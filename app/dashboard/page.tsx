@@ -8,12 +8,14 @@ import {
   FileText,
   Zap,
   Lock,
+  Shell,
 } from "lucide-react";
 import { TodoPreview } from "@/components/todos/todo-preview";
 import { FinancePreview } from "@/components/finance/finance-preview";
 import { PlansPreview } from "@/components/plans/plans-preview";
 import { QuickCapture } from "@/components/shared/quick-capture";
 import { VaultPreview } from "@/components/vault/vault-preview";
+import { ClawPreview } from "@/components/claw/claw-preview";
 
 export default function DashboardPage() {
   return (
@@ -62,6 +64,10 @@ export default function DashboardPage() {
 
         <BentoCard title="Vault" icon={Lock} href="/dashboard/vault">
           <VaultPreview />
+        </BentoCard>
+
+        <BentoCard title="My Claw" icon={Shell} href="/dashboard/claw">
+          <ClawPreview />
         </BentoCard>
       </BentoGrid>
     </div>

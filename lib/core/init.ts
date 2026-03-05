@@ -6,6 +6,7 @@ import { financeModule } from "@/lib/modules/finance";
 import { plansModule } from "@/lib/modules/plans";
 import { settingsModule } from "@/lib/modules/settings";
 import { vaultModule } from "@/lib/modules/vault";
+import { clawModule } from "@/lib/modules/claw";
 
 let booted = false;
 
@@ -20,6 +21,7 @@ export function bootApp() {
   moduleRegistry.register(plansModule);
   moduleRegistry.register(settingsModule);
   moduleRegistry.register(vaultModule);
+  moduleRegistry.register(clawModule);
 
   moduleRegistry.initAll();
   booted = true;

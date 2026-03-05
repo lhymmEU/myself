@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   ChevronLeft,
   ChevronRight,
+  Shell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +31,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/finance", label: "Finance", icon: DollarSign },
   { href: "/dashboard/plans", label: "Plans", icon: FileText },
   { href: "/dashboard/vault", label: "Vault", icon: Lock },
+  { href: "/dashboard/claw", label: "My Claw", icon: Shell },
 ];
 
 const BOTTOM_ITEMS = [
