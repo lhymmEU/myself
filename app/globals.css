@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@source "../node_modules/@blocknote/shadcn";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -124,17 +126,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-.ProseMirror {
-  min-height: 300px;
-  outline: none;
-}
-.ProseMirror h1 { font-size: 1.5em; font-weight: bold; margin: 0.5em 0; }
-.ProseMirror h2 { font-size: 1.25em; font-weight: bold; margin: 0.5em 0; }
-.ProseMirror h3 { font-size: 1.1em; font-weight: bold; margin: 0.5em 0; }
-.ProseMirror p { margin: 0.25em 0; }
-.ProseMirror ul, .ProseMirror ol { padding-left: 1.5em; }
-.ProseMirror blockquote { border-left: 3px solid hsl(var(--border)); padding-left: 1em; margin-left: 0; color: hsl(var(--muted-foreground)); }
-.ProseMirror pre { background: hsl(var(--muted)); padding: 0.75em; border-radius: 0.375rem; overflow-x: auto; }
-.ProseMirror code { background: hsl(var(--muted)); padding: 0.15em 0.3em; border-radius: 0.25rem; font-size: 0.9em; }
-.ProseMirror .is-editor-empty:first-child::before { content: attr(data-placeholder); color: hsl(var(--muted-foreground)); float: left; height: 0; pointer-events: none; }

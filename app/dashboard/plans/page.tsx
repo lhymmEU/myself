@@ -3,14 +3,13 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { PageList } from "@/components/plans/page-list";
 import { Editor } from "@/components/plans/editor";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { FileText } from "lucide-react";
+import { FileText, PenLine } from "lucide-react";
+import type { Block } from "@blocknote/core";
 
 interface Plan {
   id: string;
   title: string;
-  content: Record<string, unknown>;
+  content: Block[];
   createdAt: number;
   updatedAt: number;
 }
@@ -96,7 +95,7 @@ export default function PlansPage() {
   );
 
   const handleContentChange = useCallback(
-    async (content: Record<string, unknown>) => {
+    async (content: Block[]) => {
       if (!activeId) return;
       try {
         await fetch("/api/plans", {
@@ -141,7 +140,7 @@ export default function PlansPage() {
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-      <div className="w-[250px] border-r shrink-0">
+      <div className="w-[260px] border-r shrink-0 bg-muted/30">
         <PageList
           plans={plans}
           activeId={activeId}
@@ -153,28 +152,52 @@ export default function PlansPage() {
       <div className="flex-1 flex flex-col min-w-0">
         {activePlan ? (
           <>
-            <div className="p-4 pb-2">
-              <Input
+            <div className="px-12 pt-10 pb-1">
+              <input
                 value={title}
                 onChange={(e) => handleTitleChange(e.target.value)}
-                className="border-none text-xl font-semibold h-auto p-0 shadow-none focus-visible:ring-0"
+                className="w-full text-4xl font-bold bg-transparent border-none outline-none placeholder:text-muted-foreground/40 tracking-tight"
                 placeholder="Untitled"
               />
+              <p className="mt-2 text-sm text-muted-foreground">
+                Last edited{" "}
+                {new Date(activePlan.updatedAt).toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </p>
             </div>
-            <Separator />
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-0 px-8">
               <Editor
                 key={activePlan.id}
-                content={activePlan.content as Record<string, unknown>}
+                content={activePlan.content as Block[]}
                 onChange={handleContentChange}
               />
             </div>
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center">
-            <div className="text-center text-muted-foreground space-y-2">
-              <FileText className="h-12 w-12 mx-auto opacity-30" />
-              <p className="text-lg">Select a page or create a new one</p>
+            <div className="text-center space-y-4">
+              <div className="mx-auto w-16 h-16 rounded-2xl bg-muted/60 flex items-center justify-center">
+                <FileText className="h-8 w-8 text-muted-foreground/50" />
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-lg font-medium text-foreground/80">
+                  No page selected
+                </p>
+                <p className="text-sm text-muted-foreground max-w-[240px]">
+                  Choose a page from the sidebar or create a new one to start
+                  writing
+                </p>
+              </div>
+              <button
+                onClick={handleCreate}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                <PenLine className="h-4 w-4" />
+                New page
+              </button>
             </div>
           </div>
         )}
