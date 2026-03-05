@@ -15,6 +15,7 @@ import { SessionsPanel } from "@/components/claw/sessions-panel";
 import { ConfigEditor } from "@/components/claw/config-editor";
 import { GatewayControl } from "@/components/claw/gateway-control";
 import { MemoriesPanel } from "@/components/claw/memories-panel";
+import { SoulEditor } from "@/components/claw/soul-editor";
 import { InstalledSkillsPanel } from "@/components/claw/installed-skills-panel";
 import { SkillsMarketplace } from "@/components/claw/skills-marketplace";
 import dynamic from "next/dynamic";
@@ -58,7 +59,7 @@ export default function ClawPage() {
         {/* Left half: existing tabs + Memories */}
         <div className="w-1/2 min-w-0">
           <Tabs defaultValue="status" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-8">
+            <TabsList className="grid w-full grid-cols-9">
               <TabsTrigger value="status">Status</TabsTrigger>
               <TabsTrigger value="logs">Logs</TabsTrigger>
               <TabsTrigger value="channels">Channels</TabsTrigger>
@@ -67,6 +68,7 @@ export default function ClawPage() {
               <TabsTrigger value="terminal">Terminal</TabsTrigger>
               <TabsTrigger value="gateway">Gateway</TabsTrigger>
               <TabsTrigger value="memories">Memories</TabsTrigger>
+              <TabsTrigger value="soul">Soul</TabsTrigger>
             </TabsList>
 
             <TabsContent value="status">
@@ -120,6 +122,13 @@ export default function ClawPage() {
 
             <TabsContent value="memories">
               <MemoriesPanel
+                connectionId={connectState.connectionId}
+                connected={connectState.connected}
+              />
+            </TabsContent>
+
+            <TabsContent value="soul">
+              <SoulEditor
                 connectionId={connectState.connectionId}
                 connected={connectState.connected}
               />
