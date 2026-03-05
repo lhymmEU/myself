@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useReducer } from "react";
 import {
   Tabs,
   TabsContent,
@@ -40,6 +40,8 @@ export default function ClawPage() {
   const handleConnectionChange = useCallback((state: ConnectState) => {
     setConnectState(state);
   }, []);
+
+  const [installedRefreshKey, bumpInstalledRefresh] = useReducer((c: number) => c + 1, 0);
 
   return (
     <div className="space-y-6">
@@ -131,12 +133,14 @@ export default function ClawPage() {
             <InstalledSkillsPanel
               connectionId={connectState.connectionId}
               connected={connectState.connected}
+              refreshKey={installedRefreshKey}
             />
           </div>
           <div>
             <SkillsMarketplace
               connectionId={connectState.connectionId}
               connected={connectState.connected}
+              onSkillInstalled={bumpInstalledRefresh}
             />
           </div>
         </div>

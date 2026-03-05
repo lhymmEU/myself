@@ -45,21 +45,30 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Not connected via SSH" }, { status: 400 });
     }
 
-    // Read managed/local skills + workspace skills in one batch
-    // Each skill dir has a SKILL.md; print a delimiter between entries
+    // Scan all known skill install locations:
+    //   ~/.openclaw/skills/        — managed/local skills
+    //   ~/skills/                  — workspace skills (home)
+    //   ./skills/                  — CWD workspace skills (clawhub default)
+    //   ~/.openclaw/workspace/skills/ — openclaw workspace skills
     const script = `
-for dir in ~/.openclaw/skills/*/; do
-  [ -f "\${dir}SKILL.md" ] || continue
-  echo "===SKILL_ENTRY==="
-  echo "PATH:\${dir}"
-  head -30 "\${dir}SKILL.md"
-done
-for dir in ~/skills/*/; do
-  [ -f "\${dir}SKILL.md" ] || continue
-  echo "===SKILL_ENTRY==="
-  echo "PATH:\${dir}"
-  head -30 "\${dir}SKILL.md"
-done
+seen=""
+scan_dir() {
+  local base="$1"
+  [ -d "$base" ] || return
+  for dir in "$base"/*/; do
+    [ -f "\${dir}SKILL.md" ] || continue
+    real=\$(cd "$dir" 2>/dev/null && pwd)
+    case "$seen" in *"|$real|"*) continue ;; esac
+    seen="$seen|$real|"
+    echo "===SKILL_ENTRY==="
+    echo "PATH:\${dir}"
+    head -30 "\${dir}SKILL.md"
+  done
+}
+scan_dir ~/.openclaw/skills
+scan_dir ~/skills
+scan_dir ./skills
+scan_dir ~/.openclaw/workspace/skills
 `.trim();
 
     const result = await executeCommand(connectionId, script, 15000);

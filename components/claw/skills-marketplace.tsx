@@ -27,6 +27,7 @@ import type { MarketplaceSkill } from "@/lib/modules/claw/types";
 interface SkillsMarketplaceProps {
   connectionId: string | null;
   connected: boolean;
+  onSkillInstalled?: () => void;
 }
 
 const PAGE_SIZE = 5;
@@ -40,10 +41,12 @@ function SourceTab({
   source,
   connectionId,
   connected,
+  onSkillInstalled,
 }: {
   source: "clawhub" | "vercel";
   connectionId: string | null;
   connected: boolean;
+  onSkillInstalled?: () => void;
 }) {
   const [skills, setSkills] = useState<MarketplaceSkill[]>([]);
   const [loading, setLoading] = useState(false);
@@ -114,6 +117,7 @@ function SourceTab({
       const data = await res.json();
       if (data.success) {
         setInstallResult(`Installed ${skill.displayName}`);
+        onSkillInstalled?.();
       } else {
         setInstallResult(data.stderr || data.error || "Install failed");
       }
@@ -274,6 +278,7 @@ function SourceTab({
 export function SkillsMarketplace({
   connectionId,
   connected,
+  onSkillInstalled,
 }: SkillsMarketplaceProps) {
   if (!connected) {
     return (
@@ -309,6 +314,7 @@ export function SkillsMarketplace({
               source="clawhub"
               connectionId={connectionId}
               connected={connected}
+              onSkillInstalled={onSkillInstalled}
             />
           </TabsContent>
           <TabsContent value="vercel" className="mt-2">
@@ -316,6 +322,7 @@ export function SkillsMarketplace({
               source="vercel"
               connectionId={connectionId}
               connected={connected}
+              onSkillInstalled={onSkillInstalled}
             />
           </TabsContent>
         </Tabs>

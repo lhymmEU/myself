@@ -19,11 +19,13 @@ import type { InstalledSkill } from "@/lib/modules/claw/types";
 interface InstalledSkillsPanelProps {
   connectionId: string | null;
   connected: boolean;
+  refreshKey?: number;
 }
 
 export function InstalledSkillsPanel({
   connectionId,
   connected,
+  refreshKey,
 }: InstalledSkillsPanelProps) {
   const [skills, setSkills] = useState<InstalledSkill[]>([]);
   const [loading, setLoading] = useState(false);
@@ -57,7 +59,7 @@ export function InstalledSkillsPanel({
       setSkills([]);
       setError(null);
     }
-  }, [connected, load]);
+  }, [connected, load, refreshKey]);
 
   if (!connected) {
     return (
