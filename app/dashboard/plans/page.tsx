@@ -149,17 +149,17 @@ export default function PlansPage() {
           onCreate={handleCreate}
         />
       </div>
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {activePlan ? (
-          <>
-            <div className="px-12 pt-10 pb-1">
+          <div className="flex-1 overflow-y-auto">
+            <div className="max-w-3xl mx-auto px-6 pt-12 pb-24">
               <input
                 value={title}
                 onChange={(e) => handleTitleChange(e.target.value)}
                 className="w-full text-4xl font-bold bg-transparent border-none outline-none placeholder:text-muted-foreground/40 tracking-tight"
                 placeholder="Untitled"
               />
-              <p className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-2 mb-6 text-sm text-muted-foreground">
                 Last edited{" "}
                 {new Date(activePlan.updatedAt).toLocaleDateString(undefined, {
                   month: "short",
@@ -167,15 +167,13 @@ export default function PlansPage() {
                   year: "numeric",
                 })}
               </p>
-            </div>
-            <div className="flex-1 min-h-0 px-8">
               <Editor
                 key={activePlan.id}
                 content={activePlan.content as Block[]}
                 onChange={handleContentChange}
               />
             </div>
-          </>
+          </div>
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center space-y-4">

@@ -31,12 +31,11 @@ export function Editor({ content, onChange }: EditorProps) {
   });
 
   return (
-    <div className="flex-1 min-h-0 [&_.bn-container]:h-full [&_.bn-editor]:min-h-full">
-      <BlockNoteView
-        editor={editor}
-        onChange={handleChange}
-        theme="light"
-      />
-    </div>
+    <BlockNoteView
+      editor={editor}
+      onChange={handleChange}
+      theme="light"
+      className="bn-seamless"
+    />
   );
 }

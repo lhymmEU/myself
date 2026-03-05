@@ -126,3 +126,16 @@
     @apply bg-background text-foreground;
   }
 }
+
+.bn-seamless .bn-container {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.bn-seamless .bn-editor {
+  background: transparent !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
