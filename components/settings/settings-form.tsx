@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { LlmConfig } from "./llm-config";
+import { CryptoConfig } from "./crypto-config";
 import { FinanceDefaults } from "./finance-defaults";
 import { AppearanceConfig } from "./appearance-config";
 import { DataManagement } from "./data-management";
@@ -55,6 +56,8 @@ export function SettingsForm() {
   return (
     <div className="space-y-6">
       <LlmConfig settings={settings} onUpdate={handleUpdate} />
+      <Separator />
+      <CryptoConfig settings={settings} onUpdate={handleUpdate} />
       <Separator />
       <FinanceDefaults settings={settings} onUpdate={handleUpdate} />
       <Separator />

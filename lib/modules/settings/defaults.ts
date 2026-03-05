@@ -7,6 +7,9 @@ export const SETTING_DEFAULTS: Record<string, string> = {
   budget_period: "monthly",
   theme: "system",
   accent_color: "#6366f1",
+  binance_api_key: "",
+  binance_api_secret: "",
+  polkadot_wallets: "",
 };
 
 export const LLM_MODELS = [
