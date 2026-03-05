@@ -1,73 +1,85 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type {
-  PolymarketEvent,
-  PolymarketMarket,
-} from "@/lib/modules/finance/polymarket";
+import { ExternalLink } from "lucide-react";
 
-interface EventsPanelProps {
-  onSelectMarket?: (market: PolymarketMarket) => void;
+interface NewsArticle {
+  title: string;
+  link: string;
+  pubDate: string;
+  source: string;
 }
 
-const TAGS = [
-  { value: "", label: "All" },
-  { value: "politics", label: "Politics" },
-  { value: "crypto", label: "Crypto" },
-  { value: "sports", label: "Sports" },
-  { value: "pop-culture", label: "Pop Culture" },
-  { value: "business", label: "Business" },
-  { value: "science", label: "Science" },
-];
-
-function formatVolume(v: number): string {
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
-  if (v >= 1_000) return `$${(v / 1_000).toFixed(1)}K`;
-  return `$${v.toFixed(0)}`;
+interface NewsCategory {
+  value: string;
+  label: string;
 }
 
-export function EventsPanel({ onSelectMarket }: EventsPanelProps) {
-  const [tag, setTag] = useState("");
-  const [events, setEvents] = useState<PolymarketEvent[]>([]);
+const REFRESH_INTERVAL = 5 * 60_000;
+
+function timeAgo(dateStr: string): string {
+  try {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60_000);
+    if (mins < 1) return "now";
+    if (mins < 60) return `${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h`;
+    return `${Math.floor(hrs / 24)}d`;
+  } catch {
+    return "";
+  }
+}
+
+export function NewsPanel() {
+  const [category, setCategory] = useState("top");
+  const [articles, setArticles] = useState<NewsArticle[]>([]);
+  const [categories, setCategories] = useState<NewsCategory[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchEvents = useCallback(async () => {
-    setLoading(true);
+  const fetchArticles = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
-      const params = new URLSearchParams({ action: "events", limit: "15" });
-      if (tag) params.set("tag", tag);
+      const params = new URLSearchParams({ action: "news", category });
       const res = await fetch(`/api/finance/market?${params}`);
       if (res.ok) {
         const data = await res.json();
-        setEvents(data.events ?? []);
+        setArticles(data.articles ?? []);
+        if (data.categories) setCategories(data.categories);
       }
     } catch {
       // silently fail
     } finally {
       setLoading(false);
     }
-  }, [tag]);
+  }, [category]);
 
   useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+    fetchArticles();
+    const interval = setInterval(() => fetchArticles(false), REFRESH_INTERVAL);
+    return () => clearInterval(interval);
+  }, [fetchArticles]);
 
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between border-b border-amber-900/30 pb-1 mb-2">
         <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-          Events
+          Live News
         </span>
         <select
-          value={tag}
-          onChange={(e) => setTag(e.target.value)}
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
           className="text-[10px] bg-transparent border border-amber-900/40 rounded px-1.5 py-0.5 text-amber-300 outline-none"
         >
-          {TAGS.map((t) => (
-            <option key={t.value} value={t.value} className="bg-[#0a0a0f]">
-              {t.label}
-            </option>
-          ))}
+          {categories.length > 0
+            ? categories.map((c) => (
+                <option key={c.value} value={c.value} className="bg-[#0a0a0f]">
+                  {c.label}
+                </option>
+              ))
+            : (
+                <option value="top" className="bg-[#0a0a0f]">Top Stories</option>
+              )}
         </select>
       </div>
 
@@ -75,55 +87,33 @@ export function EventsPanel({ onSelectMarket }: EventsPanelProps) {
         <div className="flex-1 flex items-center justify-center text-amber-700 text-xs">
           Loading...
         </div>
-      ) : events.length === 0 ? (
+      ) : articles.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-amber-700 text-xs">
-          No events found
+          No articles found
         </div>
       ) : (
-        <div className="flex-1 overflow-auto space-y-2">
-          {events.map((evt) => (
-            <div
-              key={evt.id}
-              className="border border-amber-900/20 rounded p-2"
+        <div className="flex-1 overflow-auto space-y-0.5">
+          {articles.map((article, i) => (
+            <a
+              key={i}
+              href={article.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-start gap-2 px-1.5 py-1.5 rounded hover:bg-amber-950/40 transition-colors group"
             >
-              <p className="text-xs text-amber-200 font-medium mb-1.5 line-clamp-2">
-                {evt.title}
-              </p>
-              {evt.markets.length > 0 ? (
-                <div className="space-y-1">
-                  {evt.markets.slice(0, 3).map((m) => {
-                    const yesPrice = m.outcomePrices[0] ?? 0;
-                    const pct = Math.round(yesPrice * 100);
-                    return (
-                      <div
-                        key={m.id}
-                        onClick={() => onSelectMarket?.(m)}
-                        className="flex items-center justify-between gap-2 px-1.5 py-1 rounded hover:bg-amber-950/40 cursor-pointer"
-                      >
-                        <span className="text-[10px] text-amber-400 truncate flex-1">
-                          {m.question}
-                        </span>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[10px] font-mono text-green-400">
-                            {pct}¢
-                          </span>
-                          <span className="text-[10px] text-amber-700">
-                            {formatVolume(m.volume)}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {evt.markets.length > 3 && (
-                    <p className="text-[10px] text-amber-700 pl-1.5">
-                      +{evt.markets.length - 3} more
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-[10px] text-amber-700">No markets</p>
-              )}
-            </div>
+              <span className="text-[10px] text-amber-700 shrink-0 pt-0.5 w-6 text-right tabular-nums">
+                {timeAgo(article.pubDate)}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-amber-100 leading-tight line-clamp-2 group-hover:text-amber-50">
+                  {article.title}
+                </p>
+                <p className="text-[10px] text-amber-700 mt-0.5">
+                  {article.source}
+                </p>
+              </div>
+              <ExternalLink className="size-2.5 text-amber-800 shrink-0 mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </a>
           ))}
         </div>
       )}

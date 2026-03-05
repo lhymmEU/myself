@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PolymarketFeed } from "./polymarket-feed";
-import { EventsPanel } from "./events-panel";
+import { NewsPanel } from "./events-panel";
 import { MarketSearch } from "./market-search";
 import { MarketDetail } from "./market-detail";
 import type { PolymarketMarket } from "@/lib/modules/finance/polymarket";
@@ -81,7 +81,7 @@ export function PlanView() {
           <MarketDetail market={selectedMarket} />
         </div>
         <div className="p-4 border-t lg:border-r border-amber-900/30 min-h-[300px] max-h-[460px]">
-          <EventsPanel onSelectMarket={setSelectedMarket} />
+          <NewsPanel />
         </div>
         <div className="p-4 border-t border-amber-900/30 min-h-[300px] max-h-[460px]">
           <MarketSearch onSelect={setSelectedMarket} />

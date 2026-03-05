@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   listMarkets,
   searchMarkets,
-  listEvents,
   getMarket,
 } from "@/lib/modules/finance/polymarket";
+import { fetchNews, NEWS_CATEGORIES } from "@/lib/modules/finance/news";
 
 export async function GET(req: NextRequest) {
   const action = req.nextUrl.searchParams.get("action");
@@ -29,13 +29,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ markets });
     }
 
-    if (action === "events") {
-      const tag = req.nextUrl.searchParams.get("tag") ?? undefined;
-      const limit = parseInt(req.nextUrl.searchParams.get("limit") ?? "20", 10);
-      const events = await listEvents(tag, limit);
-      return NextResponse.json({ events });
-    }
-
     if (action === "detail") {
       const slug = req.nextUrl.searchParams.get("slug") ?? "";
       if (!slug.trim()) {
@@ -54,8 +47,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ market });
     }
 
+    if (action === "news") {
+      const category = req.nextUrl.searchParams.get("category") ?? "top";
+      const articles = await fetchNews(category);
+      return NextResponse.json({ articles, categories: NEWS_CATEGORIES });
+    }
+
     return NextResponse.json(
-      { error: "Invalid action. Use ?action=list|search|events|detail" },
+      { error: "Invalid action. Use ?action=list|search|events|detail|news" },
       { status: 400 }
     );
   } catch (err) {
