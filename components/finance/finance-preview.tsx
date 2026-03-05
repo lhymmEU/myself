@@ -1,71 +1,58 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { TrendingUp, TrendingDown, Activity } from "lucide-react";
+import { Activity } from "lucide-react";
 
-interface Ticker {
-  symbol: string;
-  price: number;
-  changePercent24h: number;
+interface PreviewMarket {
+  question: string;
+  outcomePrices: number[];
+  volume: number;
 }
 
-function stripUsdt(s: string) {
-  return s.replace(/USDT$/, "");
+function formatVolume(v: number): string {
+  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `$${(v / 1_000).toFixed(1)}K`;
+  return `$${v.toFixed(0)}`;
 }
 
 export function FinancePreview() {
-  const [tickers, setTickers] = useState<Ticker[]>([]);
+  const [markets, setMarkets] = useState<PreviewMarket[]>([]);
 
   useEffect(() => {
-    fetch("/api/finance/market?source=binance")
+    fetch("/api/finance/market?action=list&limit=3")
       .then((r) => r.json())
       .then((data) => {
-        if (data.tickers) setTickers(data.tickers.slice(0, 4));
+        if (data.markets) setMarkets(data.markets.slice(0, 3));
       })
       .catch(() => {});
   }, []);
 
-  if (!tickers.length) {
+  if (!markets.length) {
     return (
       <p className="text-sm text-muted-foreground flex items-center gap-1">
         <Activity className="size-3" />
-        Loading market data...
+        Loading markets...
       </p>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3">
-      {tickers.map((t) => {
-        const isUp = t.changePercent24h >= 0;
+    <div className="space-y-2">
+      {markets.map((m, i) => {
+        const pct = Math.round((m.outcomePrices[0] ?? 0) * 100);
         return (
-          <div key={t.symbol} className="space-y-0.5">
-            <div className="flex items-center gap-1">
-              {isUp ? (
-                <TrendingUp className="h-3 w-3 text-green-500" />
-              ) : (
-                <TrendingDown className="h-3 w-3 text-red-500" />
-              )}
+          <div key={i} className="flex items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground truncate flex-1">
+              {m.question}
+            </p>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs font-mono font-semibold text-green-500">
+                {pct}¢
+              </span>
               <span className="text-[10px] text-muted-foreground">
-                {stripUsdt(t.symbol)}
+                {formatVolume(m.volume)}
               </span>
             </div>
-            <p className="text-sm font-semibold font-mono">
-              $
-              {t.price >= 1000
-                ? t.price.toLocaleString("en-US", {
-                    maximumFractionDigits: 0,
-                  })
-                : t.price.toFixed(2)}
-            </p>
-            <p
-              className={`text-[10px] font-mono ${
-                isUp ? "text-green-500" : "text-red-500"
-              }`}
-            >
-              {isUp ? "+" : ""}
-              {t.changePercent24h.toFixed(2)}%
-            </p>
           </div>
         );
       })}

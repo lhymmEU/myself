@@ -37,7 +37,7 @@ export function PolkadotWallets({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Polkadot Wallets</CardTitle>
+          <CardTitle>Polkadot Asset Hub</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">{error}</p>
@@ -50,7 +50,7 @@ export function PolkadotWallets({
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>Polkadot Wallets</CardTitle>
+          <CardTitle>Polkadot Asset Hub</CardTitle>
           {!loading && dotPrice > 0 && (
             <span className="text-xs font-mono text-muted-foreground">
               DOT = {formatUsd(dotPrice)}
@@ -97,6 +97,35 @@ export function PolkadotWallets({
                     </p>
                   </div>
                 </div>
+                {w.assets && w.assets.length > 0 && (
+                  <div className="border-t pt-2 mt-2">
+                    <p className="text-xs text-muted-foreground mb-1.5">
+                      Asset Hub Tokens
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      {w.assets.map((a) => (
+                        <div
+                          key={a.assetId}
+                          className="flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1"
+                        >
+                          <span className="text-xs font-medium">
+                            {a.symbol}
+                          </span>
+                          <span className="text-xs font-mono text-muted-foreground">
+                            {a.balance.toLocaleString("en-US", {
+                              maximumFractionDigits: 2,
+                            })}
+                          </span>
+                          {a.usdValue > 0 && (
+                            <span className="text-[10px] text-muted-foreground">
+                              ({formatUsd(a.usdValue)})
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

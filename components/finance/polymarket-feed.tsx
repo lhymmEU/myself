@@ -1,10 +1,12 @@
 "use client";
 
-import type { PolymarketEvent } from "@/lib/modules/finance/polymarket";
+import type { PolymarketMarket } from "@/lib/modules/finance/polymarket";
 
 interface PolymarketFeedProps {
-  markets: PolymarketEvent[];
+  markets: PolymarketMarket[];
   loading: boolean;
+  onSelect?: (market: PolymarketMarket) => void;
+  selectedId?: string;
 }
 
 function formatVolume(v: number): string {
@@ -24,7 +26,7 @@ function PriceBar({ price, label }: { price: number; label: string }) {
           className={`h-full rounded-sm ${
             isYes ? "bg-green-500/70" : "bg-red-500/70"
           }`}
-          style={{ width: `${pct}%` }}
+          style={{ width: `${Math.max(pct, 2)}%` }}
         />
       </div>
       <span className="w-8 text-right font-mono text-amber-200">
@@ -34,14 +36,21 @@ function PriceBar({ price, label }: { price: number; label: string }) {
   );
 }
 
-export function PolymarketFeed({ markets, loading }: PolymarketFeedProps) {
+export function PolymarketFeed({
+  markets,
+  loading,
+  onSelect,
+  selectedId,
+}: PolymarketFeedProps) {
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between border-b border-amber-900/30 pb-1 mb-2">
         <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-          Prediction Markets
+          Top Markets
         </span>
-        <span className="text-[10px] text-amber-700">POLYMARKET</span>
+        <span className="text-[10px] text-amber-700">
+          {markets.length} ACTIVE
+        </span>
       </div>
 
       {loading ? (
@@ -53,11 +62,16 @@ export function PolymarketFeed({ markets, loading }: PolymarketFeedProps) {
           No markets available
         </div>
       ) : (
-        <div className="flex-1 overflow-auto space-y-2">
+        <div className="flex-1 overflow-auto space-y-1.5">
           {markets.map((m) => (
             <div
-              key={m.conditionId}
-              className="border border-amber-900/20 rounded p-2 hover:bg-amber-950/30"
+              key={m.id}
+              onClick={() => onSelect?.(m)}
+              className={`border rounded p-2 cursor-pointer transition-colors ${
+                selectedId === m.id
+                  ? "border-amber-500/60 bg-amber-950/50"
+                  : "border-amber-900/20 hover:bg-amber-950/30"
+              }`}
             >
               <div className="flex items-start justify-between gap-2 mb-1.5">
                 <p className="text-xs text-amber-100 leading-tight line-clamp-2">

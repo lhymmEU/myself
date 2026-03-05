@@ -3,39 +3,34 @@
 import { useEffect, useState, useCallback } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MarketTicker } from "./market-ticker";
 import { PolymarketFeed } from "./polymarket-feed";
-import { Watchlist } from "./watchlist";
-import { MarketHeatmap } from "./market-heatmap";
-import type { TickerInfo } from "@/lib/modules/finance/binance";
-import type { PolymarketEvent } from "@/lib/modules/finance/polymarket";
+import { EventsPanel } from "./events-panel";
+import { MarketSearch } from "./market-search";
+import { MarketDetail } from "./market-detail";
+import type { PolymarketMarket } from "@/lib/modules/finance/polymarket";
 
-const REFRESH_INTERVAL = 15_000;
+const REFRESH_INTERVAL = 60_000;
 
 export function PlanView() {
-  const [tickers, setTickers] = useState<TickerInfo[]>([]);
-  const [markets, setMarkets] = useState<PolymarketEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [markets, setMarkets] = useState<PolymarketMarket[]>([]);
+  const [selectedMarket, setSelectedMarket] = useState<PolymarketMarket | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
-    const [tickerRes, marketRes] = await Promise.allSettled([
-      fetch("/api/finance/market?source=binance"),
-      fetch("/api/finance/market?source=polymarket"),
-    ]);
-
-    if (tickerRes.status === "fulfilled" && tickerRes.value.ok) {
-      const data = await tickerRes.value.json();
-      setTickers(data.tickers ?? []);
+    setRefreshing(true);
+    try {
+      const res = await fetch("/api/finance/market?action=list&limit=20");
+      if (res.ok) {
+        const data = await res.json();
+        setMarkets(data.markets ?? []);
+      }
+    } catch {
+      // silently fail
     }
-
-    if (marketRes.status === "fulfilled" && marketRes.value.ok) {
-      const data = await marketRes.value.json();
-      setMarkets(data.markets ?? []);
-    }
-
-    setLoading(false);
+    setRefreshing(false);
+    setInitialLoading(false);
     setLastUpdated(new Date());
   }, []);
 
@@ -45,46 +40,51 @@ export function PlanView() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  const topTickers = tickers.slice(0, 10);
-  const allTickers = tickers;
+  const loading = initialLoading;
 
   return (
     <div className="space-y-0">
-      {/* Terminal header bar */}
       <div className="flex items-center justify-between bg-amber-950/80 border border-amber-900/40 rounded-t-lg px-4 py-2">
         <div className="flex items-center gap-4">
           <span className="text-amber-400 font-mono font-bold text-sm tracking-widest">
-            MARKET TERMINAL
+            POLYMARKET TERMINAL
           </span>
           <span className="text-amber-700 font-mono text-[10px]">
             {lastUpdated ? lastUpdated.toLocaleTimeString() : "--:--:--"}
           </span>
+          {refreshing && (
+            <RefreshCw className="size-3 text-amber-700 animate-spin" />
+          )}
         </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={fetchData}
-          disabled={loading}
+          disabled={refreshing}
           className="text-amber-500 hover:text-amber-300 hover:bg-amber-900/30 h-6 px-2"
         >
-          <RefreshCw className={`size-3 mr-1 ${loading ? "animate-spin" : ""}`} />
+          <RefreshCw className={`size-3 mr-1 ${refreshing ? "animate-spin" : ""}`} />
           <span className="text-[10px] font-mono">REFRESH</span>
         </Button>
       </div>
 
-      {/* Terminal grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 border border-t-0 border-amber-900/40 rounded-b-lg overflow-hidden bg-[#0a0a0f] font-mono">
-        <div className="p-4 border-b lg:border-b-0 lg:border-r border-amber-900/30 min-h-[320px]">
-          <MarketTicker tickers={topTickers} loading={loading} />
+        <div className="p-4 border-b lg:border-b-0 lg:border-r border-amber-900/30 min-h-[340px] max-h-[500px]">
+          <PolymarketFeed
+            markets={markets}
+            loading={loading}
+            onSelect={setSelectedMarket}
+            selectedId={selectedMarket?.id}
+          />
         </div>
-        <div className="p-4 border-b lg:border-b-0 border-amber-900/30 min-h-[320px]">
-          <PolymarketFeed markets={markets} loading={loading} />
+        <div className="p-4 border-b lg:border-b-0 border-amber-900/30 min-h-[340px] max-h-[500px]">
+          <MarketDetail market={selectedMarket} />
         </div>
-        <div className="p-4 border-t lg:border-r border-amber-900/30 min-h-[280px]">
-          <Watchlist tickers={allTickers} loading={loading} />
+        <div className="p-4 border-t lg:border-r border-amber-900/30 min-h-[300px] max-h-[460px]">
+          <EventsPanel onSelectMarket={setSelectedMarket} />
         </div>
-        <div className="p-4 border-t border-amber-900/30 min-h-[280px]">
-          <MarketHeatmap tickers={allTickers} loading={loading} />
+        <div className="p-4 border-t border-amber-900/30 min-h-[300px] max-h-[460px]">
+          <MarketSearch onSelect={setSelectedMarket} />
         </div>
       </div>
     </div>
