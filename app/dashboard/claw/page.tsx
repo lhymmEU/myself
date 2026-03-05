@@ -125,15 +125,15 @@ export default function ClawPage() {
           </Tabs>
         </div>
 
-        {/* Right half: Installed Skills (top 1/3) + Marketplace (bottom 2/3) */}
-        <div className="w-1/2 min-w-0 flex flex-col gap-4" style={{ height: "calc(100vh - 280px)" }}>
-          <div className="h-1/3 min-h-0">
+        {/* Right half: Installed Skills (top) + Marketplace (bottom) */}
+        <div className="w-1/2 min-w-0 flex flex-col gap-4">
+          <div className="h-[250px]">
             <InstalledSkillsPanel
               connectionId={connectState.connectionId}
               connected={connectState.connected}
             />
           </div>
-          <div className="h-2/3 min-h-0">
+          <div>
             <SkillsMarketplace
               connectionId={connectState.connectionId}
               connected={connectState.connected}

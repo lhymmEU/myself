@@ -137,7 +137,7 @@ export async function GET(req: NextRequest) {
   try {
     const source = req.nextUrl.searchParams.get("source") ?? "clawhub";
     const query = req.nextUrl.searchParams.get("q") ?? undefined;
-    const limit = parseInt(req.nextUrl.searchParams.get("limit") ?? "20", 10);
+    const limit = parseInt(req.nextUrl.searchParams.get("limit") ?? "30", 10);
 
     if (source === "vercel") {
       const skills = await fetchVercelSkills(query, limit);
