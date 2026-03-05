@@ -5,7 +5,7 @@ export default function TodosPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Todos</h1>
-        <p className="text-muted-foreground">Manage tasks manually or let AI help</p>
+        <p className="text-muted-foreground">Tasks derived from your mind map</p>
       </div>
       <TodoList />
     </div>

@@ -3,7 +3,7 @@ import { todoTools } from "./tools";
 
 export const todosModule: FeatureModule = {
   name: "todos",
-  description: "Todo management with mind map integration and LLM suggestions",
+  description: "Todos derived from mind map rectangle nodes",
   tools: todoTools,
   eventHandlers: {},
 };

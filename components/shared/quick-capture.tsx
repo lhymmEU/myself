@@ -1,21 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, CheckSquare, DollarSign, FileText } from "lucide-react";
+import { Plus, DollarSign, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
-type CaptureMode = "todo" | "expense" | "note";
+type CaptureMode = "expense" | "note";
 
 export function QuickCapture() {
-  const [mode, setMode] = useState<CaptureMode>("todo");
+  const [mode, setMode] = useState<CaptureMode>("expense");
   const [value, setValue] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const modes: { key: CaptureMode; icon: typeof CheckSquare; label: string }[] =
+  const modes: { key: CaptureMode; icon: typeof DollarSign; label: string }[] =
     [
-      { key: "todo", icon: CheckSquare, label: "Todo" },
       { key: "expense", icon: DollarSign, label: "Expense" },
       { key: "note", icon: FileText, label: "Note" },
     ];
@@ -32,7 +31,7 @@ export function QuickCapture() {
         body: JSON.stringify({ module: mode, value: value.trim() }),
       });
       setValue("");
-      toast.success(`${mode === "todo" ? "Todo" : mode === "expense" ? "Expense" : "Note"} added`);
+      toast.success(`${mode === "expense" ? "Expense" : "Note"} added`);
     } catch {
       toast.error("Failed to save");
     }
@@ -60,9 +59,7 @@ export function QuickCapture() {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder={
-            mode === "todo"
-              ? "What needs doing?"
-              : mode === "expense"
+            mode === "expense"
               ? "e.g. Coffee $4.50"
               : "Jot down an idea..."
           }

@@ -1,75 +1,30 @@
 import { z } from "zod";
 import type { AgentTool } from "@/lib/core/types";
-import {
-  createTodo,
-  updateTodo,
-  deleteTodo,
-  getTodo,
-  getAllTodos,
-  getActiveTodos,
-} from "./actions";
+import { getOrCreateDefaultScene } from "@/lib/modules/mind-map/actions";
+import { parseMindMapTodos } from "./parse-mind-map";
 
 export const todoTools: AgentTool[] = [
   {
-    name: "createTodo",
-    description: "Create a new todo item",
-    parameters: z.object({
-      title: z.string(),
-      description: z.string().optional(),
-      priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
-      dueDate: z.string().optional(),
-      linkedNodeId: z.string().optional(),
-    }),
-    handler: async (params) => {
-      const input = params as {
-        title: string;
-        description?: string;
-        priority?: "low" | "medium" | "high" | "urgent";
-        dueDate?: string;
-        linkedNodeId?: string;
-      };
-      return createTodo(input);
-    },
-  },
-  {
-    name: "completeTodo",
-    description: "Mark a todo as completed",
-    parameters: z.object({ id: z.string() }),
-    handler: async (params) => {
-      const { id } = params as { id: string };
-      return updateTodo({ id, completed: true });
-    },
-  },
-  {
     name: "queryTodos",
-    description: "Query todos - get all, active only, or a specific todo by ID",
+    description:
+      "Query todos derived from the mind map. Optionally filter to urgent-only.",
     parameters: z.object({
-      filter: z.enum(["all", "active"]).optional(),
-      id: z.string().optional(),
+      urgentOnly: z.boolean().optional(),
     }),
     handler: async (params) => {
-      const { filter = "all", id } = params as {
-        filter?: "all" | "active";
-        id?: string;
-      };
-      if (id) {
-        const todo = getTodo(id);
-        return todo ?? { error: "Todo not found" };
+      const { urgentOnly } = params as { urgentOnly?: boolean };
+      const scene = getOrCreateDefaultScene();
+      let elements: unknown[] = [];
+      try {
+        elements = JSON.parse(scene.elements);
+      } catch {
+        /* empty scene */
       }
-      if (filter === "active") {
-        return getActiveTodos();
-      }
-      return getAllTodos();
-    },
-  },
-  {
-    name: "deleteTodo",
-    description: "Delete a todo by ID",
-    parameters: z.object({ id: z.string() }),
-    handler: async (params) => {
-      const { id } = params as { id: string };
-      deleteTodo(id);
-      return { success: true, id };
+      const todos = parseMindMapTodos(
+        elements as Parameters<typeof parseMindMapTodos>[0]
+      );
+      if (urgentOnly) return todos.filter((t) => t.isUrgent);
+      return todos;
     },
   },
 ];
