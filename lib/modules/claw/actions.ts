@@ -206,7 +206,17 @@ export function setDefaultConnection(id: string): void {
 // SSH execution helpers
 // ---------------------------------------------------------------------------
 
-const activeConnections = new Map<string, Client>();
+// Persist across Next.js hot-reloads in dev mode by storing on globalThis
+const globalKey = "__claw_ssh_connections" as const;
+type GlobalWithSSH = typeof globalThis & { [globalKey]?: Map<string, Client> };
+
+function getActiveConnections(): Map<string, Client> {
+  const g = globalThis as GlobalWithSSH;
+  if (!g[globalKey]) {
+    g[globalKey] = new Map();
+  }
+  return g[globalKey];
+}
 
 function buildConnectConfig(conn: ClawConnection): ConnectConfig {
   const config: ConnectConfig = {
@@ -230,17 +240,18 @@ function buildConnectConfig(conn: ClawConnection): ConnectConfig {
 }
 
 export function getSSHClient(connectionId: string): Client | undefined {
-  return activeConnections.get(connectionId);
+  return getActiveConnections().get(connectionId);
 }
 
 export async function connectSSH(connectionId: string): Promise<{ success: boolean; error?: string }> {
   const conn = getConnection(connectionId);
   if (!conn) return { success: false, error: "Connection not found" };
 
-  const existing = activeConnections.get(connectionId);
+  const conns = getActiveConnections();
+  const existing = conns.get(connectionId);
   if (existing) {
     existing.end();
-    activeConnections.delete(connectionId);
+    conns.delete(connectionId);
   }
 
   return new Promise((resolve) => {
@@ -248,17 +259,17 @@ export async function connectSSH(connectionId: string): Promise<{ success: boole
     const config = buildConnectConfig(conn);
 
     client.on("ready", () => {
-      activeConnections.set(connectionId, client);
+      getActiveConnections().set(connectionId, client);
       resolve({ success: true });
     });
 
     client.on("error", (err) => {
-      activeConnections.delete(connectionId);
+      getActiveConnections().delete(connectionId);
       resolve({ success: false, error: err.message });
     });
 
     client.on("close", () => {
-      activeConnections.delete(connectionId);
+      getActiveConnections().delete(connectionId);
     });
 
     client.connect(config);
@@ -266,31 +277,70 @@ export async function connectSSH(connectionId: string): Promise<{ success: boole
 }
 
 export function disconnectSSH(connectionId: string): void {
-  const client = activeConnections.get(connectionId);
+  const conns = getActiveConnections();
+  const client = conns.get(connectionId);
   if (client) {
     client.end();
-    activeConnections.delete(connectionId);
+    conns.delete(connectionId);
   }
 }
 
 export function isSSHConnected(connectionId: string): boolean {
-  return activeConnections.has(connectionId);
+  return getActiveConnections().has(connectionId);
 }
 
-export async function executeCommand(
-  connectionId: string,
-  command: string,
-  timeoutMs = 30000
-): Promise<{ stdout: string; stderr: string; code: number }> {
-  const client = activeConnections.get(connectionId);
-  if (!client) throw new Error("Not connected");
+/**
+ * Wraps a command in a login shell so that PATH from ~/.profile, ~/.bashrc,
+ * nvm, etc. is loaded. ssh2's exec() spawns a bare non-interactive shell
+ * by default, which doesn't source login profiles.
+ */
+function loginShell(command: string): string {
+  const escaped = command.replace(/'/g, "'\\''");
+  return `bash -lc '${escaped}'`;
+}
 
+// ---------------------------------------------------------------------------
+// Command queue — serializes exec calls to avoid exhausting SSH channels.
+// SSH servers have a MaxSessions limit (default 10 on OpenSSH). Each exec()
+// opens a channel; parallel requests quickly hit that ceiling. This queue
+// ensures only one exec channel is open per connection at a time.
+// ---------------------------------------------------------------------------
+
+const queueKey = "__claw_ssh_queues" as const;
+type GlobalWithQueues = typeof globalThis & { [queueKey]?: Map<string, Promise<unknown>> };
+
+function getQueue(): Map<string, Promise<unknown>> {
+  const g = globalThis as GlobalWithQueues;
+  if (!g[queueKey]) {
+    g[queueKey] = new Map();
+  }
+  return g[queueKey];
+}
+
+function enqueue<T>(connectionId: string, fn: () => Promise<T>): Promise<T> {
+  const queues = getQueue();
+  const prev = queues.get(connectionId) ?? Promise.resolve();
+  const next = prev.then(fn, fn);
+  queues.set(connectionId, next);
+  next.finally(() => {
+    if (queues.get(connectionId) === next) {
+      queues.delete(connectionId);
+    }
+  });
+  return next;
+}
+
+function execOnClient(
+  client: Client,
+  command: string,
+  timeoutMs: number
+): Promise<{ stdout: string; stderr: string; code: number }> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       reject(new Error(`Command timed out after ${timeoutMs}ms`));
     }, timeoutMs);
 
-    client.exec(command, (err, stream) => {
+    client.exec(loginShell(command), (err, stream) => {
       if (err) {
         clearTimeout(timer);
         reject(err);
@@ -316,6 +366,17 @@ export async function executeCommand(
   });
 }
 
+export async function executeCommand(
+  connectionId: string,
+  command: string,
+  timeoutMs = 30000
+): Promise<{ stdout: string; stderr: string; code: number }> {
+  const client = getActiveConnections().get(connectionId);
+  if (!client) throw new Error("Not connected");
+
+  return enqueue(connectionId, () => execOnClient(client, command, timeoutMs));
+}
+
 export async function executeOpenClawCommand(
   connectionId: string,
   subcommand: string,
@@ -323,3 +384,5 @@ export async function executeOpenClawCommand(
 ): Promise<{ stdout: string; stderr: string; code: number }> {
   return executeCommand(connectionId, `openclaw ${subcommand}`, timeoutMs);
 }
+
+export { loginShell };

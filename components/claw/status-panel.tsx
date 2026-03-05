@@ -40,20 +40,18 @@ export function StatusPanel({ connectionId, connected }: StatusPanelProps) {
     if (!connectionId || !connected) return;
     setLoading(true);
     try {
-      const [statusRes, healthRes] = await Promise.all([
-        fetch("/api/claw/command", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ connectionId, command: "status" }),
-        }),
-        fetch("/api/claw/command", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ connectionId, command: "health" }),
-        }),
-      ]);
-
+      const statusRes = await fetch("/api/claw/command", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionId, command: "status" }),
+      });
       const statusData = await statusRes.json();
+
+      const healthRes = await fetch("/api/claw/command", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionId, command: "health" }),
+      });
       const healthData = await healthRes.json();
 
       setStatus({

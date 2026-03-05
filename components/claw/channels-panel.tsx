@@ -27,20 +27,18 @@ export function ChannelsPanel({ connectionId, connected }: ChannelsPanelProps) {
     if (!connectionId || !connected) return;
     setLoading(true);
     try {
-      const [statusRes, listRes] = await Promise.all([
-        fetch("/api/claw/command", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ connectionId, command: "channels-status" }),
-        }),
-        fetch("/api/claw/command", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ connectionId, command: "channels-list" }),
-        }),
-      ]);
-
+      const statusRes = await fetch("/api/claw/command", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionId, command: "channels-status" }),
+      });
       const statusData = await statusRes.json();
+
+      const listRes = await fetch("/api/claw/command", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionId, command: "channels-list" }),
+      });
       const listData = await listRes.json();
 
       setStatusOutput(statusData.stdout || statusData.stderr || statusData.error || "");

@@ -4,6 +4,7 @@ import {
   getSSHClient,
   isSSHConnected,
   getDefaultConnection,
+  loginShell,
 } from "@/lib/modules/claw/actions";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
 
   const stream = new ReadableStream({
     start(controller) {
-      client.exec("openclaw logs --follow --json 2>&1", (err, sshStream) => {
+      client.exec(loginShell("openclaw logs --follow --json 2>&1"), (err, sshStream) => {
         if (err) {
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({ error: err.message })}\n\n`)
