@@ -18,3 +18,13 @@ export const lifeNodes = sqliteTable("life_nodes", {
   createdAt: integer("created_at", { mode: "number" }).notNull(),
   updatedAt: integer("updated_at", { mode: "number" }).notNull(),
 });
+
+export const mindMapScenes = sqliteTable("mind_map_scenes", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull().default("Untitled"),
+  elements: text("elements").notNull().default("[]"),
+  appState: text("app_state").notNull().default("{}"),
+  files: text("files").notNull().default("{}"),
+  createdAt: integer("created_at", { mode: "number" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "number" }).notNull(),
+});

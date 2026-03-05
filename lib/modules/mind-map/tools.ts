@@ -1,96 +1,55 @@
 import { z } from "zod";
 import type { AgentTool } from "@/lib/core/types";
 import {
-  createNode,
-  getAllNodes,
-  getNode,
-  updateNode,
-  connectNodes,
-  deleteNode,
+  getOrCreateDefaultScene,
+  getAllScenes,
+  updateScene,
 } from "./actions";
 
 export const mindMapTools: AgentTool[] = [
   {
-    name: "addMindMapNode",
-    description: "Add a new node to the mind map",
+    name: "getMindMapScene",
+    description:
+      "Get the current mind map scene (Excalidraw elements and state)",
     parameters: z.object({
-      label: z.string(),
-      type: z.enum(["category", "item"]),
-      parentId: z.string().optional().nullable(),
-      color: z.string().optional(),
-      positionX: z.number().optional(),
-      positionY: z.number().optional(),
+      id: z.string().optional(),
     }),
     handler: async (params) => {
-      const { label, type, parentId, color, positionX, positionY } = params as {
-        label: string;
-        type: "category" | "item";
-        parentId?: string | null;
-        color?: string;
-        positionX?: number;
-        positionY?: number;
-      };
-      return createNode({
-        label,
-        type,
-        parentId,
-        color,
-        positionX,
-        positionY,
-      });
+      const { id } = params as { id?: string };
+      if (id) {
+        const { getScene } = await import("./actions");
+        const scene = getScene(id);
+        if (!scene) throw new Error(`Scene not found: ${id}`);
+        return scene;
+      }
+      return getOrCreateDefaultScene();
     },
   },
   {
-    name: "getMindMapState",
-    description: "Get the current state of all nodes in the mind map",
+    name: "listMindMapScenes",
+    description: "List all mind map scenes",
     parameters: z.object({}),
     handler: async () => {
-      return getAllNodes();
+      return getAllScenes();
     },
   },
   {
-    name: "updateNodeMetadata",
-    description: "Update metadata for a mind map node (merges with existing)",
+    name: "updateMindMapScene",
+    description: "Update a mind map scene's name or content",
     parameters: z.object({
       id: z.string(),
-      metadata: z.record(z.string(), z.unknown()),
+      name: z.string().optional(),
+      elements: z.string().optional(),
+      appState: z.string().optional(),
     }),
     handler: async (params) => {
-      const { id, metadata } = params as {
+      const { id, name, elements, appState } = params as {
         id: string;
-        metadata: Record<string, unknown>;
+        name?: string;
+        elements?: string;
+        appState?: string;
       };
-      const existing = getNode(id);
-      if (!existing) throw new Error(`Node not found: ${id}`);
-      const merged = { ...existing.metadata, ...metadata };
-      return updateNode({ id, metadata: merged });
-    },
-  },
-  {
-    name: "connectNodes",
-    description: "Create a connection between two mind map nodes",
-    parameters: z.object({
-      sourceId: z.string(),
-      targetId: z.string(),
-    }),
-    handler: async (params) => {
-      const { sourceId, targetId } = params as {
-        sourceId: string;
-        targetId: string;
-      };
-      return connectNodes(sourceId, targetId);
-    },
-  },
-  {
-    name: "deleteNode",
-    description: "Delete a node from the mind map",
-    parameters: z.object({
-      id: z.string(),
-    }),
-    handler: async (params) => {
-      const { id } = params as { id: string };
-      deleteNode(id);
-      return { success: true, id };
+      return updateScene({ id, name, elements, appState });
     },
   },
 ];

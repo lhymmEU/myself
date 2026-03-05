@@ -31,3 +31,28 @@ export interface UpdateNodeInput {
   connections?: string[];
   metadata?: Record<string, unknown>;
 }
+
+export interface MindMapScene {
+  id: string;
+  name: string;
+  elements: string;
+  appState: string;
+  files: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CreateSceneInput {
+  name?: string;
+  elements?: string;
+  appState?: string;
+  files?: string;
+}
+
+export interface UpdateSceneInput {
+  id: string;
+  name?: string;
+  elements?: string;
+  appState?: string;
+  files?: string;
+}

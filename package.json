@@ -11,12 +11,12 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
+    "@excalidraw/excalidraw": "^0.18.0",
     "@noble/ciphers": "^1.3.0",
     "@noble/hashes": "^2.0.1",
     "@tiptap/extension-placeholder": "^3.20.0",
     "@tiptap/react": "^3.20.0",
     "@tiptap/starter-kit": "^3.20.0",
-    "@xyflow/react": "^12.10.1",
     "better-sqlite3": "^12.6.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

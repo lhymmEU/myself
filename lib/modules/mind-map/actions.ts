@@ -1,8 +1,15 @@
 import { nanoid } from "nanoid";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/core/db";
-import { lifeNodes } from "./schema";
-import type { LifeNode, CreateNodeInput, UpdateNodeInput } from "./types";
+import { lifeNodes, mindMapScenes } from "./schema";
+import type {
+  LifeNode,
+  CreateNodeInput,
+  UpdateNodeInput,
+  MindMapScene,
+  CreateSceneInput,
+  UpdateSceneInput,
+} from "./types";
 
 function parseRow(row: (typeof lifeNodes.$inferSelect)): LifeNode {
   let connections: string[] = [];
@@ -111,4 +118,98 @@ export function disconnectNodes(sourceId: string, targetId: string): LifeNode {
   if (!node) throw new Error(`Node not found: ${sourceId}`);
   const connections = node.connections.filter((c) => c !== targetId);
   return updateNode({ id: sourceId, connections });
+}
+
+// --- Scene CRUD ---
+
+const DEFAULT_SCENE_ID = "default";
+
+function parseSceneRow(
+  row: typeof mindMapScenes.$inferSelect
+): MindMapScene {
+  return {
+    id: row.id,
+    name: row.name,
+    elements: row.elements,
+    appState: row.appState,
+    files: row.files,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+export function getScene(id: string): MindMapScene | null {
+  const db = getDb();
+  const row = db
+    .select()
+    .from(mindMapScenes)
+    .where(eq(mindMapScenes.id, id))
+    .get();
+  return row ? parseSceneRow(row) : null;
+}
+
+export function getOrCreateDefaultScene(): MindMapScene {
+  const existing = getScene(DEFAULT_SCENE_ID);
+  if (existing) return existing;
+  return createScene({ name: "Mind Map" }, DEFAULT_SCENE_ID);
+}
+
+export function getAllScenes(): MindMapScene[] {
+  const db = getDb();
+  const rows = db.select().from(mindMapScenes).all();
+  return rows.map(parseSceneRow);
+}
+
+export function createScene(
+  input: CreateSceneInput,
+  id?: string
+): MindMapScene {
+  const db = getDb();
+  const now = Date.now();
+  const sceneId = id ?? nanoid();
+  const scene = {
+    id: sceneId,
+    name: input.name ?? "Untitled",
+    elements: input.elements ?? "[]",
+    appState: input.appState ?? "{}",
+    files: input.files ?? "{}",
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.insert(mindMapScenes).values(scene).run();
+  return parseSceneRow(scene as typeof mindMapScenes.$inferSelect);
+}
+
+export function updateScene(input: UpdateSceneInput): MindMapScene {
+  const db = getDb();
+  const existing = db
+    .select()
+    .from(mindMapScenes)
+    .where(eq(mindMapScenes.id, input.id))
+    .get();
+  if (!existing) {
+    throw new Error(`Scene not found: ${input.id}`);
+  }
+  const updates: Partial<typeof mindMapScenes.$inferInsert> = {
+    updatedAt: Date.now(),
+  };
+  if (input.name !== undefined) updates.name = input.name;
+  if (input.elements !== undefined) updates.elements = input.elements;
+  if (input.appState !== undefined) updates.appState = input.appState;
+  if (input.files !== undefined) updates.files = input.files;
+  db.update(mindMapScenes)
+    .set(updates)
+    .where(eq(mindMapScenes.id, input.id))
+    .run();
+  const row = db
+    .select()
+    .from(mindMapScenes)
+    .where(eq(mindMapScenes.id, input.id))
+    .get();
+  return parseSceneRow(row!);
+}
+
+export function deleteScene(id: string): void {
+  const db = getDb();
+  db.delete(mindMapScenes).where(eq(mindMapScenes.id, id)).run();
 }

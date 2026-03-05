@@ -1,53 +1,64 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
 import {
-  getAllNodes,
-  createNode,
-  updateNode,
-  deleteNode,
-  connectNodes,
+  getOrCreateDefaultScene,
+  getScene,
+  getAllScenes,
+  createScene,
+  updateScene,
+  deleteScene,
 } from "@/lib/modules/mind-map/actions";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   bootApp();
-  const nodes = getAllNodes();
-  return NextResponse.json(nodes);
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+
+  if (id) {
+    const scene = getScene(id);
+    if (!scene) {
+      return NextResponse.json({ error: "Scene not found" }, { status: 404 });
+    }
+    return NextResponse.json(scene);
+  }
+
+  const listAll = searchParams.get("all");
+  if (listAll === "true") {
+    return NextResponse.json(getAllScenes());
+  }
+
+  const scene = getOrCreateDefaultScene();
+  return NextResponse.json(scene);
 }
 
 export async function POST(req: NextRequest) {
   bootApp();
   const body = await req.json();
-  const node = createNode({
-    label: body.label,
-    type: body.type,
-    color: body.color,
-    positionX: body.positionX,
-    positionY: body.positionY,
-    parentId: body.parentId,
+  const scene = createScene({
+    name: body.name,
+    elements: body.elements,
+    appState: body.appState,
+    files: body.files,
   });
-  return NextResponse.json(node, { status: 201 });
+  return NextResponse.json(scene, { status: 201 });
 }
 
 export async function PUT(req: NextRequest) {
   bootApp();
   const body = await req.json();
 
-  if (body.action === "connect") {
-    const node = connectNodes(body.sourceId, body.targetId);
-    return NextResponse.json(node);
+  if (!body.id) {
+    return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
 
-  const node = updateNode({
+  const scene = updateScene({
     id: body.id,
-    label: body.label,
-    type: body.type,
-    color: body.color,
-    positionX: body.positionX,
-    positionY: body.positionY,
-    connections: body.connections,
-    metadata: body.metadata,
+    name: body.name,
+    elements: body.elements,
+    appState: body.appState,
+    files: body.files,
   });
-  return NextResponse.json(node);
+  return NextResponse.json(scene);
 }
 
 export async function DELETE(req: NextRequest) {
@@ -57,6 +68,6 @@ export async function DELETE(req: NextRequest) {
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
-  deleteNode(id);
+  deleteScene(id);
   return NextResponse.json({ success: true });
 }

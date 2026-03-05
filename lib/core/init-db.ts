@@ -92,6 +92,16 @@ CREATE TABLE IF NOT EXISTS events_log (
   module TEXT NOT NULL,
   created_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS mind_map_scenes (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL DEFAULT 'Untitled',
+  elements TEXT NOT NULL DEFAULT '[]',
+  app_state TEXT NOT NULL DEFAULT '{}',
+  files TEXT NOT NULL DEFAULT '{}',
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
 `;
 
 let initialized = false;

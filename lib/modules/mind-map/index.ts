@@ -3,7 +3,7 @@ import { mindMapTools } from "./tools";
 
 export const mindMapModule: FeatureModule = {
   name: "mind-map",
-  description: "Interactive mind map for organizing life aspects",
+  description: "Excalidraw-powered canvas for freeform visual thinking",
   tools: mindMapTools,
   eventHandlers: {},
 };

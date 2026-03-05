@@ -2,12 +2,14 @@ import { MindMapCanvas } from "@/components/mind-map/mind-map-canvas";
 
 export default function MindMapPage() {
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Mind Map</h1>
-        <p className="text-muted-foreground">Organize every aspect of your life</p>
+    <div className="flex flex-col h-[calc(100vh-64px)]">
+      <div className="px-4 py-3 border-b border-border shrink-0">
+        <h1 className="text-lg font-bold tracking-tight">Mind Map</h1>
+        <p className="text-xs text-muted-foreground">
+          Freeform canvas for organizing your thoughts
+        </p>
       </div>
-      <div className="h-[calc(100vh-160px)] rounded-lg border border-border overflow-hidden">
+      <div className="flex-1 min-h-0">
         <MindMapCanvas />
       </div>
     </div>
