@@ -59,26 +59,6 @@ CREATE TABLE IF NOT EXISTS plan_pages (
   updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS habits (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  frequency TEXT NOT NULL DEFAULT 'daily' CHECK(frequency IN ('daily','weekly')),
-  completions TEXT NOT NULL DEFAULT '[]',
-  linked_node_id TEXT,
-  created_at INTEGER NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS goals (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  target_date TEXT NOT NULL,
-  progress INTEGER NOT NULL DEFAULT 0,
-  milestones TEXT NOT NULL DEFAULT '[]',
-  linked_node_id TEXT,
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,

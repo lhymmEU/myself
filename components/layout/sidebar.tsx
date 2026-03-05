@@ -8,8 +8,6 @@ import {
   CheckSquare,
   DollarSign,
   FileText,
-  Target,
-  Repeat,
   Lock,
   Settings,
   LayoutDashboard,
@@ -31,8 +29,6 @@ const NAV_ITEMS = [
   { href: "/dashboard/todos", label: "Todos", icon: CheckSquare },
   { href: "/dashboard/finance", label: "Finance", icon: DollarSign },
   { href: "/dashboard/plans", label: "Plans", icon: FileText },
-  { href: "/dashboard/habits", label: "Habits", icon: Repeat },
-  { href: "/dashboard/goals", label: "Goals", icon: Target },
   { href: "/dashboard/vault", label: "Vault", icon: Lock },
 ];
 
