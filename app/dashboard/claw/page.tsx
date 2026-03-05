@@ -14,6 +14,9 @@ import { ChannelsPanel } from "@/components/claw/channels-panel";
 import { SessionsPanel } from "@/components/claw/sessions-panel";
 import { ConfigEditor } from "@/components/claw/config-editor";
 import { GatewayControl } from "@/components/claw/gateway-control";
+import { MemoriesPanel } from "@/components/claw/memories-panel";
+import { InstalledSkillsPanel } from "@/components/claw/installed-skills-panel";
+import { SkillsMarketplace } from "@/components/claw/skills-marketplace";
 import dynamic from "next/dynamic";
 
 const ClawTerminal = dynamic(
@@ -49,66 +52,95 @@ export default function ClawPage() {
 
       <ConnectionForm onConnectionChange={handleConnectionChange} />
 
-      <Tabs defaultValue="status" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-7">
-          <TabsTrigger value="status">Status</TabsTrigger>
-          <TabsTrigger value="logs">Logs</TabsTrigger>
-          <TabsTrigger value="channels">Channels</TabsTrigger>
-          <TabsTrigger value="sessions">Sessions</TabsTrigger>
-          <TabsTrigger value="config">Config</TabsTrigger>
-          <TabsTrigger value="terminal">Terminal</TabsTrigger>
-          <TabsTrigger value="gateway">Gateway</TabsTrigger>
-        </TabsList>
+      <div className="flex gap-6 items-start">
+        {/* Left half: existing tabs + Memories */}
+        <div className="w-1/2 min-w-0">
+          <Tabs defaultValue="status" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-8">
+              <TabsTrigger value="status">Status</TabsTrigger>
+              <TabsTrigger value="logs">Logs</TabsTrigger>
+              <TabsTrigger value="channels">Channels</TabsTrigger>
+              <TabsTrigger value="sessions">Sessions</TabsTrigger>
+              <TabsTrigger value="config">Config</TabsTrigger>
+              <TabsTrigger value="terminal">Terminal</TabsTrigger>
+              <TabsTrigger value="gateway">Gateway</TabsTrigger>
+              <TabsTrigger value="memories">Memories</TabsTrigger>
+            </TabsList>
 
-        <TabsContent value="status">
-          <StatusPanel
-            connectionId={connectState.connectionId}
-            connected={connectState.connected}
-          />
-        </TabsContent>
+            <TabsContent value="status">
+              <StatusPanel
+                connectionId={connectState.connectionId}
+                connected={connectState.connected}
+              />
+            </TabsContent>
 
-        <TabsContent value="logs">
-          <LogsViewer
-            connectionId={connectState.connectionId}
-            connected={connectState.connected}
-          />
-        </TabsContent>
+            <TabsContent value="logs">
+              <LogsViewer
+                connectionId={connectState.connectionId}
+                connected={connectState.connected}
+              />
+            </TabsContent>
 
-        <TabsContent value="channels">
-          <ChannelsPanel
-            connectionId={connectState.connectionId}
-            connected={connectState.connected}
-          />
-        </TabsContent>
+            <TabsContent value="channels">
+              <ChannelsPanel
+                connectionId={connectState.connectionId}
+                connected={connectState.connected}
+              />
+            </TabsContent>
 
-        <TabsContent value="sessions">
-          <SessionsPanel
-            connectionId={connectState.connectionId}
-            connected={connectState.connected}
-          />
-        </TabsContent>
+            <TabsContent value="sessions">
+              <SessionsPanel
+                connectionId={connectState.connectionId}
+                connected={connectState.connected}
+              />
+            </TabsContent>
 
-        <TabsContent value="config">
-          <ConfigEditor
-            connectionId={connectState.connectionId}
-            connected={connectState.connected}
-          />
-        </TabsContent>
+            <TabsContent value="config">
+              <ConfigEditor
+                connectionId={connectState.connectionId}
+                connected={connectState.connected}
+              />
+            </TabsContent>
 
-        <TabsContent value="terminal">
-          <ClawTerminal
-            connectionId={connectState.connectionId}
-            connected={connectState.connected}
-          />
-        </TabsContent>
+            <TabsContent value="terminal">
+              <ClawTerminal
+                connectionId={connectState.connectionId}
+                connected={connectState.connected}
+              />
+            </TabsContent>
 
-        <TabsContent value="gateway">
-          <GatewayControl
-            connectionId={connectState.connectionId}
-            connected={connectState.connected}
-          />
-        </TabsContent>
-      </Tabs>
+            <TabsContent value="gateway">
+              <GatewayControl
+                connectionId={connectState.connectionId}
+                connected={connectState.connected}
+              />
+            </TabsContent>
+
+            <TabsContent value="memories">
+              <MemoriesPanel
+                connectionId={connectState.connectionId}
+                connected={connectState.connected}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Right half: Installed Skills (top 1/3) + Marketplace (bottom 2/3) */}
+        <div className="w-1/2 min-w-0 flex flex-col gap-4" style={{ height: "calc(100vh - 280px)" }}>
+          <div className="h-1/3 min-h-0">
+            <InstalledSkillsPanel
+              connectionId={connectState.connectionId}
+              connected={connectState.connected}
+            />
+          </div>
+          <div className="h-2/3 min-h-0">
+            <SkillsMarketplace
+              connectionId={connectState.connectionId}
+              connected={connectState.connected}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

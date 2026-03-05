@@ -84,3 +84,29 @@ export interface LogEntry {
 }
 
 export type GatewayAction = "start" | "stop" | "restart" | "install" | "uninstall";
+
+export interface MemoryFile {
+  path: string;
+  name: string;
+  date?: string;
+  content?: string;
+}
+
+export interface InstalledSkill {
+  name: string;
+  description: string;
+  path: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface MarketplaceSkill {
+  slug: string;
+  displayName: string;
+  summary: string;
+  downloads: number;
+  stars: number;
+  source: "clawhub" | "vercel";
+  url: string;
+  certified?: boolean;
+  owner?: string;
+}
