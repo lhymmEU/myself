@@ -60,17 +60,17 @@ export default function ClawPage() {
         {/* Left half: existing tabs + Memories */}
         <div className="w-1/2 min-w-0">
           <Tabs defaultValue="status" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-10">
-              <TabsTrigger value="status">Status</TabsTrigger>
-              <TabsTrigger value="logs">Logs</TabsTrigger>
-              <TabsTrigger value="channels">Channels</TabsTrigger>
-              <TabsTrigger value="sessions">Sessions</TabsTrigger>
-              <TabsTrigger value="config">Config</TabsTrigger>
-              <TabsTrigger value="terminal">Terminal</TabsTrigger>
-              <TabsTrigger value="gateway">Gateway</TabsTrigger>
-              <TabsTrigger value="memories">Memories</TabsTrigger>
-              <TabsTrigger value="soul">Soul</TabsTrigger>
-              <TabsTrigger value="files">Files</TabsTrigger>
+            <TabsList variant="line" className="flex flex-wrap gap-2 w-full">
+              <TabsTrigger value="status" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Status</TabsTrigger>
+              <TabsTrigger value="logs" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Logs</TabsTrigger>
+              <TabsTrigger value="channels" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Channels</TabsTrigger>
+              <TabsTrigger value="sessions" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Sessions</TabsTrigger>
+              <TabsTrigger value="config" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Config</TabsTrigger>
+              <TabsTrigger value="terminal" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Terminal</TabsTrigger>
+              <TabsTrigger value="gateway" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Gateway</TabsTrigger>
+              <TabsTrigger value="memories" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Memories</TabsTrigger>
+              <TabsTrigger value="soul" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Soul</TabsTrigger>
+              <TabsTrigger value="files" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Files</TabsTrigger>
             </TabsList>
 
             <TabsContent value="status">
