@@ -22,7 +22,7 @@ export function TodoPreview() {
         const parsed = parseMindMapTodos(
           elements as Parameters<typeof parseMindMapTodos>[0]
         );
-        setTodos(parsed.filter((t) => t.isUrgent).slice(0, 5));
+        setTodos(parsed.filter((t) => t.isUrgent));
       })
       .catch(() => {});
   }, []);
@@ -36,7 +36,7 @@ export function TodoPreview() {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1">
       {todos.map((todo) => {
         const traceWithoutTitle = todo.trace.slice(0, -1);
         return (

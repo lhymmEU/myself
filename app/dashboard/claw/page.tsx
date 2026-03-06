@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useReducer } from "react";
+import { useState, useCallback } from "react";
 import {
   Tabs,
   TabsContent,
@@ -17,7 +17,6 @@ import { GatewayControl } from "@/components/claw/gateway-control";
 import { MemoriesPanel } from "@/components/claw/memories-panel";
 import { SoulEditor } from "@/components/claw/soul-editor";
 import { FilesPanel } from "@/components/claw/files-panel";
-import { InstalledSkillsPanel } from "@/components/claw/installed-skills-panel";
 import { SkillsMarketplace } from "@/components/claw/skills-marketplace";
 import { SkillEditor } from "@/components/claw/skill-editor";
 import dynamic from "next/dynamic";
@@ -42,17 +41,6 @@ export default function ClawPage() {
 
   const handleConnectionChange = useCallback((state: ConnectState) => {
     setConnectState(state);
-  }, []);
-
-  const [installedRefreshKey, bumpInstalledRefresh] = useReducer((c: number) => c + 1, 0);
-  const [editingSkillPath, setEditingSkillPath] = useState<string | null>(null);
-
-  const handleEditSkill = useCallback((path: string) => {
-    setEditingSkillPath(path);
-  }, []);
-
-  const handleSkillCreated = useCallback(() => {
-    bumpInstalledRefresh();
   }, []);
 
   return (
@@ -155,29 +143,18 @@ export default function ClawPage() {
           </Tabs>
         </div>
 
-        {/* Right half: Installed Skills + Marketplace + Skill Editor */}
+        {/* Right half: Marketplace + Skill Editor */}
         <div className="w-1/2 min-w-0 flex flex-col gap-4">
-          <div className="h-[250px]">
-            <InstalledSkillsPanel
-              connectionId={connectState.connectionId}
-              connected={connectState.connected}
-              refreshKey={installedRefreshKey}
-              onEditSkill={handleEditSkill}
-            />
-          </div>
           <div>
             <SkillsMarketplace
               connectionId={connectState.connectionId}
               connected={connectState.connected}
-              onSkillInstalled={bumpInstalledRefresh}
             />
           </div>
           <div>
             <SkillEditor
               connectionId={connectState.connectionId}
               connected={connectState.connected}
-              editingSkillPath={editingSkillPath}
-              onSkillCreated={handleSkillCreated}
             />
           </div>
         </div>

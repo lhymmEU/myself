@@ -30,8 +30,6 @@ import type { InstalledSkill } from "@/lib/modules/claw/types";
 interface SkillEditorProps {
   connectionId: string | null;
   connected: boolean;
-  editingSkillPath: string | null;
-  onSkillCreated?: () => void;
 }
 
 function parseFrontmatter(raw: string) {
@@ -69,8 +67,6 @@ function serializeToSkillMd(name: string, description: string, metadata: Record<
 export function SkillEditor({
   connectionId,
   connected,
-  editingSkillPath,
-  onSkillCreated,
 }: SkillEditorProps) {
   const [skills, setSkills] = useState<InstalledSkill[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
@@ -176,7 +172,6 @@ export function SkillEditor({
         setCreateDialogOpen(false);
         setNewSkillName("");
         await loadSkills();
-        onSkillCreated?.();
         if (data.path) loadSkillContent(data.path);
       }
     } catch (err) {
@@ -184,7 +179,7 @@ export function SkillEditor({
     } finally {
       setCreating(false);
     }
-  }, [connectionId, newSkillName, loadSkills, loadSkillContent, onSkillCreated]);
+  }, [connectionId, newSkillName, loadSkills, loadSkillContent]);
 
   useEffect(() => {
     if (connected) loadSkills();
@@ -194,12 +189,6 @@ export function SkillEditor({
       setError(null);
     }
   }, [connected, loadSkills]);
-
-  useEffect(() => {
-    if (editingSkillPath && connected) {
-      loadSkillContent(editingSkillPath);
-    }
-  }, [editingSkillPath, connected, loadSkillContent]);
 
   const currentContent = serializeToSkillMd(skillName, skillDescription, skillMetadata, skillBody);
   const hasChanges = selectedPath !== null && currentContent !== originalContent;
