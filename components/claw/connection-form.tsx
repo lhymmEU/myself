@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,6 +41,9 @@ import {
   AlertCircle,
   Lock,
   Check,
+  Upload,
+  FileCheck,
+  FolderOpen,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import type { VaultSecretMeta, SecretCategory } from "@/lib/modules/vault/types";
@@ -97,6 +100,51 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
     passphrase: "",
     gatewayPort: "18789",
   });
+
+  const [keyFileName, setKeyFileName] = useState<string | null>(null);
+  const [keyPathInput, setKeyPathInput] = useState("");
+  const [showKeyPathInput, setShowKeyPathInput] = useState(false);
+  const [loadingKeyPath, setLoadingKeyPath] = useState(false);
+  const [keyPathError, setKeyPathError] = useState<string | null>(null);
+  const keyFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleKeyFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFormData((p) => ({ ...p, privateKey: reader.result as string }));
+      setKeyFileName(file.name);
+    };
+    reader.readAsText(file);
+    if (keyFileInputRef.current) keyFileInputRef.current.value = "";
+  }, []);
+
+  const handleLoadKeyFromPath = useCallback(async () => {
+    if (!keyPathInput.trim()) return;
+    setLoadingKeyPath(true);
+    setKeyPathError(null);
+    try {
+      const res = await fetch("/api/claw/read-local-file", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: keyPathInput.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setKeyPathError(data.error ?? "Failed to read file");
+        return;
+      }
+      setFormData((p) => ({ ...p, privateKey: data.contents }));
+      setKeyFileName(data.fileName);
+      setShowKeyPathInput(false);
+      setKeyPathInput("");
+    } catch {
+      setKeyPathError("Failed to load file");
+    } finally {
+      setLoadingKeyPath(false);
+    }
+  }, [keyPathInput]);
 
   // Vault picker state
   const [vaultPickerOpen, setVaultPickerOpen] = useState(false);
@@ -456,28 +504,92 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label>Private Key (PEM)</Label>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="h-6 px-2 text-[11px]"
-                          onClick={() => openVaultPicker("privateKey")}
-                        >
-                          <Vault className="h-3 w-3 mr-1" />
-                          From Vault
-                        </Button>
+                        <div className="flex items-center gap-1.5">
+                          {keyFileName && (
+                            <span className="flex items-center gap-1 text-[11px] text-emerald-500">
+                              <FileCheck className="h-3 w-3" />
+                              {keyFileName}
+                            </span>
+                          )}
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-[11px]"
+                            onClick={() => keyFileInputRef.current?.click()}
+                          >
+                            <Upload className="h-3 w-3 mr-1" />
+                            Browse
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={showKeyPathInput ? "secondary" : "outline"}
+                            className="h-6 px-2 text-[11px]"
+                            onClick={() => { setShowKeyPathInput(!showKeyPathInput); setKeyPathError(null); }}
+                          >
+                            <FolderOpen className="h-3 w-3 mr-1" />
+                            From Path
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-[11px]"
+                            onClick={() => openVaultPicker("privateKey")}
+                          >
+                            <Vault className="h-3 w-3 mr-1" />
+                            From Vault
+                          </Button>
+                        </div>
                       </div>
+                      <input
+                        ref={keyFileInputRef}
+                        type="file"
+                        className="hidden"
+                        accept=".pem,.key,.pub,*"
+                        onChange={handleKeyFileUpload}
+                      />
+                      {showKeyPathInput && (
+                        <div className="space-y-1.5">
+                          <div className="flex gap-1.5">
+                            <Input
+                              className="font-mono text-xs h-8"
+                              placeholder="~/.ssh/id_ed25519"
+                              value={keyPathInput}
+                              onChange={(e) => { setKeyPathInput(e.target.value); setKeyPathError(null); }}
+                              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleLoadKeyFromPath())}
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="h-8 px-3 shrink-0"
+                              disabled={!keyPathInput.trim() || loadingKeyPath}
+                              onClick={handleLoadKeyFromPath}
+                            >
+                              {loadingKeyPath ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Load"}
+                            </Button>
+                          </div>
+                          {keyPathError && (
+                            <p className="text-[11px] text-red-400">{keyPathError}</p>
+                          )}
+                          <p className="text-[11px] text-muted-foreground">
+                            Enter an absolute path or use ~ for home. Tip: press <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">Cmd+Shift+.</kbd> in the Browse dialog to show hidden files.
+                          </p>
+                        </div>
+                      )}
                       <Textarea
                         className="font-mono text-xs"
                         rows={5}
                         placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
                         value={formData.privateKey}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setFormData((p) => ({
                             ...p,
                             privateKey: e.target.value,
-                          }))
-                        }
+                          }));
+                          setKeyFileName(null);
+                        }}
                       />
                     </div>
                     <div className="space-y-2">

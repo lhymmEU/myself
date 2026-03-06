@@ -272,7 +272,14 @@ export async function connectSSH(connectionId: string): Promise<{ success: boole
       getActiveConnections().delete(connectionId);
     });
 
-    client.connect(config);
+    try {
+      client.connect(config);
+    } catch (err) {
+      resolve({
+        success: false,
+        error: err instanceof Error ? err.message : "Failed to initiate connection",
+      });
+    }
   });
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Loader2, Eye, EyeOff } from "lucide-react";
+import { Plus, Loader2, Eye, EyeOff, Upload, FileCheck, FolderOpen } from "lucide-react";
 import { SECRET_CATEGORIES } from "@/lib/modules/vault/types";
 import type { SecretCategory } from "@/lib/modules/vault/types";
 
@@ -36,6 +36,56 @@ export function AddSecret({ onCreated }: AddSecretProps) {
   const [showValue, setShowValue] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [pathInput, setPathInput] = useState("");
+  const [showPathInput, setShowPathInput] = useState(false);
+  const [loadingPath, setLoadingPath] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLoadFromPath = useCallback(async () => {
+    if (!pathInput.trim()) return;
+    setLoadingPath(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/claw/read-local-file", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: pathInput.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Failed to read file");
+        return;
+      }
+      setValue(data.contents);
+      setUploadedFileName(data.fileName);
+      setShowPathInput(false);
+      setPathInput("");
+      if (!name.trim() && data.fileName) {
+        setName(data.fileName);
+      }
+    } catch {
+      setError("Failed to load file");
+    } finally {
+      setLoadingPath(false);
+    }
+  }, [pathInput, name]);
+
+  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = reader.result as string;
+      setValue(text);
+      setUploadedFileName(file.name);
+      if (!name.trim()) {
+        setName(file.name.replace(/\.[^.]+$/, ""));
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, [name]);
 
   function reset() {
     setName("");
@@ -45,6 +95,10 @@ export function AddSecret({ onCreated }: AddSecretProps) {
     setTagsInput("");
     setShowValue(false);
     setError(null);
+    setUploadedFileName(null);
+    setPathInput("");
+    setShowPathInput(false);
+    setLoadingPath(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -145,15 +199,88 @@ export function AddSecret({ onCreated }: AddSecretProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="secret-value">Secret Value</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="secret-value">Secret Value</Label>
+              {isLargeValue && (
+                <div className="flex items-center gap-1.5">
+                  {uploadedFileName && (
+                    <span className="flex items-center gap-1 text-[11px] text-emerald-500">
+                      <FileCheck className="h-3 w-3" />
+                      {uploadedFileName}
+                    </span>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2 text-[11px]"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="h-3 w-3 mr-1" />
+                    Browse
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={showPathInput ? "secondary" : "outline"}
+                    className="h-6 px-2 text-[11px]"
+                    onClick={() => setShowPathInput(!showPathInput)}
+                  >
+                    <FolderOpen className="h-3 w-3 mr-1" />
+                    From Path
+                  </Button>
+                </div>
+              )}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              accept=".pem,.key,.pub,.crt,.cer,.txt,*"
+              onChange={handleFileUpload}
+            />
+            {showPathInput && (
+              <div className="space-y-1.5">
+                <div className="flex gap-1.5">
+                  <Input
+                    className="font-mono text-xs h-8"
+                    placeholder="~/.ssh/id_ed25519"
+                    value={pathInput}
+                    onChange={(e) => setPathInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleLoadFromPath())}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 px-3 shrink-0"
+                    disabled={!pathInput.trim() || loadingPath}
+                    onClick={handleLoadFromPath}
+                  >
+                    {loadingPath ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Load"}
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Enter an absolute path or use ~ for home. Tip: press <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">Cmd+Shift+.</kbd> in the Browse dialog to show hidden files.
+                </p>
+              </div>
+            )}
             <div className="relative">
               {isLargeValue ? (
                 <textarea
                   id="secret-value"
                   className="border-input bg-transparent placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 flex min-h-[100px] w-full rounded-md border px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 font-mono pr-10"
-                  placeholder="Paste your secret here..."
+                  placeholder={
+                    category === "ssh_key"
+                      ? "Paste your key, browse, or load from path above..."
+                      : category === "certificate"
+                        ? "Paste certificate, browse, or load from path above..."
+                        : "Paste your secret here..."
+                  }
                   value={value}
-                  onChange={(e) => setValue(e.target.value)}
+                  onChange={(e) => {
+                    setValue(e.target.value);
+                    setUploadedFileName(null);
+                  }}
                   style={
                     !showValue
                       ? {
