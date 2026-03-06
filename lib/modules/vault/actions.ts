@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import fs from "fs";
 import { eventBus } from "@/lib/core/event-bus";
-import { getVaultDb, getVaultPathSetting, moveVaultDb, closeVaultDb } from "./vault-db";
+import { getVaultDb, getVaultPathSetting, moveVaultDb } from "./vault-db";
 import { VAULT_EVENTS } from "./events";
 import {
   generateSalt,

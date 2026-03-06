@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Wifi, WifiOff, Shell } from "lucide-react";
+import { WifiOff, Shell } from "lucide-react";
 
 interface PreviewConnection {
   id: string;

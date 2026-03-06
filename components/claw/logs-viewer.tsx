@@ -121,6 +121,7 @@ export function LogsViewer({ connectionId, connected }: LogsViewerProps) {
   }, [stopStreaming]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- cleanup when disconnected
     if (!connected) stopStreaming();
   }, [connected, stopStreaming]);
 

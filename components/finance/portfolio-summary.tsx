@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { DollarSign, TrendingUp, Wallet, Coins } from "lucide-react";
+import { DollarSign, Wallet, Coins } from "lucide-react";
 
 interface PortfolioSummaryProps {
   binanceTotal: number;

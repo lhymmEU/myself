@@ -1,4 +1,4 @@
-import { Client, type ConnectConfig } from "ssh2";
+import { Client, type ConnectConfig, type SFTPWrapper } from "ssh2";
 import { nanoid } from "nanoid";
 import { getSqlite } from "@/lib/core/db";
 import type {
@@ -383,6 +383,21 @@ export async function executeOpenClawCommand(
   timeoutMs = 30000
 ): Promise<{ stdout: string; stderr: string; code: number }> {
   return executeCommand(connectionId, `openclaw ${subcommand}`, timeoutMs);
+}
+
+// ---------------------------------------------------------------------------
+// SFTP helpers
+// ---------------------------------------------------------------------------
+
+export function getSFTP(connectionId: string): Promise<SFTPWrapper> {
+  const client = getActiveConnections().get(connectionId);
+  if (!client) throw new Error("Not connected");
+  return new Promise((resolve, reject) => {
+    client.sftp((err, sftp) => {
+      if (err) return reject(err);
+      resolve(sftp);
+    });
+  });
 }
 
 export { loginShell };

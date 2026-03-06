@@ -16,19 +16,19 @@ interface EditorProps {
 export function Editor({ content, onChange }: EditorProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleChange = useCallback(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      onChange(editor.document as Block[]);
-    }, 1000);
-  }, [onChange]);
-
   const editor = useCreateBlockNote({
     initialContent:
       content && Array.isArray(content) && content.length > 0
         ? content
         : undefined,
   });
+
+  const handleChange = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      onChange(editor.document as Block[]);
+    }, 1000);
+  }, [onChange, editor]);
 
   return (
     <BlockNoteView
