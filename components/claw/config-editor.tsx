@@ -3,7 +3,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import {
   RefreshCw,
   Save,
@@ -11,7 +10,13 @@ import {
   Loader2,
   FileJson,
   AlertTriangle,
+  Code,
+  FormInput,
 } from "lucide-react";
+import { CodeEditor } from "@/components/claw/code-editor";
+import { JsonFormEditor } from "@/components/claw/json-form-editor";
+
+type ViewMode = "code" | "form";
 
 interface ConfigEditorProps {
   connectionId: string | null;
@@ -25,6 +30,16 @@ export function ConfigEditor({ connectionId, connected }: ConfigEditorProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("form");
+  const [formData, setFormData] = useState<Record<string, unknown>>({});
+
+  const syncFormFromConfig = useCallback((jsonStr: string) => {
+    try {
+      setFormData(JSON.parse(jsonStr));
+    } catch {
+      // keep existing formData if JSON is invalid
+    }
+  }, []);
 
   const load = useCallback(async () => {
     if (!connectionId || !connected) return;
@@ -47,20 +62,25 @@ export function ConfigEditor({ connectionId, connected }: ConfigEditorProps) {
       }
       setConfig(formatted);
       setOriginalConfig(formatted);
+      syncFormFromConfig(formatted);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
     } finally {
       setLoading(false);
     }
-  }, [connectionId, connected]);
+  }, [connectionId, connected, syncFormFromConfig]);
 
   const save = useCallback(async () => {
     if (!connectionId || !connected) return;
     setError(null);
     setSaved(false);
 
+    const configToSave = viewMode === "form"
+      ? JSON.stringify(formData, null, 2)
+      : config;
+
     try {
-      JSON.parse(config);
+      JSON.parse(configToSave);
     } catch {
       setError("Invalid JSON - fix syntax errors before saving");
       return;
@@ -71,13 +91,16 @@ export function ConfigEditor({ connectionId, connected }: ConfigEditorProps) {
       const res = await fetch("/api/claw/config", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ connectionId, config }),
+        body: JSON.stringify({ connectionId, config: configToSave }),
       });
       const data = await res.json();
       if (data.error) {
         setError(data.error);
       } else {
-        setOriginalConfig(config);
+        const formatted = JSON.stringify(JSON.parse(configToSave), null, 2);
+        setConfig(formatted);
+        setOriginalConfig(formatted);
+        syncFormFromConfig(formatted);
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
       }
@@ -86,18 +109,30 @@ export function ConfigEditor({ connectionId, connected }: ConfigEditorProps) {
     } finally {
       setSaving(false);
     }
-  }, [connectionId, connected, config]);
+  }, [connectionId, connected, config, viewMode, formData, syncFormFromConfig]);
 
   useEffect(() => {
     if (connected) load();
     else {
       setConfig("");
       setOriginalConfig("");
+      setFormData({});
       setError(null);
     }
   }, [connected, load]);
 
-  const hasChanges = config !== originalConfig;
+  const handleViewToggle = (mode: ViewMode) => {
+    if (mode === "form" && viewMode === "code") {
+      syncFormFromConfig(config);
+    } else if (mode === "code" && viewMode === "form") {
+      setConfig(JSON.stringify(formData, null, 2));
+    }
+    setViewMode(mode);
+  };
+
+  const hasChanges = viewMode === "form"
+    ? JSON.stringify(formData, null, 2) !== originalConfig
+    : config !== originalConfig;
 
   const formatJson = () => {
     try {
@@ -120,7 +155,7 @@ export function ConfigEditor({ connectionId, connected }: ConfigEditorProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Button
           size="sm"
           variant="outline"
@@ -134,10 +169,12 @@ export function ConfigEditor({ connectionId, connected }: ConfigEditorProps) {
           )}
           Reload
         </Button>
-        <Button size="sm" variant="outline" onClick={formatJson}>
-          <FileJson className="h-3.5 w-3.5 mr-1.5" />
-          Format
-        </Button>
+        {viewMode === "code" && (
+          <Button size="sm" variant="outline" onClick={formatJson}>
+            <FileJson className="h-3.5 w-3.5 mr-1.5" />
+            Format
+          </Button>
+        )}
         <Button
           size="sm"
           onClick={save}
@@ -150,11 +187,37 @@ export function ConfigEditor({ connectionId, connected }: ConfigEditorProps) {
           )}
           Save
         </Button>
+
+        <div className="ml-auto flex items-center border rounded-md overflow-hidden">
+          <button
+            className={`px-2.5 py-1 text-xs flex items-center gap-1 transition-colors ${
+              viewMode === "form"
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            onClick={() => handleViewToggle("form")}
+          >
+            <FormInput className="h-3 w-3" />
+            Form
+          </button>
+          <button
+            className={`px-2.5 py-1 text-xs flex items-center gap-1 transition-colors ${
+              viewMode === "code"
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            onClick={() => handleViewToggle("code")}
+          >
+            <Code className="h-3 w-3" />
+            Code
+          </button>
+        </div>
+
         {hasChanges && (
-          <span className="text-xs text-yellow-500 ml-2">Unsaved changes</span>
+          <span className="text-xs text-yellow-500">Unsaved changes</span>
         )}
         {saved && (
-          <span className="text-xs text-emerald-500 ml-2">Saved</span>
+          <span className="text-xs text-emerald-500">Saved</span>
         )}
       </div>
 
@@ -172,12 +235,26 @@ export function ConfigEditor({ connectionId, connected }: ConfigEditorProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Textarea
-            className="font-mono text-xs min-h-[500px] resize-y bg-muted/30"
-            value={config}
-            onChange={(e) => setConfig(e.target.value)}
-            spellCheck={false}
-          />
+          {viewMode === "code" ? (
+            <CodeEditor
+              value={config}
+              onChange={setConfig}
+              language="json"
+              minHeight="500px"
+            />
+          ) : (
+            <div className="min-h-[500px] p-3 rounded-md border bg-muted/30">
+              {Object.keys(formData).length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-8">
+                  Empty configuration. Switch to Code view to add raw JSON, or add fields below.
+                </p>
+              ) : null}
+              <JsonFormEditor
+                value={formData as Record<string, never>}
+                onChange={(updated) => setFormData(updated)}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

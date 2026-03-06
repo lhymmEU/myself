@@ -3,7 +3,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import {
   RefreshCw,
   Save,
@@ -12,6 +11,7 @@ import {
   AlertTriangle,
   Sparkles,
 } from "lucide-react";
+import { CodeEditor } from "@/components/claw/code-editor";
 
 interface SoulEditorProps {
   connectionId: string | null;
@@ -142,11 +142,11 @@ export function SoulEditor({ connectionId, connected }: SoulEditorProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Textarea
-            className="font-mono text-xs min-h-[500px] resize-y bg-muted/30"
+          <CodeEditor
             value={content}
-            onChange={(e) => setContent(e.target.value)}
-            spellCheck={false}
+            onChange={setContent}
+            language="markdown"
+            minHeight="500px"
           />
         </CardContent>
       </Card>

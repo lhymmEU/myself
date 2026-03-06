@@ -13,6 +13,7 @@ import {
   FolderOpen,
   ChevronRight,
   ChevronDown,
+  Pencil,
 } from "lucide-react";
 import type { InstalledSkill } from "@/lib/modules/claw/types";
 
@@ -20,12 +21,14 @@ interface InstalledSkillsPanelProps {
   connectionId: string | null;
   connected: boolean;
   refreshKey?: number;
+  onEditSkill?: (path: string) => void;
 }
 
 export function InstalledSkillsPanel({
   connectionId,
   connected,
   refreshKey,
+  onEditSkill,
 }: InstalledSkillsPanelProps) {
   const [skills, setSkills] = useState<InstalledSkill[]>([]);
   const [loading, setLoading] = useState(false);
@@ -128,11 +131,22 @@ export function InstalledSkillsPanel({
                     </div>
                   </button>
                   {expanded === skill.path && (
-                    <div className="ml-5 mb-2 px-2 py-1.5 bg-muted/30 rounded text-[11px]">
+                    <div className="ml-5 mb-2 px-2 py-1.5 bg-muted/30 rounded text-[11px] space-y-1.5">
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <FolderOpen className="h-3 w-3 shrink-0" />
                         <span className="font-mono truncate">{skill.path}</span>
                       </div>
+                      {onEditSkill && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onEditSkill(skill.path)}
+                          className="h-5 px-2 text-[10px]"
+                        >
+                          <Pencil className="h-2.5 w-2.5 mr-1" />
+                          Edit Skill
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>

@@ -19,6 +19,7 @@ import { SoulEditor } from "@/components/claw/soul-editor";
 import { FilesPanel } from "@/components/claw/files-panel";
 import { InstalledSkillsPanel } from "@/components/claw/installed-skills-panel";
 import { SkillsMarketplace } from "@/components/claw/skills-marketplace";
+import { SkillEditor } from "@/components/claw/skill-editor";
 import dynamic from "next/dynamic";
 
 const ClawTerminal = dynamic(
@@ -44,6 +45,15 @@ export default function ClawPage() {
   }, []);
 
   const [installedRefreshKey, bumpInstalledRefresh] = useReducer((c: number) => c + 1, 0);
+  const [editingSkillPath, setEditingSkillPath] = useState<string | null>(null);
+
+  const handleEditSkill = useCallback((path: string) => {
+    setEditingSkillPath(path);
+  }, []);
+
+  const handleSkillCreated = useCallback(() => {
+    bumpInstalledRefresh();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -60,7 +70,7 @@ export default function ClawPage() {
         {/* Left half: existing tabs + Memories */}
         <div className="w-1/2 min-w-0">
           <Tabs defaultValue="status" className="space-y-4">
-            <TabsList variant="line" className="flex flex-wrap gap-2 w-full">
+            <TabsList variant="line" className="flex flex-wrap gap-2 w-full mb-12">
               <TabsTrigger value="status" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Status</TabsTrigger>
               <TabsTrigger value="logs" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Logs</TabsTrigger>
               <TabsTrigger value="channels" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Channels</TabsTrigger>
@@ -145,13 +155,14 @@ export default function ClawPage() {
           </Tabs>
         </div>
 
-        {/* Right half: Installed Skills (top) + Marketplace (bottom) */}
+        {/* Right half: Installed Skills + Marketplace + Skill Editor */}
         <div className="w-1/2 min-w-0 flex flex-col gap-4">
           <div className="h-[250px]">
             <InstalledSkillsPanel
               connectionId={connectState.connectionId}
               connected={connectState.connected}
               refreshKey={installedRefreshKey}
+              onEditSkill={handleEditSkill}
             />
           </div>
           <div>
@@ -159,6 +170,14 @@ export default function ClawPage() {
               connectionId={connectState.connectionId}
               connected={connectState.connected}
               onSkillInstalled={bumpInstalledRefresh}
+            />
+          </div>
+          <div>
+            <SkillEditor
+              connectionId={connectState.connectionId}
+              connected={connectState.connected}
+              editingSkillPath={editingSkillPath}
+              onSkillCreated={handleSkillCreated}
             />
           </div>
         </div>

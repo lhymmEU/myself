@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -19,6 +18,7 @@ import {
   AlertTriangle,
   Activity,
 } from "lucide-react";
+import { CodeEditor } from "@/components/claw/code-editor";
 import type { MemoryFile } from "@/lib/modules/claw/types";
 
 interface MemoriesPanelProps {
@@ -322,11 +322,11 @@ export function MemoriesPanel({ connectionId, connected }: MemoriesPanelProps) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Textarea
-                className="font-mono text-xs min-h-[350px] resize-y bg-muted/30"
+              <CodeEditor
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
-                spellCheck={false}
+                onChange={setContent}
+                language="markdown"
+                minHeight="350px"
               />
             </CardContent>
           </Card>
