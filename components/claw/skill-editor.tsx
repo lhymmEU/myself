@@ -7,19 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
   Save,
   Loader2,
   AlertTriangle,
   Wand2,
-  Plus,
   Server,
   RefreshCw,
   Pencil,
@@ -82,10 +73,6 @@ export function SkillEditor({
   const [skillMetadata, setSkillMetadata] = useState<Record<string, unknown>>({});
   const [skillBody, setSkillBody] = useState("");
   const [originalContent, setOriginalContent] = useState("");
-
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [newSkillName, setNewSkillName] = useState("");
-  const [creating, setCreating] = useState(false);
 
   const loadSkills = useCallback(async () => {
     if (!connectionId || !connected) return;
@@ -157,32 +144,6 @@ export function SkillEditor({
     }
   }, [connectionId, selectedPath, skillName, skillDescription, skillMetadata, skillBody, loadSkills, t]);
 
-  const createSkill = useCallback(async () => {
-    if (!connectionId || !newSkillName.trim()) return;
-    setCreating(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/claw/skills/editor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ connectionId, name: newSkillName.trim() }),
-      });
-      const data = await res.json();
-      if (data.error) {
-        setError(data.error);
-      } else {
-        setCreateDialogOpen(false);
-        setNewSkillName("");
-        await loadSkills();
-        if (data.path) loadSkillContent(data.path);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("claw.skillEditor.failedCreate"));
-    } finally {
-      setCreating(false);
-    }
-  }, [connectionId, newSkillName, loadSkills, loadSkillContent, t]);
-
   useEffect(() => {
     if (connected) loadSkills();
     else {
@@ -214,25 +175,14 @@ export function SkillEditor({
             <Wand2 className="h-3.5 w-3.5" />
             {t("claw.skillEditor.title")}
           </span>
-          <div className="flex items-center gap-1">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={loadSkills}
-              className="h-6 w-6 p-0"
-            >
-              <RefreshCw className="h-3 w-3" />
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setCreateDialogOpen(true)}
-              className="h-6 px-2 text-[10px]"
-            >
-              <Plus className="h-3 w-3 mr-0.5" />
-              {t("common.new")}
-            </Button>
-          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={loadSkills}
+            className="h-6 w-6 p-0"
+          >
+            <RefreshCw className="h-3 w-3" />
+          </Button>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -360,39 +310,6 @@ export function SkillEditor({
           </div>
         )}
 
-        {/* Create skill dialog */}
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t("claw.skillEditor.createNewSkill")}</DialogTitle>
-              <DialogDescription>
-                {t("claw.skillEditor.createNewSkillDesc")}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-2">
-              <Label>{t("claw.skillEditor.skillName")}</Label>
-              <Input
-                value={newSkillName}
-                onChange={(e) => setNewSkillName(e.target.value)}
-                placeholder={t("claw.skillEditor.placeholderSkillName")}
-                onKeyDown={(e) => e.key === "Enter" && createSkill()}
-              />
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                {t("common.cancel")}
-              </Button>
-              <Button onClick={createSkill} disabled={creating || !newSkillName.trim()}>
-                {creating ? (
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                ) : (
-                  <Plus className="h-3.5 w-3.5 mr-1.5" />
-                )}
-                {t("common.create")}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </CardContent>
     </Card>
   );

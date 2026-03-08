@@ -18,6 +18,7 @@ import { GatewayControl } from "@/components/claw/gateway-control";
 import { MemoriesPanel } from "@/components/claw/memories-panel";
 import { SoulEditor } from "@/components/claw/soul-editor";
 import { FilesPanel } from "@/components/claw/files-panel";
+import { ExtendPanel } from "@/components/claw/extend-panel";
 import { SkillsMarketplace } from "@/components/claw/skills-marketplace";
 import { SkillEditor } from "@/components/claw/skill-editor";
 import dynamic from "next/dynamic";
@@ -71,6 +72,7 @@ export default function ClawPage() {
               <TabsTrigger value="memories" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">{t("claw.tabs.memories")}</TabsTrigger>
               <TabsTrigger value="soul" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">{t("claw.tabs.soul")}</TabsTrigger>
               <TabsTrigger value="files" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">{t("claw.tabs.files")}</TabsTrigger>
+              <TabsTrigger value="extend" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">{t("claw.tabs.extend")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="status">
@@ -138,6 +140,13 @@ export default function ClawPage() {
 
             <TabsContent value="files">
               <FilesPanel
+                connectionId={connectState.connectionId}
+                connected={connectState.connected}
+              />
+            </TabsContent>
+
+            <TabsContent value="extend">
+              <ExtendPanel
                 connectionId={connectState.connectionId}
                 connected={connectState.connected}
               />
