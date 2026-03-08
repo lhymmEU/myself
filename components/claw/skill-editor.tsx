@@ -64,6 +64,7 @@ export function SkillEditor({
   const [skills, setSkills] = useState<InstalledSkill[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -76,13 +77,16 @@ export function SkillEditor({
 
   const loadSkills = useCallback(async () => {
     if (!connectionId || !connected) return;
+    setRefreshing(true);
     try {
       const res = await fetch(
         `/api/claw/skills/installed?connectionId=${encodeURIComponent(connectionId)}`
       );
       const data = await res.json();
       if (!data.error) setSkills(data.skills ?? []);
-    } catch { /* ignore */ }
+    } catch { /* ignore */ } finally {
+      setRefreshing(false);
+    }
   }, [connectionId, connected]);
 
   const loadSkillContent = useCallback(
@@ -179,9 +183,10 @@ export function SkillEditor({
             size="sm"
             variant="ghost"
             onClick={loadSkills}
+            disabled={refreshing}
             className="h-6 w-6 p-0"
           >
-            <RefreshCw className="h-3 w-3" />
+            <RefreshCw className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`} />
           </Button>
         </CardTitle>
       </CardHeader>

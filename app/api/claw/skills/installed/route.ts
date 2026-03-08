@@ -65,10 +65,13 @@ scan_dir() {
     head -30 "\${dir}SKILL.md"
   done
 }
+scan_dir "$HOME/.openclaw/skills"
 scan_dir ~/.openclaw/skills
 scan_dir ~/skills
+scan_dir "$HOME/skills"
 scan_dir ./skills
 scan_dir ~/.openclaw/workspace/skills
+scan_dir "$HOME/.openclaw/workspace/skills"
 `.trim();
 
     const result = await executeCommand(connectionId, script, 15000);

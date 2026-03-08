@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Save,
   Loader2,
@@ -15,6 +16,8 @@ import {
   Eye,
   PenLine,
   RotateCcw,
+  Sparkles,
+  ArrowLeft,
 } from "lucide-react";
 import { CodeEditor } from "@/components/claw/code-editor";
 
@@ -22,6 +25,8 @@ interface ExtendPanelProps {
   connectionId: string | null;
   connected: boolean;
 }
+
+type Phase = "describe" | "edit";
 
 function sanitizeName(name: string): string {
   return name
@@ -39,26 +44,12 @@ function serializeToSkillMd(
   return `---\nname: ${name}\ndescription: ${description}\n---\n\n${body}`;
 }
 
-const BODY_TEMPLATE = `# {{name}}
-
-## About
-
-Describe what this skill does here.
-
-## When to Use
-
-Use this skill when:
-- (describe trigger conditions)
-
-## Workflow
-
-1. (step one)
-2. (step two)
-3. (step three)
-`;
-
 export function ExtendPanel({ connectionId, connected }: ExtendPanelProps) {
   const t = useT();
+
+  const [phase, setPhase] = useState<Phase>("describe");
+  const [prompt, setPrompt] = useState("");
+  const [generating, setGenerating] = useState(false);
 
   const [skillName, setSkillName] = useState("");
   const [skillDescription, setSkillDescription] = useState("");
@@ -80,15 +71,35 @@ export function ExtendPanel({ connectionId, connected }: ExtendPanelProps) {
   const canSave =
     skillName.trim().length > 0 && skillDescription.trim().length > 0;
 
-  const handleNameChange = useCallback(
-    (value: string) => {
-      setSkillName(value);
-      if (!skillBody || skillBody === BODY_TEMPLATE.replace("{{name}}", "")) {
-        setSkillBody(BODY_TEMPLATE.replace("{{name}}", value));
+  const generateSkill = useCallback(async () => {
+    if (!connectionId || !prompt.trim()) return;
+    setGenerating(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/claw/skills/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionId, prompt: prompt.trim() }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setError(data.error);
+        return;
       }
-    },
-    [skillBody]
-  );
+
+      setSkillName(data.name ?? "");
+      setSkillDescription(data.description ?? "");
+      setSkillBody(data.body ?? "");
+      setPhase("edit");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : t("claw.extend.failedGenerate")
+      );
+    } finally {
+      setGenerating(false);
+    }
+  }, [connectionId, prompt, t]);
 
   const saveSkill = useCallback(async () => {
     if (!connectionId || !canSave) return;
@@ -156,6 +167,8 @@ export function ExtendPanel({ connectionId, connected }: ExtendPanelProps) {
   }, [connectionId, canSave, skillName, skillDescription, skillBody, savedPath, t]);
 
   const resetForm = useCallback(() => {
+    setPhase("describe");
+    setPrompt("");
     setSkillName("");
     setSkillDescription("");
     setSkillBody("");
@@ -185,21 +198,23 @@ export function ExtendPanel({ connectionId, connected }: ExtendPanelProps) {
             {t("claw.extend.title")}
           </span>
           <div className="flex items-center gap-1.5">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setShowPreview(!showPreview)}
-              className="h-7 px-2 text-xs"
-            >
-              {showPreview ? (
-                <PenLine className="h-3.5 w-3.5 mr-1" />
-              ) : (
-                <Eye className="h-3.5 w-3.5 mr-1" />
-              )}
-              {showPreview
-                ? t("claw.extend.edit")
-                : t("claw.extend.preview")}
-            </Button>
+            {phase === "edit" && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowPreview(!showPreview)}
+                className="h-7 px-2 text-xs"
+              >
+                {showPreview ? (
+                  <PenLine className="h-3.5 w-3.5 mr-1" />
+                ) : (
+                  <Eye className="h-3.5 w-3.5 mr-1" />
+                )}
+                {showPreview
+                  ? t("claw.extend.edit")
+                  : t("claw.extend.preview")}
+              </Button>
+            )}
             <Button
               size="sm"
               variant="ghost"
@@ -224,99 +239,152 @@ export function ExtendPanel({ connectionId, connected }: ExtendPanelProps) {
           </div>
         )}
 
-        {showPreview ? (
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">
-              {t("claw.extend.previewLabel")}
-            </Label>
-            <CodeEditor
-              value={preview}
-              onChange={() => {}}
-              language="markdown"
-              minHeight="400px"
-              readOnly
-            />
-          </div>
-        ) : (
-          <>
-            <div className="space-y-3 p-3 rounded-md border bg-muted/30">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">
-                  {t("claw.extend.skillName")}
-                </Label>
-                <Input
-                  value={skillName}
-                  onChange={(e) => handleNameChange(e.target.value)}
-                  className="h-8 text-sm"
-                  placeholder={t("claw.extend.skillNamePlaceholder")}
-                />
-                {skillName && (
-                  <p className="text-[10px] text-muted-foreground font-mono">
-                    ~/.openclaw/skills/{safeName}/SKILL.md
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">
-                  {t("claw.extend.description")}
-                </Label>
-                <Input
-                  value={skillDescription}
-                  onChange={(e) => setSkillDescription(e.target.value)}
-                  className="h-8 text-sm"
-                  placeholder={t("claw.extend.descriptionPlaceholder")}
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  {t("claw.extend.descriptionHint")}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
+        {phase === "describe" && (
+          <div className="space-y-4">
+            <div className="space-y-2">
               <Label className="text-xs font-medium">
-                {t("claw.extend.body")}
+                {t("claw.extend.promptLabel")}
               </Label>
-              <CodeEditor
-                value={skillBody}
-                onChange={setSkillBody}
-                language="markdown"
-                minHeight="300px"
+              <Textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder={t("claw.extend.promptPlaceholder")}
+                className="min-h-[140px] text-sm resize-none"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                    generateSkill();
+                  }
+                }}
               />
+              <p className="text-[10px] text-muted-foreground">
+                {t("claw.extend.promptHint")}
+              </p>
             </div>
-          </>
+
+            <Button
+              onClick={generateSkill}
+              disabled={generating || !prompt.trim()}
+              className="h-9"
+            >
+              {generating ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4 mr-2" />
+              )}
+              {generating
+                ? t("claw.extend.generating")
+                : t("claw.extend.generate")}
+            </Button>
+          </div>
         )}
 
-        <div className="flex items-center gap-2 pt-1">
-          <Button
-            size="sm"
-            onClick={saveSkill}
-            disabled={saving || !canSave}
-            className="h-8"
-          >
-            {saving ? (
-              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-            ) : (
-              <Save className="h-3.5 w-3.5 mr-1.5" />
-            )}
-            {t("claw.extend.saveSkill")}
-          </Button>
-          {saved && (
-            <span className="text-xs text-emerald-500">
-              {t("claw.extend.saved")}
-            </span>
-          )}
-          {!canSave && skillName.length > 0 && (
-            <span className="text-xs text-yellow-500">
-              {t("claw.extend.descriptionRequired")}
-            </span>
-          )}
-        </div>
+        {phase === "edit" && (
+          <>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setPhase("describe")}
+              className="h-7 px-2 text-xs"
+            >
+              <ArrowLeft className="h-3.5 w-3.5 mr-1" />
+              {t("claw.extend.backToDescribe")}
+            </Button>
 
-        {savedPath && (
-          <p className="text-[10px] text-muted-foreground font-mono">
-            {savedPath}SKILL.md
-          </p>
+            {showPreview ? (
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  {t("claw.extend.previewLabel")}
+                </Label>
+                <CodeEditor
+                  value={preview}
+                  onChange={() => {}}
+                  language="markdown"
+                  minHeight="400px"
+                  readOnly
+                />
+              </div>
+            ) : (
+              <>
+                <div className="space-y-3 p-3 rounded-md border bg-muted/30">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">
+                      {t("claw.extend.skillName")}
+                    </Label>
+                    <Input
+                      value={skillName}
+                      onChange={(e) => setSkillName(e.target.value)}
+                      className="h-8 text-sm"
+                      placeholder={t("claw.extend.skillNamePlaceholder")}
+                    />
+                    {skillName && (
+                      <p className="text-[10px] text-muted-foreground font-mono">
+                        $HOME/.openclaw/workspace/skills/{safeName}/SKILL.md
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">
+                      {t("claw.extend.description")}
+                    </Label>
+                    <Input
+                      value={skillDescription}
+                      onChange={(e) => setSkillDescription(e.target.value)}
+                      className="h-8 text-sm"
+                      placeholder={t("claw.extend.descriptionPlaceholder")}
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      {t("claw.extend.descriptionHint")}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">
+                    {t("claw.extend.body")}
+                  </Label>
+                  <CodeEditor
+                    value={skillBody}
+                    onChange={setSkillBody}
+                    language="markdown"
+                    minHeight="300px"
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="flex items-center gap-2 pt-1">
+              <Button
+                size="sm"
+                onClick={saveSkill}
+                disabled={saving || !canSave}
+                className="h-8"
+              >
+                {saving ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <Save className="h-3.5 w-3.5 mr-1.5" />
+                )}
+                {t("claw.extend.saveSkill")}
+              </Button>
+              {saved && (
+                <span className="text-xs text-emerald-500">
+                  {t("claw.extend.saved")}
+                </span>
+              )}
+              {!canSave && skillName.length > 0 && (
+                <span className="text-xs text-yellow-500">
+                  {t("claw.extend.descriptionRequired")}
+                </span>
+              )}
+            </div>
+
+            {savedPath && (
+              <p className="text-[10px] text-muted-foreground font-mono">
+                {savedPath}SKILL.md
+              </p>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

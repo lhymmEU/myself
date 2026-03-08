@@ -67,7 +67,7 @@ export async function PUT(req: NextRequest) {
     const escaped = content.replace(/'/g, "'\\''");
     const result = await executeCommand(
       connectionId!,
-      `cat > "${safePath}SKILL.md" << 'OPENCLAW_SKILL_EOF'\n${escaped}\nOPENCLAW_SKILL_EOF`,
+      `mkdir -p "${safePath}" && cat > "${safePath}SKILL.md" << 'OPENCLAW_SKILL_EOF'\n${escaped}\nOPENCLAW_SKILL_EOF`,
       10000
     );
 
@@ -100,7 +100,6 @@ export async function POST(req: NextRequest) {
     }
 
     const safeName = name.replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase();
-    const skillDir = `~/.openclaw/skills/${safeName}/`;
 
     const template = `---
 name: ${name}
@@ -113,9 +112,10 @@ Describe what this skill does here.
 `;
 
     const escaped = template.replace(/'/g, "'\\''");
+    // Use $HOME instead of ~ so it expands inside double quotes
     const result = await executeCommand(
       connectionId!,
-      `mkdir -p "${skillDir}" && cat > "${skillDir}SKILL.md" << 'OPENCLAW_SKILL_EOF'\n${escaped}\nOPENCLAW_SKILL_EOF`,
+      `SKILL_DIR="$HOME/.openclaw/workspace/skills/${safeName}/" && mkdir -p "$SKILL_DIR" && cat > "$SKILL_DIR"SKILL.md << 'OPENCLAW_SKILL_EOF'\n${escaped}\nOPENCLAW_SKILL_EOF`,
       10000
     );
 
@@ -126,7 +126,15 @@ Describe what this skill does here.
       );
     }
 
-    return NextResponse.json({ success: true, path: skillDir });
+    // Return the resolved path using $HOME expansion
+    const pathResult = await executeCommand(
+      connectionId!,
+      `echo "$HOME/.openclaw/workspace/skills/${safeName}/"`,
+      5000
+    );
+    const resolvedPath = pathResult.stdout.trim() || `$HOME/.openclaw/workspace/skills/${safeName}/`;
+
+    return NextResponse.json({ success: true, path: resolvedPath });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
