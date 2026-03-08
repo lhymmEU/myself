@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Activity } from "lucide-react";
+import { useT } from "@/lib/i18n/context";
 
 interface PreviewMarket {
   question: string;
@@ -16,6 +17,7 @@ function formatVolume(v: number): string {
 }
 
 export function FinancePreview() {
+  const t = useT();
   const [markets, setMarkets] = useState<PreviewMarket[]>([]);
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export function FinancePreview() {
     return (
       <p className="text-sm text-muted-foreground flex items-center gap-1">
         <Activity className="size-3" />
-        Loading markets...
+        {t("finance.preview.loadingMarkets")}
       </p>
     );
   }

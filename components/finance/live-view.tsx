@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/lib/i18n/context";
 import { PortfolioSummary } from "./portfolio-summary";
 import { BinanceHoldings } from "./binance-holdings";
 import { PolkadotWallets } from "./polkadot-wallets";
@@ -12,6 +13,7 @@ import type { PolkadotPortfolio } from "@/lib/modules/finance/polkadot";
 const REFRESH_INTERVAL = 60_000;
 
 export function LiveView() {
+  const t = useT();
   const [binance, setBinance] = useState<BinancePortfolio | null>(null);
   const [polkadot, setPolkadot] = useState<PolkadotPortfolio | null>(null);
   const [binanceError, setBinanceError] = useState<string>();
@@ -43,7 +45,7 @@ export function LiveView() {
             }
           })
           .catch(() => {
-            setBinanceError("Failed to connect to Binance API");
+            setBinanceError(t("finance.liveView.failedBinance"));
           })
       );
     }
@@ -63,7 +65,7 @@ export function LiveView() {
             }
           })
           .catch(() => {
-            setPolkadotError("Failed to connect to Polkadot network");
+            setPolkadotError(t("finance.liveView.failedPolkadot"));
           })
       );
     }
@@ -72,7 +74,7 @@ export function LiveView() {
     setRefreshing(false);
     setInitialLoading(false);
     setLastUpdated(new Date());
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch + polling
@@ -95,7 +97,7 @@ export function LiveView() {
         <div>
           {lastUpdated && (
             <p className="text-xs text-muted-foreground">
-              Last updated: {lastUpdated.toLocaleTimeString()}
+              {t("finance.liveView.lastUpdated")} {lastUpdated.toLocaleTimeString()}
             </p>
           )}
         </div>
@@ -106,7 +108,7 @@ export function LiveView() {
           disabled={refreshing}
         >
           <RefreshCw className={`size-4 mr-1 ${refreshing ? "animate-spin" : ""}`} />
-          Refresh
+          {t("common.refresh")}
         </Button>
       </div>
 

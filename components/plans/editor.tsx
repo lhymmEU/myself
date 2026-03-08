@@ -34,7 +34,7 @@ export function Editor({ content, onChange }: EditorProps) {
     <BlockNoteView
       editor={editor}
       onChange={handleChange}
-      theme="light"
+      theme="dark"
       className="bn-seamless"
     />
   );

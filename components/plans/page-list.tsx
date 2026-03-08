@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Plus, Trash2, FileText, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useT } from "@/lib/i18n/context";
+import type { TranslationKey } from "@/lib/i18n/types";
 
 interface Plan {
   id: string;
@@ -19,7 +21,7 @@ interface PageListProps {
   onCreate: () => void;
 }
 
-function relativeTime(timestamp: number): string {
+function relativeTime(timestamp: number, t: (key: TranslationKey) => string): string {
   const now = Date.now();
   const diff = now - timestamp;
   const seconds = Math.floor(diff / 1000);
@@ -27,10 +29,10 @@ function relativeTime(timestamp: number): string {
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  if (seconds < 60) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
+  if (seconds < 60) return t("plans.justNow");
+  if (minutes < 60) return `${minutes}${t("plans.mAgo")}`;
+  if (hours < 24) return `${hours}${t("plans.hAgo")}`;
+  if (days < 7) return `${days}${t("plans.dAgo")}`;
   return new Date(timestamp).toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
@@ -44,6 +46,7 @@ export function PageList({
   onDelete,
   onCreate,
 }: PageListProps) {
+  const t = useT();
   const [search, setSearch] = useState("");
 
   const filtered = plans.filter((p) =>
@@ -55,14 +58,14 @@ export function PageList({
       <div className="p-3 space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Pages
+            {t("plans.pages")}
           </h2>
           <Button
             onClick={onCreate}
             variant="ghost"
             size="icon"
             className="h-7 w-7"
-            title="New page"
+            title={t("plans.newPage")}
           >
             <Plus className="h-4 w-4" />
           </Button>
@@ -70,7 +73,7 @@ export function PageList({
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <input
-            placeholder="Search..."
+            placeholder={t("plans.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-8 pr-3 h-8 text-sm rounded-md border border-border bg-background placeholder:text-muted-foreground/60 outline-none focus:ring-1 focus:ring-ring transition-shadow"
@@ -81,7 +84,7 @@ export function PageList({
         <div className="px-2 pb-2 space-y-0.5">
           {filtered.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-8">
-              {search ? "No matching pages" : "No pages yet"}
+              {search ? t("plans.noMatchingPages") : t("plans.noPagesYet")}
             </p>
           ) : (
             filtered.map((plan) => (
@@ -108,7 +111,7 @@ export function PageList({
                     {plan.title}
                   </p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    {relativeTime(plan.updatedAt)}
+                    {relativeTime(plan.updatedAt, t)}
                   </p>
                 </div>
                 <Button

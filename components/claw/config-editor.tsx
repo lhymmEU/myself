@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useT } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -24,6 +25,7 @@ interface ConfigEditorProps {
 }
 
 export function ConfigEditor({ connectionId, connected }: ConfigEditorProps) {
+  const t = useT();
   const [config, setConfig] = useState("");
   const [originalConfig, setOriginalConfig] = useState("");
   const [loading, setLoading] = useState(false);
@@ -64,11 +66,11 @@ export function ConfigEditor({ connectionId, connected }: ConfigEditorProps) {
       setOriginalConfig(formatted);
       syncFormFromConfig(formatted);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
+      setError(err instanceof Error ? err.message : t("claw.config.failedLoad"));
     } finally {
       setLoading(false);
     }
-  }, [connectionId, connected, syncFormFromConfig]);
+  }, [connectionId, connected, syncFormFromConfig, t]);
 
   const save = useCallback(async () => {
     if (!connectionId || !connected) return;
@@ -82,7 +84,7 @@ export function ConfigEditor({ connectionId, connected }: ConfigEditorProps) {
     try {
       JSON.parse(configToSave);
     } catch {
-      setError("Invalid JSON - fix syntax errors before saving");
+      setError(t("claw.config.invalidJson"));
       return;
     }
 
@@ -105,11 +107,11 @@ export function ConfigEditor({ connectionId, connected }: ConfigEditorProps) {
         setTimeout(() => setSaved(false), 3000);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
+      setError(err instanceof Error ? err.message : t("claw.config.failedSave"));
     } finally {
       setSaving(false);
     }
-  }, [connectionId, connected, config, viewMode, formData, syncFormFromConfig]);
+  }, [connectionId, connected, config, viewMode, formData, syncFormFromConfig, t]);
 
   useEffect(() => {
     if (connected) load();
@@ -140,7 +142,7 @@ export function ConfigEditor({ connectionId, connected }: ConfigEditorProps) {
       setConfig(JSON.stringify(parsed, null, 2));
       setError(null);
     } catch {
-      setError("Cannot format: invalid JSON");
+      setError(t("claw.config.cannotFormat"));
     }
   };
 
@@ -148,7 +150,7 @@ export function ConfigEditor({ connectionId, connected }: ConfigEditorProps) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <Server className="h-10 w-10 mb-3 opacity-40" />
-        <p className="text-sm">Connect to a server to edit configuration</p>
+        <p className="text-sm">{t("claw.config.connectToEdit")}</p>
       </div>
     );
   }
@@ -167,12 +169,12 @@ export function ConfigEditor({ connectionId, connected }: ConfigEditorProps) {
           ) : (
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
           )}
-          Reload
+          {t("common.reload")}
         </Button>
         {viewMode === "code" && (
           <Button size="sm" variant="outline" onClick={formatJson}>
             <FileJson className="h-3.5 w-3.5 mr-1.5" />
-            Format
+            {t("common.format")}
           </Button>
         )}
         <Button
@@ -185,7 +187,7 @@ export function ConfigEditor({ connectionId, connected }: ConfigEditorProps) {
           ) : (
             <Save className="h-3.5 w-3.5 mr-1.5" />
           )}
-          Save
+          {t("common.save")}
         </Button>
 
         <div className="ml-auto flex items-center border rounded-md overflow-hidden">
@@ -198,7 +200,7 @@ export function ConfigEditor({ connectionId, connected }: ConfigEditorProps) {
             onClick={() => handleViewToggle("form")}
           >
             <FormInput className="h-3 w-3" />
-            Form
+            {t("claw.config.form")}
           </button>
           <button
             className={`px-2.5 py-1 text-xs flex items-center gap-1 transition-colors ${
@@ -209,15 +211,15 @@ export function ConfigEditor({ connectionId, connected }: ConfigEditorProps) {
             onClick={() => handleViewToggle("code")}
           >
             <Code className="h-3 w-3" />
-            Code
+            {t("claw.config.code")}
           </button>
         </div>
 
         {hasChanges && (
-          <span className="text-xs text-yellow-500">Unsaved changes</span>
+          <span className="text-xs text-yellow-500">{t("common.unsavedChanges")}</span>
         )}
         {saved && (
-          <span className="text-xs text-emerald-500">Saved</span>
+          <span className="text-xs text-emerald-500">{t("common.saved")}</span>
         )}
       </div>
 
@@ -231,7 +233,7 @@ export function ConfigEditor({ connectionId, connected }: ConfigEditorProps) {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-xs font-medium text-muted-foreground">
-            ~/.openclaw/openclaw.json
+            {t("claw.config.configPath")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -246,7 +248,7 @@ export function ConfigEditor({ connectionId, connected }: ConfigEditorProps) {
             <div className="min-h-[500px] p-3 rounded-md border bg-muted/30">
               {Object.keys(formData).length === 0 ? (
                 <p className="text-xs text-muted-foreground text-center py-8">
-                  Empty configuration. Switch to Code view to add raw JSON, or add fields below.
+                  {t("claw.config.emptyConfig")}
                 </p>
               ) : null}
               <JsonFormEditor

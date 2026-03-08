@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useT } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -82,6 +83,7 @@ interface ConnectionFormProps {
 }
 
 export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
+  const t = useT();
   const [connections, setConnections] = useState<ConnectionInfo[]>([]);
   const [connectState, setConnectState] = useState<ConnectState>({
     connected: false,
@@ -132,7 +134,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
       });
       const data = await res.json();
       if (!res.ok) {
-        setKeyPathError(data.error ?? "Failed to read file");
+        setKeyPathError(data.error ?? t("claw.connection.failedReadFile"));
         return;
       }
       setFormData((p) => ({ ...p, privateKey: data.contents }));
@@ -140,11 +142,11 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
       setShowKeyPathInput(false);
       setKeyPathInput("");
     } catch {
-      setKeyPathError("Failed to load file");
+      setKeyPathError(t("claw.connection.failedLoadFile"));
     } finally {
       setLoadingKeyPath(false);
     }
-  }, [keyPathInput]);
+  }, [keyPathInput, t]);
 
   // Vault picker state
   const [vaultPickerOpen, setVaultPickerOpen] = useState(false);
@@ -208,18 +210,18 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
         body: JSON.stringify({ password: vaultUnlockPassword }),
       });
       if (!res.ok) {
-        setVaultError("Incorrect password");
+        setVaultError(t("claw.connection.incorrectPassword"));
         return;
       }
       setVaultLocked(false);
       setVaultUnlockPassword("");
       fetchVaultSecrets();
     } catch {
-      setVaultError("Failed to unlock vault");
+      setVaultError(t("claw.connection.failedUnlockVault"));
     } finally {
       setVaultUnlocking(false);
     }
-  }, [vaultUnlockPassword, fetchVaultSecrets]);
+  }, [vaultUnlockPassword, fetchVaultSecrets, t]);
 
   const handleVaultSelectSecret = useCallback(async (id: string) => {
     setVaultImporting(id);
@@ -227,7 +229,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
     try {
       const res = await fetch(`/api/vault?id=${id}`);
       if (!res.ok) {
-        setVaultError("Failed to fetch secret");
+        setVaultError(t("claw.connection.failedFetchSecret"));
         return;
       }
       const secret = await res.json();
@@ -238,11 +240,11 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
         setVaultImported(null);
       }, 600);
     } catch {
-      setVaultError("Failed to import secret");
+      setVaultError(t("claw.connection.failedImportSecret"));
     } finally {
       setVaultImporting(null);
     }
-  }, [vaultPickerTarget]);
+  }, [vaultPickerTarget, t]);
 
   const loadConnections = useCallback(async () => {
     try {
@@ -349,7 +351,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
         <CardTitle className="flex items-center justify-between text-sm font-medium">
           <div className="flex items-center gap-2">
             <Server className="h-4 w-4" />
-            SSH Connection
+            {t("claw.connection.sshConnection")}
           </div>
           <div className="flex items-center gap-2">
             {connectState.connected ? (
@@ -360,7 +362,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
             ) : (
               <Badge variant="secondary">
                 <WifiOff className="h-3 w-3 mr-1" />
-                Disconnected
+                {t("claw.connection.disconnected")}
               </Badge>
             )}
           </div>
@@ -406,18 +408,18 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
             <DialogTrigger asChild>
               <Button size="sm" variant="outline">
                 <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Add Server
+                {t("claw.connection.addServer")}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Add SSH Connection</DialogTitle>
+                <DialogTitle>{t("claw.connection.addSshConnection")}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Name</Label>
+                  <Label>{t("common.name")}</Label>
                   <Input
-                    placeholder="My Cloud Server"
+                    placeholder={t("claw.connection.placeholderName")}
                     value={formData.name}
                     onChange={(e) =>
                       setFormData((p) => ({ ...p, name: e.target.value }))
@@ -426,9 +428,9 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="col-span-2 space-y-2">
-                    <Label>Host</Label>
+                    <Label>{t("claw.connection.host")}</Label>
                     <Input
-                      placeholder="192.168.1.100"
+                      placeholder={t("claw.connection.placeholderHost")}
                       value={formData.host}
                       onChange={(e) =>
                         setFormData((p) => ({ ...p, host: e.target.value }))
@@ -436,7 +438,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Port</Label>
+                    <Label>{t("claw.connection.port")}</Label>
                     <Input
                       value={formData.port}
                       onChange={(e) =>
@@ -447,7 +449,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label>Username</Label>
+                    <Label>{t("claw.connection.username")}</Label>
                     <Input
                       value={formData.username}
                       onChange={(e) =>
@@ -456,7 +458,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Auth Method</Label>
+                    <Label>{t("claw.connection.authMethod")}</Label>
                     <Select
                       value={formData.authMethod}
                       onValueChange={(v) =>
@@ -470,8 +472,8 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="key">SSH Key</SelectItem>
-                        <SelectItem value="password">Password</SelectItem>
+                        <SelectItem value="key">{t("claw.connection.sshKey")}</SelectItem>
+                        <SelectItem value="password">{t("common.password")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -479,7 +481,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                 {formData.authMethod === "password" ? (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label>Password</Label>
+                      <Label>{t("common.password")}</Label>
                       <Button
                         type="button"
                         size="sm"
@@ -488,7 +490,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                         onClick={() => openVaultPicker("password")}
                       >
                         <Vault className="h-3 w-3 mr-1" />
-                        From Vault
+                        {t("claw.connection.fromVault")}
                       </Button>
                     </div>
                     <Input
@@ -503,7 +505,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                   <>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label>Private Key (PEM)</Label>
+                        <Label>{t("claw.connection.privateKeyPem")}</Label>
                         <div className="flex items-center gap-1.5">
                           {keyFileName && (
                             <span className="flex items-center gap-1 text-[11px] text-emerald-500">
@@ -519,7 +521,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                             onClick={() => keyFileInputRef.current?.click()}
                           >
                             <Upload className="h-3 w-3 mr-1" />
-                            Browse
+                            {t("common.browse")}
                           </Button>
                           <Button
                             type="button"
@@ -529,7 +531,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                             onClick={() => { setShowKeyPathInput(!showKeyPathInput); setKeyPathError(null); }}
                           >
                             <FolderOpen className="h-3 w-3 mr-1" />
-                            From Path
+                            {t("claw.connection.fromPath")}
                           </Button>
                           <Button
                             type="button"
@@ -539,7 +541,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                             onClick={() => openVaultPicker("privateKey")}
                           >
                             <Vault className="h-3 w-3 mr-1" />
-                            From Vault
+                            {t("claw.connection.fromVault")}
                           </Button>
                         </div>
                       </div>
@@ -555,7 +557,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                           <div className="flex gap-1.5">
                             <Input
                               className="font-mono text-xs h-8"
-                              placeholder="~/.ssh/id_ed25519"
+                              placeholder={t("claw.connection.placeholderKeyPath")}
                               value={keyPathInput}
                               onChange={(e) => { setKeyPathInput(e.target.value); setKeyPathError(null); }}
                               onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleLoadKeyFromPath())}
@@ -567,21 +569,21 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                               disabled={!keyPathInput.trim() || loadingKeyPath}
                               onClick={handleLoadKeyFromPath}
                             >
-                              {loadingKeyPath ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Load"}
+                              {loadingKeyPath ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("common.load")}
                             </Button>
                           </div>
                           {keyPathError && (
                             <p className="text-[11px] text-red-400">{keyPathError}</p>
                           )}
                           <p className="text-[11px] text-muted-foreground">
-                            Enter an absolute path or use ~ for home. Tip: press <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">Cmd+Shift+.</kbd> in the Browse dialog to show hidden files.
+                            {t("claw.connection.pathTip")} <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">{t("claw.connection.pathTipKey")}</kbd> {t("claw.connection.pathTipSuffix")}
                           </p>
                         </div>
                       )}
                       <Textarea
                         className="font-mono text-xs"
                         rows={5}
-                        placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+                        placeholder={t("claw.connection.placeholderKeyContent")}
                         value={formData.privateKey}
                         onChange={(e) => {
                           setFormData((p) => ({
@@ -593,7 +595,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Passphrase (optional)</Label>
+                      <Label>{t("claw.connection.passphrase")}</Label>
                       <Input
                         type="password"
                         value={formData.passphrase}
@@ -608,7 +610,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                   </>
                 )}
                 <div className="space-y-2">
-                  <Label>Gateway Port</Label>
+                  <Label>{t("claw.connection.gatewayPort")}</Label>
                   <Input
                     value={formData.gatewayPort}
                     onChange={(e) =>
@@ -617,7 +619,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                   />
                 </div>
                 <Button className="w-full" onClick={handleAddConnection}>
-                  Add Connection
+                  {t("claw.connection.addConnection")}
                 </Button>
               </div>
             </DialogContent>
@@ -635,12 +637,12 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <Vault className="h-4 w-4" />
-                  Import from Vault
+                  {t("claw.connection.importFromVault")}
                 </DialogTitle>
                 <DialogDescription>
                   {vaultLocked
-                    ? "Enter your vault password to decrypt and select a secret."
-                    : `Select a secret to use as ${vaultPickerTarget === "privateKey" ? "the private key" : "the password"}.`}
+                    ? t("claw.connection.vaultPasswordPrompt")
+                    : vaultPickerTarget === "privateKey" ? t("claw.connection.selectSecretKey") : t("claw.connection.selectSecretPassword")}
                 </DialogDescription>
               </DialogHeader>
 
@@ -649,11 +651,11 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                   <div className="space-y-2">
                     <Label className="flex items-center gap-1.5">
                       <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                      Vault Password
+                      {t("claw.connection.vaultPassword")}
                     </Label>
                     <Input
                       type="password"
-                      placeholder="Enter encryption password"
+                      placeholder={t("claw.connection.enterEncryptionPassword")}
                       value={vaultUnlockPassword}
                       onChange={(e) => setVaultUnlockPassword(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleVaultUnlock()}
@@ -676,7 +678,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                     ) : (
                       <Lock className="h-3.5 w-3.5 mr-1.5" />
                     )}
-                    Unlock Vault
+                    {t("claw.connection.unlockVault")}
                   </Button>
                 </div>
               ) : (
@@ -687,7 +689,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                     </div>
                   ) : vaultSecrets.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-8">
-                      No secrets found in vault.
+                      {t("claw.connection.noSecretsFound")}
                     </p>
                   ) : (
                     <div className="max-h-64 overflow-y-auto space-y-1 pr-1">
@@ -731,7 +733,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
                     onClick={() => { setVaultLocked(true); setVaultError(null); }}
                   >
                     <ChevronLeft className="h-3 w-3" />
-                    Use a different password
+                    {t("claw.connection.useDifferentPassword")}
                   </button>
                 </div>
               )}

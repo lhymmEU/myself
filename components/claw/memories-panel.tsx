@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useT } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,7 @@ interface MemoriesPanelProps {
 type View = "list" | "edit-memory" | "view-daily" | "search" | "status";
 
 export function MemoriesPanel({ connectionId, connected }: MemoriesPanelProps) {
+  const t = useT();
   const [view, setView] = useState<View>("list");
   const [files, setFiles] = useState<MemoryFile[]>([]);
   const [hasMemoryMd, setHasMemoryMd] = useState(false);
@@ -62,11 +64,11 @@ export function MemoriesPanel({ connectionId, connected }: MemoriesPanelProps) {
       setFiles(data.files ?? []);
       setHasMemoryMd(data.hasMemoryMd ?? false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
+      setError(err instanceof Error ? err.message : t("claw.memories.failedLoad"));
     } finally {
       setLoading(false);
     }
-  }, [connectionId, connected]);
+  }, [connectionId, connected, t]);
 
   useEffect(() => {
     if (connected) loadFiles();
@@ -93,12 +95,12 @@ export function MemoriesPanel({ connectionId, connected }: MemoriesPanelProps) {
         setOriginalContent(data.content ?? "");
         setActiveFile(filePath);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load file");
+        setError(err instanceof Error ? err.message : t("claw.memories.failedLoadFile"));
       } finally {
         setLoading(false);
       }
     },
-    [connectionId]
+    [connectionId, t]
   );
 
   const saveFile = useCallback(async () => {
@@ -126,11 +128,11 @@ export function MemoriesPanel({ connectionId, connected }: MemoriesPanelProps) {
         setTimeout(() => setSaved(false), 3000);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
+      setError(err instanceof Error ? err.message : t("claw.memories.failedSave"));
     } finally {
       setSaving(false);
     }
-  }, [connectionId, activeFile, content]);
+  }, [connectionId, activeFile, content, t]);
 
   const handleSearch = useCallback(async () => {
     if (!connectionId || !searchQuery.trim()) return;
@@ -147,13 +149,13 @@ export function MemoriesPanel({ connectionId, connected }: MemoriesPanelProps) {
         }),
       });
       const data = await res.json();
-      setSearchResults(data.results ?? data.error ?? "No results");
+      setSearchResults(data.results ?? data.error ?? t("claw.memories.noResults"));
     } catch (err) {
-      setSearchResults(err instanceof Error ? err.message : "Search failed");
+      setSearchResults(err instanceof Error ? err.message : t("claw.memories.searchFailed"));
     } finally {
       setSearching(false);
     }
-  }, [connectionId, searchQuery]);
+  }, [connectionId, searchQuery, t]);
 
   const loadStatus = useCallback(async () => {
     if (!connectionId) return;
@@ -175,7 +177,7 @@ export function MemoriesPanel({ connectionId, connected }: MemoriesPanelProps) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <Server className="h-10 w-10 mb-3 opacity-40" />
-        <p className="text-sm">Connect to a server to manage memories</p>
+        <p className="text-sm">{t("claw.memories.connectToManage")}</p>
       </div>
     );
   }
@@ -194,7 +196,7 @@ export function MemoriesPanel({ connectionId, connected }: MemoriesPanelProps) {
           }}
         >
           <Calendar className="h-3.5 w-3.5 mr-1.5" />
-          Daily Logs
+          {t("claw.memories.dailyLogs")}
         </Button>
         <Button
           size="sm"
@@ -205,7 +207,7 @@ export function MemoriesPanel({ connectionId, connected }: MemoriesPanelProps) {
           }}
         >
           <Brain className="h-3.5 w-3.5 mr-1.5" />
-          MEMORY.md
+          {t("claw.memories.memoryMd")}
         </Button>
         <Button
           size="sm"
@@ -213,7 +215,7 @@ export function MemoriesPanel({ connectionId, connected }: MemoriesPanelProps) {
           onClick={() => setView("search")}
         >
           <Search className="h-3.5 w-3.5 mr-1.5" />
-          Search
+          {t("common.search")}
         </Button>
         <Button
           size="sm"
@@ -224,7 +226,7 @@ export function MemoriesPanel({ connectionId, connected }: MemoriesPanelProps) {
           }}
         >
           <Activity className="h-3.5 w-3.5 mr-1.5" />
-          Status
+          {t("claw.memories.status")}
         </Button>
       </div>
 
@@ -239,7 +241,7 @@ export function MemoriesPanel({ connectionId, connected }: MemoriesPanelProps) {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground flex items-center justify-between">
-              <span>Daily Memory Logs</span>
+              <span>{t("claw.memories.dailyMemoryLogs")}</span>
               <Button size="sm" variant="ghost" onClick={loadFiles} disabled={loading}>
                 {loading ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -252,7 +254,7 @@ export function MemoriesPanel({ connectionId, connected }: MemoriesPanelProps) {
           <CardContent>
             {files.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4 text-center">
-                No daily memory files found
+                {t("claw.memories.noDailyFiles")}
               </p>
             ) : (
               <ScrollArea className="h-[350px]">
@@ -281,7 +283,7 @@ export function MemoriesPanel({ connectionId, connected }: MemoriesPanelProps) {
             {hasMemoryMd && (
               <div className="mt-3 pt-3 border-t">
                 <Badge variant="outline" className="text-xs">
-                  MEMORY.md present
+                  {t("claw.memories.memoryMdPresent")}
                 </Badge>
               </div>
             )}
@@ -298,7 +300,7 @@ export function MemoriesPanel({ connectionId, connected }: MemoriesPanelProps) {
               ) : (
                 <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
               )}
-              Reload
+              {t("common.reload")}
             </Button>
             <Button size="sm" onClick={saveFile} disabled={saving || !hasChanges}>
               {saving ? (
@@ -306,19 +308,19 @@ export function MemoriesPanel({ connectionId, connected }: MemoriesPanelProps) {
               ) : (
                 <Save className="h-3.5 w-3.5 mr-1.5" />
               )}
-              Save
+              {t("common.save")}
             </Button>
             {hasChanges && (
-              <span className="text-xs text-yellow-500">Unsaved changes</span>
+              <span className="text-xs text-yellow-500">{t("common.unsavedChanges")}</span>
             )}
             {saved && (
-              <span className="text-xs text-emerald-500">Saved</span>
+              <span className="text-xs text-emerald-500">{t("common.saved")}</span>
             )}
           </div>
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium text-muted-foreground">
-                {activeFile ? `~/.openclaw/workspace/${activeFile}` : "Memory File"}
+                {activeFile ? `~/.openclaw/workspace/${activeFile}` : t("claw.memories.memoryFile")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -337,13 +339,13 @@ export function MemoriesPanel({ connectionId, connected }: MemoriesPanelProps) {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground">
-              Semantic Memory Search
+              {t("claw.memories.semanticSearch")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex gap-2">
               <Input
-                placeholder="Search memories..."
+                placeholder={t("claw.memories.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -370,7 +372,7 @@ export function MemoriesPanel({ connectionId, connected }: MemoriesPanelProps) {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground flex items-center justify-between">
-              <span>Memory Index Status</span>
+              <span>{t("claw.memories.memoryIndexStatus")}</span>
               <Button size="sm" variant="ghost" onClick={loadStatus} disabled={loading}>
                 {loading ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -382,7 +384,7 @@ export function MemoriesPanel({ connectionId, connected }: MemoriesPanelProps) {
           </CardHeader>
           <CardContent>
             <pre className="text-xs font-mono whitespace-pre-wrap bg-muted/50 rounded-md p-3 max-h-[350px] overflow-auto">
-              {memoryStatus || "Loading..."}
+              {memoryStatus || t("common.loading")}
             </pre>
           </CardContent>
         </Card>

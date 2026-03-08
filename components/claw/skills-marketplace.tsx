@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { useT } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,7 @@ function SourceTab({
   connected: boolean;
   onSkillInstalled?: () => void;
 }) {
+  const t = useT();
   const [skills, setSkills] = useState<MarketplaceSkill[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,12 +83,12 @@ function SourceTab({
         }
         setSkills(data.skills ?? []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load");
+        setError(err instanceof Error ? err.message : t("claw.marketplace.failedLoad"));
       } finally {
         setLoading(false);
       }
     },
-    [source]
+    [source, t]
   );
 
   useEffect(() => {
@@ -99,7 +101,7 @@ function SourceTab({
 
   const handleInstall = async (skill: MarketplaceSkill) => {
     if (!connectionId || !connected) {
-      setInstallResult("Connect to a server first");
+      setInstallResult(t("claw.marketplace.connectFirst"));
       return;
     }
     setInstalling(skill.slug);
@@ -116,13 +118,13 @@ function SourceTab({
       });
       const data = await res.json();
       if (data.success) {
-        setInstallResult(`Installed ${skill.displayName}`);
+        setInstallResult(`${t("claw.marketplace.installed")} ${skill.displayName}`);
         onSkillInstalled?.();
       } else {
-        setInstallResult(data.stderr || data.error || "Install failed");
+        setInstallResult(data.stderr || data.error || t("claw.marketplace.installFailed"));
       }
     } catch (err) {
-      setInstallResult(err instanceof Error ? err.message : "Install failed");
+      setInstallResult(err instanceof Error ? err.message : t("claw.marketplace.installFailed"));
     } finally {
       setInstalling(null);
       setTimeout(() => setInstallResult(null), 5000);
@@ -133,7 +135,7 @@ function SourceTab({
     <div className="space-y-2">
       <div className="flex gap-1.5">
         <Input
-          placeholder={`Search ${source === "clawhub" ? "ClawHub" : "Vercel"} skills...`}
+          placeholder={source === "clawhub" ? t("claw.marketplace.searchClawHub") : t("claw.marketplace.searchVercel")}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -160,7 +162,7 @@ function SourceTab({
         <table className="w-full text-xs table-fixed">
           <thead>
             <tr className="border-b border-border text-muted-foreground">
-              <th className="text-left font-medium py-1.5 px-2">Skill</th>
+              <th className="text-left font-medium py-1.5 px-2">{t("claw.marketplace.skill")}</th>
               <th className="text-right font-medium py-1.5 px-2 w-14">
                 <Download className="h-3 w-3 ml-auto" />
               </th>
@@ -174,7 +176,7 @@ function SourceTab({
             {pageSkills.length === 0 && !loading ? (
               <tr>
                 <td colSpan={4} className="text-center text-muted-foreground py-8">
-                  No skills found
+                  {t("claw.marketplace.noSkillsFound")}
                 </td>
               </tr>
             ) : (
@@ -228,7 +230,7 @@ function SourceTab({
                       ) : (
                         <>
                           <Download className="h-3 w-3 mr-1" />
-                          Install
+                          {t("common.install")}
                         </>
                       )}
                     </Button>
@@ -280,12 +282,13 @@ export function SkillsMarketplace({
   connected,
   onSkillInstalled,
 }: SkillsMarketplaceProps) {
+  const t = useT();
   if (!connected) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-8 text-muted-foreground">
           <Server className="h-8 w-8 mb-2 opacity-40" />
-          <p className="text-xs">Connect to install skills</p>
+          <p className="text-xs">{t("claw.marketplace.connectToInstall")}</p>
         </CardContent>
       </Card>
     );
@@ -296,17 +299,17 @@ export function SkillsMarketplace({
       <CardHeader className="pb-2">
         <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
           <Store className="h-3.5 w-3.5" />
-          Skills Marketplace
+          {t("claw.marketplace.title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
         <Tabs defaultValue="clawhub">
           <TabsList className="grid w-full grid-cols-2 h-7">
             <TabsTrigger value="clawhub" className="text-xs h-6">
-              ClawHub
+              {t("claw.marketplace.clawHub")}
             </TabsTrigger>
             <TabsTrigger value="vercel" className="text-xs h-6">
-              Vercel Skills
+              {t("claw.marketplace.vercelSkills")}
             </TabsTrigger>
           </TabsList>
           <TabsContent value="clawhub" className="mt-2">

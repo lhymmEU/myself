@@ -29,6 +29,7 @@ import {
   CheckCheck,
   HelpCircle,
 } from "lucide-react";
+import { useT } from "@/lib/i18n/context";
 
 interface SessionsPanelProps {
   connectionId: string | null;
@@ -57,6 +58,7 @@ interface SessionsData {
 }
 
 export function SessionsPanel({ connectionId, connected }: SessionsPanelProps) {
+  const t = useT();
   const [data, setData] = useState<SessionsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -135,7 +137,7 @@ export function SessionsPanel({ connectionId, connected }: SessionsPanelProps) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <Server className="h-10 w-10 mb-3 opacity-40" />
-        <p className="text-sm">Connect to a server to manage sessions</p>
+        <p className="text-sm">{t("claw.sessions.connectToManage")}</p>
       </div>
     );
   }
@@ -152,7 +154,7 @@ export function SessionsPanel({ connectionId, connected }: SessionsPanelProps) {
           ) : (
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
           )}
-          Refresh
+          {t("common.refresh")}
         </Button>
 
         {sessions.length > 0 && (
@@ -163,7 +165,7 @@ export function SessionsPanel({ connectionId, connected }: SessionsPanelProps) {
               ) : (
                 <CheckSquare className="h-3.5 w-3.5 mr-1.5" />
               )}
-              {allSelected ? "Deselect All" : "Select All"}
+              {allSelected ? t("claw.sessions.deselectAll") : t("claw.sessions.selectAll")}
             </Button>
 
             {selected.size > 0 && (
@@ -178,7 +180,7 @@ export function SessionsPanel({ connectionId, connected }: SessionsPanelProps) {
                 ) : (
                   <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                 )}
-                Delete Selected ({selected.size})
+                {`${t("claw.sessions.deleteSelected")} (${selected.size})`}
               </Button>
             )}
           </>
@@ -188,7 +190,7 @@ export function SessionsPanel({ connectionId, connected }: SessionsPanelProps) {
       {/* Session count */}
       {data?.count !== undefined && (
         <p className="text-sm text-muted-foreground">
-          Total sessions:{" "}
+          {t("claw.sessions.totalSessions")}{" "}
           <span className="font-medium text-foreground">{data.count}</span>
         </p>
       )}
@@ -229,7 +231,7 @@ export function SessionsPanel({ connectionId, connected }: SessionsPanelProps) {
                       </button>
                       <Users className="h-3.5 w-3.5 shrink-0" />
                       <span className="truncate">
-                        {s.agentId ?? "session"}
+                        {s.agentId ?? t("common.session")}
                       </span>
                     </CardTitle>
                   </CardHeader>
@@ -247,7 +249,7 @@ export function SessionsPanel({ connectionId, connected }: SessionsPanelProps) {
                       )}
                       {(s.inputTokens !== undefined || s.outputTokens !== undefined) && (
                         <Badge variant="outline" className="text-xs font-mono">
-                          {((s.inputTokens ?? 0) + (s.outputTokens ?? 0)).toLocaleString()} tokens
+                          {((s.inputTokens ?? 0) + (s.outputTokens ?? 0)).toLocaleString()} {t("common.tokens")}
                         </Badge>
                       )}
                     </div>
@@ -260,7 +262,7 @@ export function SessionsPanel({ connectionId, connected }: SessionsPanelProps) {
       ) : (
         !loading && (
           <p className="text-sm text-muted-foreground text-center py-8">
-            No sessions found
+            {t("claw.sessions.noSessionsFound")}
           </p>
         )
       )}
@@ -276,58 +278,58 @@ export function SessionsPanel({ connectionId, connected }: SessionsPanelProps) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-4 w-4" />
-              {detailSession?.agentId ?? "Session Details"}
+              {detailSession?.agentId ?? t("claw.sessions.sessionDetails")}
             </DialogTitle>
             <DialogDescription>
-              Session information and metadata
+              {t("claw.sessions.sessionInfo")}
             </DialogDescription>
           </DialogHeader>
 
           {detailSession && (
             <div className="space-y-3 text-sm">
-              <DetailRow label="Agent ID" value={detailSession.agentId} />
-              <DetailRow label="Key" value={detailSession.key} mono truncateWithTooltip />
-              <DetailRow label="Model" value={detailSession.model} />
-              <DetailRow label="Status" value={detailSession.status} />
-              <DetailRow label="Created" value={detailSession.createdAt} />
-              <DetailRow label="Last Active" value={detailSession.lastActive} />
+              <DetailRow label={t("claw.sessions.agentId")} value={detailSession.agentId} />
+              <DetailRow label={t("claw.sessions.key")} value={detailSession.key} mono truncateWithTooltip />
+              <DetailRow label={t("claw.sessions.model")} value={detailSession.model} />
+              <DetailRow label={t("common.status")} value={detailSession.status} />
+              <DetailRow label={t("claw.sessions.created")} value={detailSession.createdAt} />
+              <DetailRow label={t("claw.sessions.lastActive")} value={detailSession.lastActive} />
               {detailSession.messageCount !== undefined && (
                 <DetailRow
-                  label="Messages"
+                  label={t("claw.sessions.messages")}
                   value={String(detailSession.messageCount)}
                 />
               )}
               {detailSession.inputTokens !== undefined && (
                 <DetailRow
-                  label="Input Tokens"
+                  label={t("claw.sessions.inputTokens")}
                   value={detailSession.inputTokens.toLocaleString()}
-                  hint="Cumulative prompt tokens sent to the model across all turns, including system prompt, history, and tool results."
+                  hint={t("claw.sessions.inputTokensHint")}
                 />
               )}
               {detailSession.outputTokens !== undefined && (
                 <DetailRow
-                  label="Output Tokens"
+                  label={t("claw.sessions.outputTokens")}
                   value={detailSession.outputTokens.toLocaleString()}
-                  hint="Cumulative completion tokens generated by the model across all turns."
+                  hint={t("claw.sessions.outputTokensHint")}
                 />
               )}
               {(detailSession.inputTokens !== undefined || detailSession.outputTokens !== undefined) && (
                 <DetailRow
-                  label="Total Usage"
+                  label={t("claw.sessions.totalUsage")}
                   value={((detailSession.inputTokens ?? 0) + (detailSession.outputTokens ?? 0)).toLocaleString()}
-                  hint="Sum of input and output tokens. Reflects the actual cumulative token consumption for cost estimation."
+                  hint={t("claw.sessions.totalUsageHint")}
                 />
               )}
               {detailSession.totalTokens !== undefined && (
                 <DetailRow
-                  label="Context Utilization"
+                  label={t("claw.sessions.contextUtilization")}
                   value={detailSession.totalTokens.toLocaleString()}
-                  hint="Estimated context window usage from the last API turn, it reflects how much of the model's context window is occupied."
+                  hint={t("claw.sessions.contextUtilizationHint")}
                 />
               )}
               {detailSession.diskBytes !== undefined && (
                 <DetailRow
-                  label="Disk Usage"
+                  label={t("claw.sessions.diskUsage")}
                   value={formatBytes(detailSession.diskBytes)}
                 />
               )}
@@ -364,7 +366,7 @@ export function SessionsPanel({ connectionId, connected }: SessionsPanelProps) {
                 ) : (
                   <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                 )}
-                Delete Session
+                {t("claw.sessions.deleteSession")}
               </Button>
             )}
           </DialogFooter>

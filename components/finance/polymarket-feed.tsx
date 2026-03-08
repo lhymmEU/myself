@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n/context";
 import type { PolymarketMarket } from "@/lib/modules/finance/polymarket";
 
 interface PolymarketFeedProps {
@@ -42,24 +43,26 @@ export function PolymarketFeed({
   onSelect,
   selectedId,
 }: PolymarketFeedProps) {
+  const t = useT();
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between border-b border-amber-900/30 pb-1 mb-2">
         <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-          Top Markets
+          {t("finance.polymarket.title")}
         </span>
         <span className="text-[10px] text-amber-700">
-          {markets.length} ACTIVE
+          {markets.length} {t("finance.marketDetail.active")}
         </span>
       </div>
 
       {loading ? (
         <div className="flex-1 flex items-center justify-center text-amber-700 text-xs">
-          Loading...
+          {t("common.loading")}
         </div>
       ) : markets.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-amber-700 text-xs">
-          No markets available
+          {t("finance.polymarket.noMarkets")}
         </div>
       ) : (
         <div className="flex-1 overflow-auto space-y-1.5">

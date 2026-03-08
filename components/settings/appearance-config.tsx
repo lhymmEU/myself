@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Sun, Moon, Monitor } from "lucide-react";
+import { useT } from "@/lib/i18n/context";
 
 const ACCENT_COLORS = [
   "#6366f1", "#8b5cf6", "#ec4899", "#ef4444",
@@ -11,10 +12,10 @@ const ACCENT_COLORS = [
   "#3b82f6", "#64748b",
 ];
 
-const THEMES = [
-  { value: "light", label: "Light", icon: Sun },
-  { value: "dark", label: "Dark", icon: Moon },
-  { value: "system", label: "System", icon: Monitor },
+const THEME_DEFS = [
+  { value: "light", labelKey: "settings.appearance.light", icon: Sun },
+  { value: "dark", labelKey: "settings.appearance.dark", icon: Moon },
+  { value: "system", labelKey: "settings.appearance.system", icon: Monitor },
 ] as const;
 
 interface AppearanceConfigProps {
@@ -35,6 +36,7 @@ function applyTheme(theme: string) {
 }
 
 export function AppearanceConfig({ settings, onUpdate }: AppearanceConfigProps) {
+  const t = useT();
   const currentTheme = settings.theme ?? "system";
   const currentAccent = settings.accent_color ?? "#6366f1";
 
@@ -48,14 +50,14 @@ export function AppearanceConfig({ settings, onUpdate }: AppearanceConfigProps) 
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Sun className="size-5" />
-          Appearance
+          {t("settings.appearance.title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-3">
-          <Label>Theme</Label>
+          <Label>{t("settings.appearance.theme")}</Label>
           <div className="flex gap-2">
-            {THEMES.map(({ value, label, icon: Icon }) => (
+            {THEME_DEFS.map(({ value, labelKey, icon: Icon }) => (
               <Button
                 key={value}
                 variant={currentTheme === value ? "default" : "outline"}
@@ -64,14 +66,14 @@ export function AppearanceConfig({ settings, onUpdate }: AppearanceConfigProps) 
                 className="flex-1 gap-2"
               >
                 <Icon className="size-4" />
-                {label}
+                {t(labelKey)}
               </Button>
             ))}
           </div>
         </div>
 
         <div className="space-y-3">
-          <Label>Accent Color</Label>
+          <Label>{t("settings.appearance.accentColor")}</Label>
           <div className="flex gap-2 flex-wrap">
             {ACCENT_COLORS.map((color) => (
               <button

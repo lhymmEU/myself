@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useT } from "@/lib/i18n/context";
 import type { PolkadotWalletBalance } from "@/lib/modules/finance/polkadot";
 
 interface PolkadotWalletsProps {
@@ -33,11 +34,13 @@ export function PolkadotWallets({
   loading,
   error,
 }: PolkadotWalletsProps) {
+  const t = useT();
+
   if (error) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Polkadot Asset Hub</CardTitle>
+          <CardTitle>{t("finance.polkadot.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">{error}</p>
@@ -50,7 +53,7 @@ export function PolkadotWallets({
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>Polkadot Asset Hub</CardTitle>
+          <CardTitle>{t("finance.polkadot.title")}</CardTitle>
           {!loading && dotPrice > 0 && (
             <span className="text-xs font-mono text-muted-foreground">
               DOT = {formatUsd(dotPrice)}
@@ -61,11 +64,11 @@ export function PolkadotWallets({
       <CardContent>
         {loading ? (
           <p className="text-sm text-muted-foreground py-4 text-center">
-            Loading...
+            {t("common.loading")}
           </p>
         ) : wallets.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">
-            No wallets configured. Add addresses in Settings.
+            {t("finance.polkadot.noWallets")}
           </p>
         ) : (
           <div className="space-y-3">
@@ -79,19 +82,19 @@ export function PolkadotWallets({
                 </p>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <p className="text-xs text-muted-foreground">Free</p>
+                    <p className="text-xs text-muted-foreground">{t("finance.polkadot.free")}</p>
                     <p className="font-mono text-sm">
                       {w.free.toFixed(4)} DOT
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Reserved</p>
+                    <p className="text-xs text-muted-foreground">{t("finance.polkadot.reserved")}</p>
                     <p className="font-mono text-sm">
                       {w.reserved.toFixed(4)} DOT
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Value</p>
+                    <p className="text-xs text-muted-foreground">{t("finance.polkadot.value")}</p>
                     <p className="font-mono text-sm font-medium">
                       {formatUsd(w.usdValue)}
                     </p>
@@ -100,7 +103,7 @@ export function PolkadotWallets({
                 {w.assets && w.assets.length > 0 && (
                   <div className="border-t pt-2 mt-2">
                     <p className="text-xs text-muted-foreground mb-1.5">
-                      Asset Hub Tokens
+                      {t("finance.polkadot.assetHubTokens")}
                     </p>
                     <div className="flex flex-wrap gap-3">
                       {w.assets.map((a) => (

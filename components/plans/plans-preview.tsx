@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { FileText } from "lucide-react";
+import { useT } from "@/lib/i18n/context";
 
 interface PlanSummary {
   id: string;
@@ -10,6 +11,7 @@ interface PlanSummary {
 }
 
 export function PlansPreview() {
+  const t = useT();
   const [plans, setPlans] = useState<PlanSummary[]>([]);
 
   useEffect(() => {
@@ -22,7 +24,7 @@ export function PlansPreview() {
   if (plans.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        No plans yet. Start jotting down ideas.
+        {t("plans.noPlansYet")}
       </p>
     );
   }

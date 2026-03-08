@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/lib/i18n/context";
 import { PolymarketFeed } from "./polymarket-feed";
 import { NewsPanel } from "./events-panel";
 import { MarketSearch } from "./market-search";
@@ -12,6 +13,7 @@ import type { PolymarketMarket } from "@/lib/modules/finance/polymarket";
 const REFRESH_INTERVAL = 60_000;
 
 export function PlanView() {
+  const t = useT();
   const [markets, setMarkets] = useState<PolymarketMarket[]>([]);
   const [selectedMarket, setSelectedMarket] = useState<PolymarketMarket | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -48,7 +50,7 @@ export function PlanView() {
       <div className="flex items-center justify-between bg-amber-950/80 border border-amber-900/40 rounded-t-lg px-4 py-2">
         <div className="flex items-center gap-4">
           <span className="text-amber-400 font-mono font-bold text-sm tracking-widest">
-            POLYMARKET TERMINAL
+            {t("finance.planView.header")}
           </span>
           <span className="text-amber-700 font-mono text-[10px]">
             {lastUpdated ? lastUpdated.toLocaleTimeString() : "--:--:--"}
@@ -65,7 +67,7 @@ export function PlanView() {
           className="text-amber-500 hover:text-amber-300 hover:bg-amber-900/30 h-6 px-2"
         >
           <RefreshCw className={`size-3 mr-1 ${refreshing ? "animate-spin" : ""}`} />
-          <span className="text-[10px] font-mono">REFRESH</span>
+          <span className="text-[10px] font-mono">{t("common.refresh")}</span>
         </Button>
       </div>
 

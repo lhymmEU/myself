@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useT } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -68,6 +69,7 @@ export function SkillEditor({
   connectionId,
   connected,
 }: SkillEditorProps) {
+  const t = useT();
   const [skills, setSkills] = useState<InstalledSkill[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -119,12 +121,12 @@ export function SkillEditor({
         setSkillBody(parsed.body);
         setSelectedPath(path);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load skill");
+        setError(err instanceof Error ? err.message : t("claw.skillEditor.failedLoadSkill"));
       } finally {
         setLoading(false);
       }
     },
-    [connectionId]
+    [connectionId, t]
   );
 
   const saveSkill = useCallback(async () => {
@@ -149,11 +151,11 @@ export function SkillEditor({
         loadSkills();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
+      setError(err instanceof Error ? err.message : t("claw.skillEditor.failedSave"));
     } finally {
       setSaving(false);
     }
-  }, [connectionId, selectedPath, skillName, skillDescription, skillMetadata, skillBody, loadSkills]);
+  }, [connectionId, selectedPath, skillName, skillDescription, skillMetadata, skillBody, loadSkills, t]);
 
   const createSkill = useCallback(async () => {
     if (!connectionId || !newSkillName.trim()) return;
@@ -175,11 +177,11 @@ export function SkillEditor({
         if (data.path) loadSkillContent(data.path);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create skill");
+      setError(err instanceof Error ? err.message : t("claw.skillEditor.failedCreate"));
     } finally {
       setCreating(false);
     }
-  }, [connectionId, newSkillName, loadSkills, loadSkillContent]);
+  }, [connectionId, newSkillName, loadSkills, loadSkillContent, t]);
 
   useEffect(() => {
     if (connected) loadSkills();
@@ -198,7 +200,7 @@ export function SkillEditor({
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-8 text-muted-foreground">
           <Server className="h-8 w-8 mb-2 opacity-40" />
-          <p className="text-xs">Connect to manage skills</p>
+          <p className="text-xs">{t("claw.skillEditor.connectToManage")}</p>
         </CardContent>
       </Card>
     );
@@ -210,7 +212,7 @@ export function SkillEditor({
         <CardTitle className="text-xs font-medium text-muted-foreground flex items-center justify-between">
           <span className="flex items-center gap-1.5">
             <Wand2 className="h-3.5 w-3.5" />
-            Skill Editor
+            {t("claw.skillEditor.title")}
           </span>
           <div className="flex items-center gap-1">
             <Button
@@ -228,7 +230,7 @@ export function SkillEditor({
               className="h-6 px-2 text-[10px]"
             >
               <Plus className="h-3 w-3 mr-0.5" />
-              New
+              {t("common.new")}
             </Button>
           </div>
         </CardTitle>
@@ -239,7 +241,7 @@ export function SkillEditor({
           <div className="space-y-1">
             {skills.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-4">
-                No skills installed. Create a new one to get started.
+                {t("claw.skillEditor.noSkills")}
               </p>
             ) : (
               skills.map((skill) => (
@@ -274,7 +276,7 @@ export function SkillEditor({
                 }}
                 className="h-7 text-xs"
               >
-                Back to list
+                {t("claw.skillEditor.backToList")}
               </Button>
               <Button
                 size="sm"
@@ -287,13 +289,13 @@ export function SkillEditor({
                 ) : (
                   <Save className="h-3 w-3 mr-1" />
                 )}
-                Save
+                {t("common.save")}
               </Button>
               {hasChanges && (
-                <span className="text-xs text-yellow-500">Unsaved</span>
+                <span className="text-xs text-yellow-500">{t("common.unsaved")}</span>
               )}
               {saved && (
-                <span className="text-xs text-emerald-500">Saved</span>
+                <span className="text-xs text-emerald-500">{t("common.saved")}</span>
               )}
             </div>
 
@@ -312,26 +314,26 @@ export function SkillEditor({
               <>
                 <div className="space-y-2 p-3 rounded-md border bg-muted/30">
                   <div className="space-y-1">
-                    <Label className="text-xs">Name</Label>
+                    <Label className="text-xs">{t("claw.skillEditor.skillName")}</Label>
                     <Input
                       value={skillName}
                       onChange={(e) => setSkillName(e.target.value)}
                       className="h-7 text-xs"
-                      placeholder="Skill name"
+                      placeholder={t("claw.skillEditor.placeholderName")}
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Description</Label>
+                    <Label className="text-xs">{t("claw.skillEditor.skillDescription")}</Label>
                     <Input
                       value={skillDescription}
                       onChange={(e) => setSkillDescription(e.target.value)}
                       className="h-7 text-xs"
-                      placeholder="What does this skill do?"
+                      placeholder={t("claw.skillEditor.placeholderDesc")}
                     />
                   </div>
                   {Object.keys(skillMetadata).length > 0 && (
                     <div className="space-y-1">
-                      <Label className="text-xs">Metadata</Label>
+                      <Label className="text-xs">{t("claw.skillEditor.metadata")}</Label>
                       <JsonFormEditor
                         value={skillMetadata as Record<string, never>}
                         onChange={(v) => setSkillMetadata(v)}
@@ -341,7 +343,7 @@ export function SkillEditor({
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Body (Markdown)</Label>
+                  <Label className="text-xs text-muted-foreground">{t("claw.skillEditor.body")}</Label>
                   <CodeEditor
                     value={skillBody}
                     onChange={setSkillBody}
@@ -362,23 +364,23 @@ export function SkillEditor({
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create New Skill</DialogTitle>
+              <DialogTitle>{t("claw.skillEditor.createNewSkill")}</DialogTitle>
               <DialogDescription>
-                Create a new custom skill in ~/.openclaw/skills/
+                {t("claw.skillEditor.createNewSkillDesc")}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-2">
-              <Label>Skill Name</Label>
+              <Label>{t("claw.skillEditor.skillName")}</Label>
               <Input
                 value={newSkillName}
                 onChange={(e) => setNewSkillName(e.target.value)}
-                placeholder="my-custom-skill"
+                placeholder={t("claw.skillEditor.placeholderSkillName")}
                 onKeyDown={(e) => e.key === "Enter" && createSkill()}
               />
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button onClick={createSkill} disabled={creating || !newSkillName.trim()}>
                 {creating ? (
@@ -386,7 +388,7 @@ export function SkillEditor({
                 ) : (
                   <Plus className="h-3.5 w-3.5 mr-1.5" />
                 )}
-                Create
+                {t("common.create")}
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { Search } from "lucide-react";
+import { useT } from "@/lib/i18n/context";
 import type { PolymarketMarket } from "@/lib/modules/finance/polymarket";
 
 interface MarketSearchProps {
@@ -15,6 +16,7 @@ function formatVolume(v: number): string {
 }
 
 export function MarketSearch({ onSelect }: MarketSearchProps) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PolymarketMarket[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,7 +56,7 @@ export function MarketSearch({ onSelect }: MarketSearchProps) {
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between border-b border-amber-900/30 pb-1 mb-2">
         <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-          Search
+          {t("finance.marketSearch.title")}
         </span>
       </div>
 
@@ -64,22 +66,22 @@ export function MarketSearch({ onSelect }: MarketSearchProps) {
           type="text"
           value={query}
           onChange={(e) => handleInput(e.target.value)}
-          placeholder="Search markets..."
+          placeholder={t("finance.marketSearch.placeholder")}
           className="w-full bg-amber-950/30 border border-amber-900/40 rounded pl-7 pr-2 py-1.5 text-xs text-amber-100 placeholder:text-amber-800 outline-none focus:border-amber-700"
         />
       </div>
 
       {loading ? (
         <div className="flex-1 flex items-center justify-center text-amber-700 text-xs">
-          Searching...
+          {t("finance.marketSearch.searching")}
         </div>
       ) : !searched ? (
         <div className="flex-1 flex items-center justify-center text-amber-800 text-[10px]">
-          Type to search prediction markets
+          {t("finance.marketSearch.typeToSearch")}
         </div>
       ) : results.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-amber-700 text-xs">
-          No results for &quot;{query}&quot;
+          {t("finance.marketSearch.noResults")} &quot;{query}&quot;
         </div>
       ) : (
         <div className="flex-1 overflow-auto space-y-1">

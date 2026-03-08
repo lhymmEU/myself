@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useT } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -58,6 +59,7 @@ function formatDate(epoch: number): string {
 }
 
 export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
+  const t = useT();
   const [currentPath, setCurrentPath] = useState("~");
   const [resolvedPath, setResolvedPath] = useState("");
   const [entries, setEntries] = useState<FileEntry[]>([]);
@@ -96,12 +98,12 @@ export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
         setCurrentPath(path);
         setPathInput(data.path ?? path);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to list");
+        setError(err instanceof Error ? err.message : t("claw.files.failedList"));
       } finally {
         setLoading(false);
       }
     },
-    [connectionId, connected]
+    [connectionId, connected, t]
   );
 
   useEffect(() => {
@@ -146,7 +148,7 @@ export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
       const res = await fetch(`/api/claw/files?${params}`);
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Download failed");
+        throw new Error(data.error || t("claw.files.downloadFailed"));
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -158,7 +160,7 @@ export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Download failed");
+      setError(err instanceof Error ? err.message : t("claw.files.downloadFailed"));
     } finally {
       setDownloadingFile(null);
     }
@@ -180,7 +182,7 @@ export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
       if (data.error) throw new Error(data.error);
       listDir(resolvedPath);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      setError(err instanceof Error ? err.message : t("claw.files.uploadFailed"));
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -202,7 +204,7 @@ export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
       if (data.error) throw new Error(data.error);
       listDir(resolvedPath);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete failed");
+      setError(err instanceof Error ? err.message : t("claw.files.deleteFailed"));
     } finally {
       setDeleting(null);
     }
@@ -225,7 +227,7 @@ export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
       setNewDirName("");
       listDir(resolvedPath);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create folder");
+      setError(err instanceof Error ? err.message : t("claw.files.failedCreateFolder"));
     } finally {
       setCreatingDir(false);
     }
@@ -235,7 +237,7 @@ export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <Server className="h-10 w-10 mb-3 opacity-40" />
-        <p className="text-sm">Connect to a server to browse files</p>
+        <p className="text-sm">{t("claw.files.connectToBrowse")}</p>
       </div>
     );
   }
@@ -244,10 +246,10 @@ export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
     <div className="space-y-3">
       {/* Toolbar */}
       <div className="flex items-center gap-2">
-        <Button size="sm" variant="outline" onClick={goUp} title="Go up">
+        <Button size="sm" variant="outline" onClick={goUp} title={t("claw.files.goUp")}>
           <ChevronLeft className="h-3.5 w-3.5" />
         </Button>
-        <Button size="sm" variant="outline" onClick={goHome} title="Home (~)">
+        <Button size="sm" variant="outline" onClick={goHome} title={t("claw.files.home")}>
           <Home className="h-3.5 w-3.5" />
         </Button>
         <form onSubmit={handlePathSubmit} className="flex-1 flex gap-1.5">
@@ -257,7 +259,7 @@ export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
             onChange={(e) => setPathInput(e.target.value)}
           />
           <Button size="sm" type="submit" variant="outline" disabled={loading}>
-            Go
+            {t("common.go")}
           </Button>
         </form>
         <Button
@@ -265,7 +267,7 @@ export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
           variant="outline"
           onClick={() => listDir(resolvedPath || currentPath)}
           disabled={loading}
-          title="Refresh"
+          title={t("common.refresh")}
         >
           {loading ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -294,7 +296,7 @@ export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
           ) : (
             <Upload className="h-3.5 w-3.5 mr-1.5" />
           )}
-          Upload
+          {t("claw.files.upload")}
         </Button>
         <Button
           size="sm"
@@ -305,7 +307,7 @@ export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
           }}
         >
           <FolderPlus className="h-3.5 w-3.5 mr-1.5" />
-          New Folder
+          {t("claw.files.newFolder")}
         </Button>
         <span className="text-xs text-muted-foreground ml-auto font-mono truncate max-w-[50%]">
           {resolvedPath}
@@ -324,7 +326,7 @@ export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
         <CardHeader className="pb-2">
           <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
             <HardDrive className="h-3.5 w-3.5" />
-            {entries.length} item{entries.length !== 1 ? "s" : ""}
+            {entries.length} {t("claw.files.items")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -332,15 +334,15 @@ export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b text-muted-foreground">
-                  <th className="text-left py-2 px-3 font-medium">Name</th>
+                  <th className="text-left py-2 px-3 font-medium">{t("claw.files.tableHeaders.name")}</th>
                   <th className="text-right py-2 px-3 font-medium w-20">
-                    Size
+                    {t("claw.files.tableHeaders.size")}
                   </th>
                   <th className="text-right py-2 px-3 font-medium w-36">
-                    Modified
+                    {t("claw.files.tableHeaders.modified")}
                   </th>
                   <th className="text-right py-2 px-3 font-medium w-20">
-                    Actions
+                    {t("claw.files.tableHeaders.actions")}
                   </th>
                 </tr>
               </thead>
@@ -351,7 +353,7 @@ export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
                       colSpan={4}
                       className="text-center py-8 text-muted-foreground"
                     >
-                      Empty directory
+                      {t("claw.files.emptyDir")}
                     </td>
                   </tr>
                 )}
@@ -391,7 +393,7 @@ export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
                             className="h-6 w-6 p-0"
                             onClick={() => handleDownload(entry)}
                             disabled={downloadingFile === entry.name}
-                            title="Download"
+                            title={t("claw.files.download")}
                           >
                             {downloadingFile === entry.name ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
@@ -406,7 +408,7 @@ export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
                           className="h-6 w-6 p-0 text-red-400 hover:text-red-300"
                           onClick={() => handleDelete(entry)}
                           disabled={deleting === entry.name}
-                          title="Delete"
+                          title={t("common.delete")}
                         >
                           {deleting === entry.name ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
@@ -428,10 +430,10 @@ export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
       <Dialog open={mkdirOpen} onOpenChange={setMkdirOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Folder</DialogTitle>
+            <DialogTitle>{t("claw.files.createNewFolder")}</DialogTitle>
           </DialogHeader>
           <Input
-            placeholder="Folder name"
+            placeholder={t("claw.files.folderName")}
             value={newDirName}
             onChange={(e) => setNewDirName(e.target.value)}
             onKeyDown={(e) => {
@@ -445,7 +447,7 @@ export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
               onClick={() => setMkdirOpen(false)}
               disabled={creatingDir}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               onClick={handleMkdir}
@@ -456,7 +458,7 @@ export function FilesPanel({ connectionId, connected }: FilesPanelProps) {
               ) : (
                 <FolderPlus className="h-3.5 w-3.5 mr-1.5" />
               )}
-              Create
+              {t("common.create")}
             </Button>
           </DialogFooter>
         </DialogContent>

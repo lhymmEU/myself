@@ -15,9 +15,12 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { SecretList } from "./secret-list";
+import { useT } from "@/lib/i18n/context";
+import type { TranslationKey } from "@/lib/i18n/types";
 import type { VaultStatus } from "@/lib/modules/vault/types";
 
 export function VaultManager() {
+  const t = useT();
   const [status, setStatus] = useState<VaultStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,11 +32,11 @@ export function VaultManager() {
         setStatus(await res.json());
       }
     } catch {
-      setError("Failed to connect to vault");
+      setError(t("vault.manager.failedConnect"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchStatus();
@@ -67,6 +70,7 @@ export function VaultManager() {
 }
 
 function SetupForm({ onComplete }: { onComplete: () => void }) {
+  const t = useT();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [storagePath, setStoragePath] = useState("");
@@ -82,11 +86,11 @@ function SetupForm({ onComplete }: { onComplete: () => void }) {
     setError(null);
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError(t("vault.manager.errorMinLength"));
       return;
     }
     if (password !== confirm) {
-      setError("Passwords do not match");
+      setError(t("vault.manager.errorMismatch"));
       return;
     }
 
@@ -103,13 +107,13 @@ function SetupForm({ onComplete }: { onComplete: () => void }) {
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error ?? "Setup failed");
+        setError(data.error ?? t("vault.manager.errorSetupFailed"));
         return;
       }
 
       onComplete();
     } catch {
-      setError("Network error");
+      setError(t("vault.manager.errorNetwork"));
     } finally {
       setSubmitting(false);
     }
@@ -122,22 +126,20 @@ function SetupForm({ onComplete }: { onComplete: () => void }) {
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
             <ShieldCheck className="h-7 w-7 text-primary" />
           </div>
-          <CardTitle className="text-xl">Set Up Your Vault</CardTitle>
+          <CardTitle className="text-xl">{t("vault.manager.setupTitle")}</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Secure your secrets with post-quantum encryption.
-            <br />
-            Choose a strong master password — it cannot be recovered.
+            {t("vault.manager.setupDesc")}
           </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="setup-password">Master Password</Label>
+              <Label htmlFor="setup-password">{t("vault.manager.masterPassword")}</Label>
               <div className="relative">
                 <Input
                   id="setup-password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Enter a strong password"
+                  placeholder={t("vault.manager.placeholderPassword")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoFocus
@@ -171,18 +173,18 @@ function SetupForm({ onComplete }: { onComplete: () => void }) {
                     ))}
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    {passwordStrength.label}
+                    {t(passwordStrength.label as TranslationKey)}
                   </span>
                 </div>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="setup-confirm">Confirm Password</Label>
+              <Label htmlFor="setup-confirm">{t("vault.manager.confirmPassword")}</Label>
               <Input
                 id="setup-confirm"
                 type={showPassword ? "text" : "password"}
-                placeholder="Confirm your password"
+                placeholder={t("vault.manager.placeholderConfirm")}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
               />
@@ -197,23 +199,23 @@ function SetupForm({ onComplete }: { onComplete: () => void }) {
                 onClick={() => setShowAdvanced(!showAdvanced)}
               >
                 <FolderOpen className="h-3 w-3 mr-1" />
-                {showAdvanced ? "Hide" : "Custom"} storage location
+                {showAdvanced ? t("vault.manager.hideStoragePath") : t("vault.manager.customStoragePath")}
               </Button>
               {showAdvanced && (
                 <div className="mt-2 space-y-2">
                   <Label htmlFor="setup-path">
-                    Storage Path
+                    {t("vault.manager.storagePath")}
                   </Label>
                   <Input
                     id="setup-path"
                     type="text"
-                    placeholder="Default: ./data/vault.db"
+                    placeholder={t("vault.manager.placeholderStoragePath")}
                     value={storagePath}
                     onChange={(e) => setStoragePath(e.target.value)}
                     className="font-mono text-xs"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Absolute path to the vault database file
+                    {t("vault.manager.storagePathHelp")}
                   </p>
                 </div>
               )}
@@ -236,16 +238,14 @@ function SetupForm({ onComplete }: { onComplete: () => void }) {
               {submitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                "Create Vault"
+                t("vault.manager.createVault")
               )}
             </Button>
 
             <div className="rounded-lg bg-muted/50 p-3 space-y-1">
-              <p className="text-xs font-medium">Encryption Details</p>
+              <p className="text-xs font-medium">{t("vault.manager.encryptionDetails")}</p>
               <p className="text-xs text-muted-foreground">
-                XChaCha20-Poly1305 authenticated encryption with scrypt key
-                derivation and SHA3-256 verification — all quantum-resistant
-                symmetric primitives.
+                {t("vault.manager.encryptionDesc")}
               </p>
             </div>
           </form>
@@ -256,6 +256,7 @@ function SetupForm({ onComplete }: { onComplete: () => void }) {
 }
 
 function UnlockForm({ onComplete }: { onComplete: () => void }) {
+  const t = useT();
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -275,13 +276,13 @@ function UnlockForm({ onComplete }: { onComplete: () => void }) {
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error ?? "Unlock failed");
+        setError(data.error ?? t("vault.manager.errorUnlock"));
         return;
       }
 
       onComplete();
     } catch {
-      setError("Network error");
+      setError(t("vault.manager.errorNetwork"));
     } finally {
       setSubmitting(false);
     }
@@ -294,20 +295,20 @@ function UnlockForm({ onComplete }: { onComplete: () => void }) {
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted">
             <Lock className="h-7 w-7 text-muted-foreground" />
           </div>
-          <CardTitle className="text-xl">Vault Locked</CardTitle>
+          <CardTitle className="text-xl">{t("vault.manager.unlockTitle")}</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Enter your master password to access your secrets
+            {t("vault.manager.unlockDesc")}
           </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="unlock-password">Master Password</Label>
+              <Label htmlFor="unlock-password">{t("vault.manager.masterPassword")}</Label>
               <div className="relative">
                 <Input
                   id="unlock-password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
+                  placeholder={t("vault.manager.placeholderUnlock")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoFocus
@@ -343,7 +344,7 @@ function UnlockForm({ onComplete }: { onComplete: () => void }) {
               {submitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                "Unlock Vault"
+                t("vault.manager.unlockButton")
               )}
             </Button>
           </form>
@@ -367,8 +368,8 @@ function getPasswordStrength(password: string): {
   if (/\d/.test(password)) score++;
   if (/[^A-Za-z0-9]/.test(password)) score++;
 
-  if (score <= 1) return { level: 1, label: "Weak", color: "bg-red-500" };
-  if (score <= 2) return { level: 2, label: "Fair", color: "bg-orange-500" };
-  if (score <= 3) return { level: 3, label: "Good", color: "bg-yellow-500" };
-  return { level: 4, label: "Strong", color: "bg-emerald-500" };
+  if (score <= 1) return { level: 1, label: "vault.manager.passwordWeak", color: "bg-red-500" };
+  if (score <= 2) return { level: 2, label: "vault.manager.passwordFair", color: "bg-orange-500" };
+  if (score <= 3) return { level: 3, label: "vault.manager.passwordGood", color: "bg-yellow-500" };
+  return { level: 4, label: "vault.manager.passwordStrong", color: "bg-emerald-500" };
 }

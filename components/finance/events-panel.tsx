@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { ExternalLink } from "lucide-react";
+import { useT } from "@/lib/i18n/context";
+import type { TranslationKey } from "@/lib/i18n/types";
 
 interface NewsArticle {
   title: string;
@@ -17,11 +19,11 @@ interface NewsCategory {
 
 const REFRESH_INTERVAL = 5 * 60_000;
 
-function timeAgo(dateStr: string): string {
+function timeAgo(dateStr: string, t: (key: TranslationKey) => string): string {
   try {
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60_000);
-    if (mins < 1) return "now";
+    if (mins < 1) return t("finance.events.now");
     if (mins < 60) return `${mins}m`;
     const hrs = Math.floor(mins / 60);
     if (hrs < 24) return `${hrs}h`;
@@ -32,6 +34,7 @@ function timeAgo(dateStr: string): string {
 }
 
 export function NewsPanel() {
+  const t = useT();
   const [category, setCategory] = useState("top");
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [categories, setCategories] = useState<NewsCategory[]>([]);
@@ -64,7 +67,7 @@ export function NewsPanel() {
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between border-b border-amber-900/30 pb-1 mb-2">
         <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-          Live News
+          {t("finance.events.title")}
         </span>
         <select
           value={category}
@@ -78,18 +81,18 @@ export function NewsPanel() {
                 </option>
               ))
             : (
-                <option value="top" className="bg-[#0a0a0f]">Top Stories</option>
+                <option value="top" className="bg-[#0a0a0f]">{t("finance.events.topStories")}</option>
               )}
         </select>
       </div>
 
       {loading ? (
         <div className="flex-1 flex items-center justify-center text-amber-700 text-xs">
-          Loading...
+          {t("common.loading")}
         </div>
       ) : articles.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-amber-700 text-xs">
-          No articles found
+          {t("finance.events.noArticles")}
         </div>
       ) : (
         <div className="flex-1 overflow-auto space-y-0.5">
@@ -102,7 +105,7 @@ export function NewsPanel() {
               className="flex items-start gap-2 px-1.5 py-1.5 rounded hover:bg-amber-950/40 transition-colors group"
             >
               <span className="text-[10px] text-amber-700 shrink-0 pt-0.5 w-6 text-right tabular-nums">
-                {timeAgo(article.pubDate)}
+                {timeAgo(article.pubDate, t)}
               </span>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-amber-100 leading-tight line-clamp-2 group-hover:text-amber-50">

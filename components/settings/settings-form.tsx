@@ -9,8 +9,10 @@ import { FinanceDefaults } from "./finance-defaults";
 import { AppearanceConfig } from "./appearance-config";
 import { DataManagement } from "./data-management";
 import { Loader2 } from "lucide-react";
+import { useT } from "@/lib/i18n/context";
 
 export function SettingsForm() {
+  const t = useT();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
@@ -22,10 +24,10 @@ export function SettingsForm() {
         setLoading(false);
       })
       .catch(() => {
-        toast.error("Failed to load settings");
+        toast.error(t("settings.form.failedLoad"));
         setLoading(false);
       });
-  }, []);
+  }, [t]);
 
   const handleUpdate = useCallback(
     async (key: string, value: string) => {
@@ -37,12 +39,12 @@ export function SettingsForm() {
           body: JSON.stringify({ key, value }),
         });
         if (!res.ok) throw new Error();
-        toast.success("Setting saved");
+        toast.success(t("settings.form.settingSaved"));
       } catch {
-        toast.error("Failed to save setting");
+        toast.error(t("settings.form.failedSave"));
       }
     },
-    []
+    [t]
   );
 
   if (loading) {

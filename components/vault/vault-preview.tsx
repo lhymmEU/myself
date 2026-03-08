@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Lock, Unlock, ShieldCheck } from "lucide-react";
+import { useT } from "@/lib/i18n/context";
 
 interface PreviewStatus {
   initialized: boolean;
@@ -10,6 +11,7 @@ interface PreviewStatus {
 }
 
 export function VaultPreview() {
+  const t = useT();
   const [status, setStatus] = useState<PreviewStatus | null>(null);
 
   useEffect(() => {
@@ -24,7 +26,7 @@ export function VaultPreview() {
       <div className="flex items-center gap-3">
         <ShieldCheck className="h-5 w-5 text-muted-foreground" />
         <p className="text-sm text-muted-foreground">
-          Set up your secure vault
+          {t("vault.preview.setup")}
         </p>
       </div>
     );
@@ -35,20 +37,20 @@ export function VaultPreview() {
       <div>
         <p className="text-2xl font-bold">{status.secretCount}</p>
         <p className="text-sm text-muted-foreground">
-          {status.secretCount === 1 ? "secret" : "secrets"} secured
+          {t("vault.preview.secretsSecured")}
         </p>
       </div>
       <div className="flex items-center gap-1.5">
         {status.unlocked ? (
           <>
             <Unlock className="h-4 w-4 text-emerald-500" />
-            <span className="text-xs font-medium text-emerald-500">Unlocked</span>
+            <span className="text-xs font-medium text-emerald-500">{t("vault.preview.unlocked")}</span>
           </>
         ) : (
           <>
             <Lock className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs font-medium text-muted-foreground">
-              Locked
+              {t("vault.preview.locked")}
             </span>
           </>
         )}

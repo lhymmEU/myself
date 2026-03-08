@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useT } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,7 @@ const LEVEL_COLORS: Record<string, string> = {
 };
 
 export function LogsViewer({ connectionId, connected }: LogsViewerProps) {
+  const t = useT();
   const [lines, setLines] = useState<LogLine[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [filter, setFilter] = useState("");
@@ -141,7 +143,7 @@ export function LogsViewer({ connectionId, connected }: LogsViewerProps) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <Server className="h-10 w-10 mb-3 opacity-40" />
-        <p className="text-sm">Connect to a server to view logs</p>
+        <p className="text-sm">{t("claw.logs.connectToView")}</p>
       </div>
     );
   }
@@ -152,12 +154,12 @@ export function LogsViewer({ connectionId, connected }: LogsViewerProps) {
         {!streaming ? (
           <Button size="sm" onClick={startStreaming}>
             <Play className="h-3.5 w-3.5 mr-1.5" />
-            Stream Logs
+            {t("claw.logs.streamLogs")}
           </Button>
         ) : (
           <Button size="sm" variant="outline" onClick={stopStreaming}>
             <Pause className="h-3.5 w-3.5 mr-1.5" />
-            Pause
+            {t("claw.logs.pause")}
           </Button>
         )}
         <Button
@@ -166,7 +168,7 @@ export function LogsViewer({ connectionId, connected }: LogsViewerProps) {
           onClick={() => setLines([])}
         >
           <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-          Clear
+          {t("claw.logs.clear")}
         </Button>
         <Button
           size="sm"
@@ -174,32 +176,32 @@ export function LogsViewer({ connectionId, connected }: LogsViewerProps) {
           onClick={() => setAutoScroll(!autoScroll)}
         >
           <ArrowDown className="h-3.5 w-3.5 mr-1.5" />
-          Auto-scroll
+          {t("claw.logs.autoScroll")}
         </Button>
 
         <Select value={levelFilter} onValueChange={setLevelFilter}>
           <SelectTrigger className="w-28 h-8 text-xs">
-            <SelectValue placeholder="Level" />
+            <SelectValue placeholder={t("claw.logs.level")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All levels</SelectItem>
-            <SelectItem value="trace">Trace</SelectItem>
-            <SelectItem value="debug">Debug</SelectItem>
-            <SelectItem value="info">Info</SelectItem>
-            <SelectItem value="warn">Warn</SelectItem>
-            <SelectItem value="error">Error</SelectItem>
+            <SelectItem value="all">{t("claw.logs.allLevels")}</SelectItem>
+            <SelectItem value="trace">{t("claw.logs.trace")}</SelectItem>
+            <SelectItem value="debug">{t("claw.logs.debug")}</SelectItem>
+            <SelectItem value="info">{t("claw.logs.info")}</SelectItem>
+            <SelectItem value="warn">{t("claw.logs.warn")}</SelectItem>
+            <SelectItem value="error">{t("claw.logs.error")}</SelectItem>
           </SelectContent>
         </Select>
 
         <Input
-          placeholder="Filter..."
+          placeholder={t("claw.logs.filterPlaceholder")}
           className="h-8 w-48 text-xs"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />
 
         <Badge variant="secondary" className="ml-auto text-xs">
-          {filteredLines.length} lines
+          {filteredLines.length} {t("claw.logs.lines")}
         </Badge>
       </div>
 
@@ -211,8 +213,8 @@ export function LogsViewer({ connectionId, connected }: LogsViewerProps) {
         {filteredLines.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">
             {streaming
-              ? "Waiting for log entries..."
-              : "Click 'Stream Logs' to begin"}
+              ? t("claw.logs.waitingForLogs")
+              : t("claw.logs.clickToBegin")}
           </p>
         ) : (
           filteredLines.map((line) => (

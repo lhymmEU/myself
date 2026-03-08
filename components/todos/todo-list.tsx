@@ -7,8 +7,10 @@ import { Label } from "@/components/ui/label";
 import { TodoItem } from "./todo-item";
 import { parseMindMapTodos } from "@/lib/modules/todos/parse-mind-map";
 import type { MindMapTodo } from "@/lib/modules/todos/types";
+import { useT } from "@/lib/i18n/context";
 
 export function TodoList() {
+  const t = useT();
   const [todos, setTodos] = useState<MindMapTodo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +19,7 @@ export function TodoList() {
   const fetchTodos = useCallback(async () => {
     try {
       const res = await fetch("/api/mind-map");
-      if (!res.ok) throw new Error("Failed to load mind map");
+      if (!res.ok) throw new Error(t("todos.failedLoadMindMap"));
       const scene = await res.json();
 
       let elements: unknown[] = [];
@@ -33,18 +35,18 @@ export function TodoList() {
       setTodos(parsed);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load todos");
+      setError(err instanceof Error ? err.message : t("todos.failedLoadTodos"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchTodos();
   }, [fetchTodos]);
 
-  const filtered = urgentOnly ? todos.filter((t) => t.isUrgent) : todos;
-  const urgentCount = todos.filter((t) => t.isUrgent).length;
+  const filtered = urgentOnly ? todos.filter((td) => td.isUrgent) : todos;
+  const urgentCount = todos.filter((td) => td.isUrgent).length;
 
   if (loading) {
     return (
@@ -66,12 +68,11 @@ export function TodoList() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {todos.length} todo{todos.length !== 1 ? "s" : ""} derived from mind
-          map
+          {todos.length} {t("todos.derivedFromMindMap")}
           {urgentCount > 0 && (
             <span className="ml-2 inline-flex items-center gap-1 text-red-500">
               <AlertTriangle className="h-3.5 w-3.5" />
-              {urgentCount} urgent
+              {urgentCount} {t("todos.urgent")}
             </span>
           )}
         </p>
@@ -82,7 +83,7 @@ export function TodoList() {
               htmlFor="urgent-filter"
               className="text-sm text-muted-foreground"
             >
-              Urgent only
+              {t("todos.urgentOnly")}
             </Label>
             <Switch
               id="urgent-filter"
@@ -96,8 +97,8 @@ export function TodoList() {
       {filtered.length === 0 ? (
         <div className="text-center py-8 text-sm text-muted-foreground">
           {todos.length === 0
-            ? "No todos found. Add rectangle items to your mind map to create todos."
-            : "No urgent todos."}
+            ? t("todos.noTodos")
+            : t("todos.noUrgentTodos")}
         </div>
       ) : (
         <div className="space-y-1.5">

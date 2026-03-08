@@ -4,12 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, ChevronRight } from "lucide-react";
 import type { MindMapTodo } from "@/lib/modules/todos/types";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/context";
 
 interface TodoItemProps {
   todo: MindMapTodo;
 }
 
 export function TodoItem({ todo }: TodoItemProps) {
+  const t = useT();
   const traceWithoutTitle = todo.trace.slice(0, -1);
 
   return (
@@ -41,7 +43,7 @@ export function TodoItem({ todo }: TodoItemProps) {
             className="text-[10px] px-1.5 py-0 border-0 bg-red-500/15 text-red-700 dark:text-red-400 shrink-0 gap-1"
           >
             <AlertTriangle className="h-3 w-3" />
-            urgent
+            {t("todos.urgent")}
           </Badge>
         )}
       </div>

@@ -5,6 +5,7 @@ import { PageList } from "@/components/plans/page-list";
 import { Editor } from "@/components/plans/editor";
 import { FileText, PenLine } from "lucide-react";
 import type { Block } from "@blocknote/core";
+import { useT } from "@/lib/i18n/context";
 
 interface Plan {
   id: string;
@@ -15,6 +16,7 @@ interface Plan {
 }
 
 export default function PlansPage() {
+  const t = useT();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activePlan, setActivePlan] = useState<Plan | null>(null);
@@ -158,10 +160,10 @@ export default function PlansPage() {
                 value={title}
                 onChange={(e) => handleTitleChange(e.target.value)}
                 className="w-full text-4xl font-bold bg-transparent border-none outline-none placeholder:text-muted-foreground/40 tracking-tight"
-                placeholder="Untitled"
+                placeholder={t("plans.untitled")}
               />
               <p className="mt-2 mb-6 text-sm text-muted-foreground">
-                Last edited{" "}
+                {t("plans.lastEdited")}{" "}
                 {new Date(activePlan.updatedAt).toLocaleDateString(undefined, {
                   month: "short",
                   day: "numeric",
@@ -183,11 +185,10 @@ export default function PlansPage() {
               </div>
               <div className="space-y-1.5">
                 <p className="text-lg font-medium text-foreground/80">
-                  No page selected
+                  {t("plans.noPageSelected")}
                 </p>
                 <p className="text-sm text-muted-foreground max-w-[240px]">
-                  Choose a page from the sidebar or create a new one to start
-                  writing
+                  {t("plans.noPageSelectedDesc")}
                 </p>
               </div>
               <button
@@ -195,7 +196,7 @@ export default function PlansPage() {
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 <PenLine className="h-4 w-4" />
-                New page
+                {t("plans.newPage")}
               </button>
             </div>
           </div>

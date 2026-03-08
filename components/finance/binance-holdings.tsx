@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useT } from "@/lib/i18n/context";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   PieChart,
@@ -48,13 +49,14 @@ function AssetTable({
 }: {
   assets: { asset: string; amount: number; usdValue: number }[];
 }) {
+  const t = useT();
   const sorted = [...assets].sort((a, b) => b.usdValue - a.usdValue);
   const total = sorted.reduce((s, a) => s + a.usdValue, 0);
 
   if (!sorted.length) {
     return (
       <p className="text-sm text-muted-foreground py-4 text-center">
-        No assets found
+        {t("finance.binance.noAssets")}
       </p>
     );
   }
@@ -64,9 +66,9 @@ function AssetTable({
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b text-left text-muted-foreground">
-            <th className="pb-2 font-medium">Asset</th>
-            <th className="pb-2 font-medium text-right">Amount</th>
-            <th className="pb-2 font-medium text-right">Value</th>
+            <th className="pb-2 font-medium">{t("finance.binance.asset")}</th>
+            <th className="pb-2 font-medium text-right">{t("finance.binance.amount")}</th>
+            <th className="pb-2 font-medium text-right">{t("finance.polkadot.value")}</th>
             <th className="pb-2 font-medium text-right">%</th>
           </tr>
         </thead>
@@ -101,6 +103,7 @@ export function BinanceHoldings({
   loading,
   error,
 }: BinanceHoldingsProps) {
+  const t = useT();
   const [tab, setTab] = useState("spot");
 
   const spotAssets = spot.map((s) => ({
@@ -136,7 +139,7 @@ export function BinanceHoldings({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Binance Holdings</CardTitle>
+          <CardTitle>{t("finance.binance.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">{error}</p>
@@ -148,12 +151,12 @@ export function BinanceHoldings({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Binance Holdings</CardTitle>
+        <CardTitle>{t("finance.binance.title")}</CardTitle>
       </CardHeader>
       <CardContent>
         {loading ? (
           <p className="text-sm text-muted-foreground py-4 text-center">
-            Loading...
+            {t("common.loading")}
           </p>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -161,13 +164,13 @@ export function BinanceHoldings({
               <Tabs value={tab} onValueChange={setTab}>
                 <TabsList>
                   <TabsTrigger value="spot">
-                    Spot ({spot.length})
+                    {t("finance.binance.spot")} ({spot.length})
                   </TabsTrigger>
                   <TabsTrigger value="funding">
-                    Funding ({funding.length})
+                    {t("finance.binance.funding")} ({funding.length})
                   </TabsTrigger>
                   <TabsTrigger value="earn">
-                    Earn ({earn.length})
+                    {t("finance.binance.earn")} ({earn.length})
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="spot" className="mt-3">
@@ -182,7 +185,7 @@ export function BinanceHoldings({
               </Tabs>
             </div>
             <div>
-              <p className="text-sm font-medium mb-2">Allocation</p>
+              <p className="text-sm font-medium mb-2">{t("finance.binance.allocation")}</p>
               {pieData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
@@ -210,7 +213,7 @@ export function BinanceHoldings({
                 </ResponsiveContainer>
               ) : (
                 <p className="text-xs text-muted-foreground text-center py-8">
-                  No data
+                  {t("finance.binance.noData")}
                 </p>
               )}
               <div className="flex flex-wrap gap-2 mt-2">

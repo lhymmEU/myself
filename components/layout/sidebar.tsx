@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Shell,
+  Languages,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,24 +24,30 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import { useState } from "react";
+import { useT, useLanguage } from "@/lib/i18n/context";
+import type { TranslationKey } from "@/lib/i18n/types";
 
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/mind-map", label: "Mind Map", icon: Brain },
-  { href: "/dashboard/todos", label: "Todos", icon: CheckSquare },
-  { href: "/dashboard/finance", label: "Finance", icon: DollarSign },
-  { href: "/dashboard/plans", label: "Plans", icon: FileText },
-  { href: "/dashboard/vault", label: "Vault", icon: Lock },
-  { href: "/dashboard/claw", label: "My Claw", icon: Shell },
+const NAV_ITEMS: { href: string; labelKey: TranslationKey; icon: typeof LayoutDashboard }[] = [
+  { href: "/dashboard", labelKey: "sidebar.dashboard", icon: LayoutDashboard },
+  { href: "/dashboard/mind-map", labelKey: "sidebar.mindMap", icon: Brain },
+  { href: "/dashboard/todos", labelKey: "sidebar.todos", icon: CheckSquare },
+  { href: "/dashboard/finance", labelKey: "sidebar.finance", icon: DollarSign },
+  { href: "/dashboard/plans", labelKey: "sidebar.plans", icon: FileText },
+  { href: "/dashboard/vault", labelKey: "sidebar.vault", icon: Lock },
+  { href: "/dashboard/claw", labelKey: "sidebar.myClaw", icon: Shell },
 ];
 
-const BOTTOM_ITEMS = [
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
+const BOTTOM_ITEMS: { href: string; labelKey: TranslationKey; icon: typeof Settings }[] = [
+  { href: "/dashboard/settings", labelKey: "sidebar.settings", icon: Settings },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const t = useT();
+  const { lang, setLang } = useLanguage();
+
+  const toggleLang = () => setLang(lang === "en" ? "zh" : "en");
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -54,7 +61,7 @@ export function Sidebar() {
           {!collapsed && (
             <Link href="/dashboard" className="flex items-center gap-2">
               <Brain className="h-6 w-6 text-primary" />
-              <span className="font-semibold text-lg">Life Dashboard</span>
+              <span className="font-semibold text-lg">{t("sidebar.title")}</span>
             </Link>
           )}
           <Button
@@ -76,6 +83,7 @@ export function Sidebar() {
             const isActive =
               pathname === item.href ||
               (item.href !== "/dashboard" && pathname.startsWith(item.href));
+            const label = t(item.labelKey);
             const link = (
               <Link
                 key={item.href}
@@ -89,7 +97,7 @@ export function Sidebar() {
                 )}
               >
                 <item.icon className="h-4 w-4 shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
+                {!collapsed && <span>{label}</span>}
               </Link>
             );
 
@@ -97,7 +105,7 @@ export function Sidebar() {
               return (
                 <Tooltip key={item.href}>
                   <TooltipTrigger asChild>{link}</TooltipTrigger>
-                  <TooltipContent side="right">{item.label}</TooltipContent>
+                  <TooltipContent side="right">{label}</TooltipContent>
                 </Tooltip>
               );
             }
@@ -109,6 +117,7 @@ export function Sidebar() {
         <div className="border-t border-border p-2">
           {BOTTOM_ITEMS.map((item) => {
             const isActive = pathname.startsWith(item.href);
+            const label = t(item.labelKey);
             const link = (
               <Link
                 key={item.href}
@@ -122,7 +131,7 @@ export function Sidebar() {
                 )}
               >
                 <item.icon className="h-4 w-4 shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
+                {!collapsed && <span>{label}</span>}
               </Link>
             );
 
@@ -130,13 +139,41 @@ export function Sidebar() {
               return (
                 <Tooltip key={item.href}>
                   <TooltipTrigger asChild>{link}</TooltipTrigger>
-                  <TooltipContent side="right">{item.label}</TooltipContent>
+                  <TooltipContent side="right">{label}</TooltipContent>
                 </Tooltip>
               );
             }
 
             return link;
           })}
+
+          {/* Language switcher */}
+          {collapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-full h-9 mt-1"
+                  onClick={toggleLang}
+                >
+                  <Languages className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {lang === "en" ? "切换到中文" : "Switch to English"}
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 px-3 py-2 mt-1 text-sm font-medium text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+              onClick={toggleLang}
+            >
+              <Languages className="h-4 w-4 shrink-0" />
+              <span>{lang === "en" ? "中文" : "English"}</span>
+            </Button>
+          )}
         </div>
       </aside>
     </TooltipProvider>

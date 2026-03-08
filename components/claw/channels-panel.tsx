@@ -11,6 +11,7 @@ import {
   Loader2,
   Search,
 } from "lucide-react";
+import { useT } from "@/lib/i18n/context";
 
 interface ChannelsPanelProps {
   connectionId: string | null;
@@ -18,6 +19,7 @@ interface ChannelsPanelProps {
 }
 
 export function ChannelsPanel({ connectionId, connected }: ChannelsPanelProps) {
+  const t = useT();
   const [statusOutput, setStatusOutput] = useState("");
   const [listOutput, setListOutput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -77,7 +79,7 @@ export function ChannelsPanel({ connectionId, connected }: ChannelsPanelProps) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <Server className="h-10 w-10 mb-3 opacity-40" />
-        <p className="text-sm">Connect to a server to manage channels</p>
+        <p className="text-sm">{t("claw.channels.connectToManage")}</p>
       </div>
     );
   }
@@ -96,7 +98,7 @@ export function ChannelsPanel({ connectionId, connected }: ChannelsPanelProps) {
           ) : (
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
           )}
-          Refresh
+          {t("common.refresh")}
         </Button>
         <Button
           size="sm"
@@ -109,7 +111,7 @@ export function ChannelsPanel({ connectionId, connected }: ChannelsPanelProps) {
           ) : (
             <Search className="h-3.5 w-3.5 mr-1.5" />
           )}
-          Deep Probe
+          {t("claw.channels.deepProbe")}
         </Button>
       </div>
 
@@ -117,7 +119,7 @@ export function ChannelsPanel({ connectionId, connected }: ChannelsPanelProps) {
         <CardHeader className="pb-2">
           <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
             <MessageSquare className="h-3.5 w-3.5" />
-            Channel Status
+            {t("claw.channels.channelStatus")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -126,7 +128,7 @@ export function ChannelsPanel({ connectionId, connected }: ChannelsPanelProps) {
               {statusOutput}
             </pre>
           ) : (
-            <p className="text-sm text-muted-foreground">Loading...</p>
+            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
           )}
         </CardContent>
       </Card>
@@ -135,7 +137,7 @@ export function ChannelsPanel({ connectionId, connected }: ChannelsPanelProps) {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground">
-              Channel List
+              {t("claw.channels.channelList")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -163,7 +165,7 @@ export function ChannelsPanel({ connectionId, connected }: ChannelsPanelProps) {
           Slack
         </Badge>
         <span className="text-xs text-muted-foreground self-center ml-1">
-          Supported channels
+          {t("claw.channels.supportedChannels")}
         </span>
       </div>
     </div>

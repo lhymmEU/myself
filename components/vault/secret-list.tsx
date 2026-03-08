@@ -31,7 +31,8 @@ import {
 } from "lucide-react";
 import { AddSecret } from "./add-secret";
 import { VaultSettings } from "./vault-settings";
-import { SECRET_CATEGORIES } from "@/lib/modules/vault/types";
+import { useT } from "@/lib/i18n/context";
+import type { TranslationKey } from "@/lib/i18n/types";
 import type {
   VaultSecretMeta,
   VaultSecretWithValue,
@@ -56,6 +57,7 @@ interface SecretListProps {
 }
 
 export function SecretList({ status, onStatusChange }: SecretListProps) {
+  const t = useT();
   const [secrets, setSecrets] = useState<VaultSecretMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -136,7 +138,7 @@ export function SecretList({ status, onStatusChange }: SecretListProps) {
     const matchesSearch =
       !search ||
       s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.tags.some((t) => t.toLowerCase().includes(search.toLowerCase()));
+      s.tags.some((tag) => tag.toLowerCase().includes(search.toLowerCase()));
     const matchesCategory =
       filterCategory === "all" || s.category === filterCategory;
     return matchesSearch && matchesCategory;
@@ -153,7 +155,7 @@ export function SecretList({ status, onStatusChange }: SecretListProps) {
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search secrets..."
+              placeholder={t("vault.secrets.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -167,11 +169,11 @@ export function SecretList({ status, onStatusChange }: SecretListProps) {
               onClick={() => setSettingsOpen(true)}
             >
               <Settings className="h-4 w-4 mr-1" />
-              Settings
+              {t("sidebar.settings")}
             </Button>
             <Button size="sm" variant="ghost" onClick={handleLock}>
               <Lock className="h-4 w-4 mr-1" />
-              Lock
+              {t("vault.secrets.lock")}
             </Button>
           </div>
         </div>
@@ -184,12 +186,10 @@ export function SecretList({ status, onStatusChange }: SecretListProps) {
               className="h-7 text-xs px-2.5"
               onClick={() => setFilterCategory("all")}
             >
-              All ({secrets.length})
+              {t("vault.secrets.all")} ({secrets.length})
             </Button>
             {usedCategories.map((cat) => {
-              const label = SECRET_CATEGORIES.find(
-                (c) => c.value === cat
-              )?.label;
+              const label = t(`vault.categories.${cat}` as TranslationKey);
               const count = secrets.filter((s) => s.category === cat).length;
               return (
                 <Button
@@ -217,18 +217,16 @@ export function SecretList({ status, onStatusChange }: SecretListProps) {
             </div>
             <p className="text-sm text-muted-foreground">
               {secrets.length === 0
-                ? "Your vault is empty. Add your first secret to get started."
-                : "No secrets match your search."}
+                ? t("vault.secrets.emptyVault")
+                : t("vault.secrets.noMatch")}
             </p>
           </div>
         ) : (
           <div className="grid gap-2">
             {filtered.map((secret) => {
               const Icon = CATEGORY_ICONS[secret.category] ?? HelpCircle;
-              const catLabel = SECRET_CATEGORIES.find(
-                (c) => c.value === secret.category
-              )?.label;
-              const ago = getTimeAgo(secret.updatedAt);
+              const catLabel = t(`vault.categories.${secret.category}` as TranslationKey);
+              const ago = getTimeAgo(secret.updatedAt, t as (key: string) => string);
 
               return (
                 <div
@@ -301,9 +299,7 @@ export function SecretList({ status, onStatusChange }: SecretListProps) {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Badge variant="secondary">
-                  {SECRET_CATEGORIES.find(
-                    (c) => c.value === selectedSecret.category
-                  )?.label}
+                  {t(`vault.categories.${selectedSecret.category}` as TranslationKey)}
                 </Badge>
                 {selectedSecret.tags.map((tag) => (
                   <Badge key={tag} variant="outline">
@@ -313,7 +309,7 @@ export function SecretList({ status, onStatusChange }: SecretListProps) {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Secret Value</label>
+                <label className="text-sm font-medium">{t("vault.secrets.secretValue")}</label>
                 <div className="flex items-start gap-2">
                   <div className="flex-1 rounded-md border bg-muted/30 p-3 font-mono text-sm break-all min-h-[44px]">
                     {showValue
@@ -368,12 +364,12 @@ export function SecretList({ status, onStatusChange }: SecretListProps) {
                     {showNotes ? (
                       <>
                         <EyeOff className="h-3 w-3 mr-1" />
-                        Hide notes
+                        {t("vault.secrets.hideNotes")}
                       </>
                     ) : (
                       <>
                         <Eye className="h-3 w-3 mr-1" />
-                        Show notes
+                        {t("vault.secrets.showNotes")}
                       </>
                     )}
                   </Button>
@@ -382,7 +378,7 @@ export function SecretList({ status, onStatusChange }: SecretListProps) {
 
               <div className="flex items-center justify-between pt-2 border-t">
                 <span className="text-xs text-muted-foreground">
-                  Created {new Date(selectedSecret.createdAt).toLocaleDateString()}
+                  {t("vault.secrets.created")} {new Date(selectedSecret.createdAt).toLocaleDateString()}
                 </span>
                 <Button
                   size="sm"
@@ -391,7 +387,7 @@ export function SecretList({ status, onStatusChange }: SecretListProps) {
                   onClick={() => handleDelete(selectedSecret.id)}
                 >
                   <Trash2 className="h-4 w-4 mr-1" />
-                  Delete
+                  {t("common.delete")}
                 </Button>
               </div>
             </div>
@@ -409,15 +405,15 @@ export function SecretList({ status, onStatusChange }: SecretListProps) {
   );
 }
 
-function getTimeAgo(timestamp: number): string {
+function getTimeAgo(timestamp: number, t: (key: string) => string): string {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
-  if (seconds < 60) return "just now";
+  if (seconds < 60) return t("vault.secrets.justNow");
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return `${minutes}${t("vault.secrets.mAgo")}`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return `${hours}${t("vault.secrets.hAgo")}`;
   const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
+  if (days < 30) return `${days}${t("vault.secrets.dAgo")}`;
   const months = Math.floor(days / 30);
-  return `${months}mo ago`;
+  return `${months}${t("vault.secrets.moAgo")}`;
 }

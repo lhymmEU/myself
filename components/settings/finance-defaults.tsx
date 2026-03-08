@@ -11,11 +11,12 @@ import {
 } from "@/components/ui/select";
 import { CURRENCIES } from "@/lib/modules/settings/defaults";
 import { DollarSign, Calendar } from "lucide-react";
+import { useT } from "@/lib/i18n/context";
 
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
+const MONTH_KEYS = [
+  "january", "february", "march", "april", "may", "june",
+  "july", "august", "september", "october", "november", "december",
+] as const;
 
 interface FinanceDefaultsProps {
   settings: Record<string, string>;
@@ -23,17 +24,19 @@ interface FinanceDefaultsProps {
 }
 
 export function FinanceDefaults({ settings, onUpdate }: FinanceDefaultsProps) {
+  const t = useT();
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <DollarSign className="size-5" />
-          Finance
+          {t("settings.finance.title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
-          <Label>Default Currency</Label>
+          <Label>{t("settings.finance.defaultCurrency")}</Label>
           <Select
             value={settings.default_currency ?? "USD"}
             onValueChange={(v) => onUpdate("default_currency", v)}
@@ -52,7 +55,7 @@ export function FinanceDefaults({ settings, onUpdate }: FinanceDefaultsProps) {
         </div>
 
         <div className="space-y-2">
-          <Label>Budget Period</Label>
+          <Label>{t("settings.finance.budgetPeriod")}</Label>
           <Select
             value={settings.budget_period ?? "monthly"}
             onValueChange={(v) => onUpdate("budget_period", v)}
@@ -61,8 +64,8 @@ export function FinanceDefaults({ settings, onUpdate }: FinanceDefaultsProps) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="weekly">Weekly</SelectItem>
-              <SelectItem value="monthly">Monthly</SelectItem>
+              <SelectItem value="weekly">{t("settings.finance.weekly")}</SelectItem>
+              <SelectItem value="monthly">{t("settings.finance.monthly")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -70,7 +73,7 @@ export function FinanceDefaults({ settings, onUpdate }: FinanceDefaultsProps) {
         <div className="space-y-2">
           <Label className="flex items-center gap-2">
             <Calendar className="size-4" />
-            Fiscal Year Start
+            {t("settings.finance.fiscalYearStart")}
           </Label>
           <Select
             value={settings.fiscal_year_start ?? "1"}
@@ -80,9 +83,9 @@ export function FinanceDefaults({ settings, onUpdate }: FinanceDefaultsProps) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {MONTHS.map((m, i) => (
-                <SelectItem key={m} value={String(i + 1)}>
-                  {m}
+              {MONTH_KEYS.map((key, i) => (
+                <SelectItem key={key} value={String(i + 1)}>
+                  {t(`settings.finance.months.${key}`)}
                 </SelectItem>
               ))}
             </SelectContent>

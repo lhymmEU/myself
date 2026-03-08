@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { useT } from "@/lib/i18n/context";
 import { DollarSign, Wallet, Coins } from "lucide-react";
 
 interface PortfolioSummaryProps {
@@ -23,26 +24,27 @@ export function PortfolioSummary({
   polkadotTotal,
   loading,
 }: PortfolioSummaryProps) {
+  const t = useT();
   const total = binanceTotal + polkadotTotal;
   const binancePct = total > 0 ? (binanceTotal / total) * 100 : 0;
   const polkadotPct = total > 0 ? (polkadotTotal / total) * 100 : 0;
 
   const cards = [
     {
-      label: "Total Portfolio",
+      label: t("finance.portfolio.totalPortfolio"),
       value: formatUsd(total),
       icon: DollarSign,
       accent: "text-emerald-500",
     },
     {
-      label: "Binance",
+      label: t("finance.portfolio.binance"),
       value: formatUsd(binanceTotal),
       icon: Coins,
       accent: "text-yellow-500",
       pct: binancePct,
     },
     {
-      label: "Polkadot",
+      label: t("finance.portfolio.polkadot"),
       value: formatUsd(polkadotTotal),
       icon: Wallet,
       accent: "text-pink-500",
@@ -63,7 +65,7 @@ export function PortfolioSummary({
                 </p>
                 {c.pct !== undefined && !loading && (
                   <p className="text-xs text-muted-foreground">
-                    {c.pct.toFixed(1)}% of portfolio
+                    {c.pct.toFixed(1)}% {t("finance.portfolio.ofPortfolio")}
                   </p>
                 )}
               </div>

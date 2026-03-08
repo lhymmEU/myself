@@ -10,6 +10,7 @@ import type {
   ExcalidrawImperativeAPI,
 } from "@excalidraw/excalidraw/types";
 import type { MindMapScene } from "@/lib/modules/mind-map/types";
+import { useT } from "@/lib/i18n/context";
 
 const SAVE_DEBOUNCE_MS = 1500;
 
@@ -38,6 +39,7 @@ function pickAppState(
 }
 
 export function ExcalidrawCanvas() {
+  const t = useT();
   const [initialData, setInitialData] = useState<{
     elements: readonly ExcalidrawElement[];
     appState: Partial<AppState>;
@@ -125,7 +127,7 @@ export function ExcalidrawCanvas() {
       <div className="flex items-center justify-center h-full bg-background text-muted-foreground">
         <div className="text-center space-y-2">
           <div className="h-8 w-8 mx-auto border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
-          <p className="text-sm">Loading mind map...</p>
+          <p className="text-sm">{t("mindMap.loading")}</p>
         </div>
       </div>
     );
@@ -151,7 +153,7 @@ export function ExcalidrawCanvas() {
         }
         onChange={handleChange}
         theme={THEME.DARK}
-        name="Mind Map"
+        name={t("mindMap.name")}
         UIOptions={{
           canvasActions: {
             loadScene: false,

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Coins, Key, Eye, EyeOff, Wallet } from "lucide-react";
+import { useT } from "@/lib/i18n/context";
 
 interface CryptoConfigProps {
   settings: Record<string, string>;
@@ -14,6 +15,7 @@ interface CryptoConfigProps {
 }
 
 export function CryptoConfig({ settings, onUpdate }: CryptoConfigProps) {
+  const t = useT();
   const [showApiKey, setShowApiKey] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
 
@@ -22,24 +24,24 @@ export function CryptoConfig({ settings, onUpdate }: CryptoConfigProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Coins className="size-5" />
-          Crypto & Exchange Configuration
+          {t("settings.crypto.title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
           <h4 className="text-sm font-medium flex items-center gap-2">
             <Key className="size-4" />
-            Binance API
+            {t("settings.crypto.binanceApi")}
           </h4>
           <div className="space-y-2">
-            <Label htmlFor="binance-key">API Key</Label>
+            <Label htmlFor="binance-key">{t("settings.crypto.apiKey")}</Label>
             <div className="relative">
               <Input
                 id="binance-key"
                 type={showApiKey ? "text" : "password"}
                 value={settings.binance_api_key ?? ""}
                 onChange={(e) => onUpdate("binance_api_key", e.target.value)}
-                placeholder="Enter your Binance API key..."
+                placeholder={t("settings.crypto.placeholderKey")}
               />
               <Button
                 type="button"
@@ -53,14 +55,14 @@ export function CryptoConfig({ settings, onUpdate }: CryptoConfigProps) {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="binance-secret">API Secret</Label>
+            <Label htmlFor="binance-secret">{t("settings.crypto.apiSecret")}</Label>
             <div className="relative">
               <Input
                 id="binance-secret"
                 type={showSecret ? "text" : "password"}
                 value={settings.binance_api_secret ?? ""}
                 onChange={(e) => onUpdate("binance_api_secret", e.target.value)}
-                placeholder="Enter your Binance API secret..."
+                placeholder={t("settings.crypto.placeholderSecret")}
               />
               <Button
                 type="button"
@@ -74,27 +76,27 @@ export function CryptoConfig({ settings, onUpdate }: CryptoConfigProps) {
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
-            Create a read-only API key at binance.com. Only &quot;Read&quot; permission is needed.
+            {t("settings.crypto.binanceHelp")}
           </p>
         </div>
 
         <div className="space-y-4">
           <h4 className="text-sm font-medium flex items-center gap-2">
             <Wallet className="size-4" />
-            Polkadot Wallets
+            {t("settings.crypto.polkadotWallets")}
           </h4>
           <div className="space-y-2">
-            <Label htmlFor="polkadot-wallets">Wallet Addresses</Label>
+            <Label htmlFor="polkadot-wallets">{t("settings.crypto.walletAddresses")}</Label>
             <Textarea
               id="polkadot-wallets"
               value={settings.polkadot_wallets ?? ""}
               onChange={(e) => onUpdate("polkadot_wallets", e.target.value)}
-              placeholder="Enter Polkadot wallet addresses, one per line..."
+              placeholder={t("settings.crypto.placeholderWallets")}
               rows={3}
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            One address per line. These are public addresses used for balance lookups only.
+            {t("settings.crypto.walletsHelp")}
           </p>
         </div>
       </CardContent>

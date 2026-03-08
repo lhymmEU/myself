@@ -16,20 +16,23 @@ import { PlansPreview } from "@/components/plans/plans-preview";
 import { QuickCapture } from "@/components/shared/quick-capture";
 import { VaultPreview } from "@/components/vault/vault-preview";
 import { ClawPreview } from "@/components/claw/claw-preview";
+import { useT } from "@/lib/i18n/context";
 
 export default function DashboardPage() {
+  const t = useT();
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("dashboard.title")}</h1>
         <p className="text-muted-foreground">
-          Your life at a glance
+          {t("dashboard.subtitle")}
         </p>
       </div>
 
       <BentoGrid>
         <BentoCard
-          title="Todos"
+          title={t("dashboard.cards.todos")}
           icon={CheckSquare}
           href="/dashboard/todos"
           className="md:row-span-1"
@@ -38,7 +41,7 @@ export default function DashboardPage() {
         </BentoCard>
 
         <BentoCard
-          title="Quick Capture"
+          title={t("dashboard.cards.quickCapture")}
           icon={Zap}
           className="md:row-span-1"
         >
@@ -46,7 +49,7 @@ export default function DashboardPage() {
         </BentoCard>
 
         <BentoCard
-          title="Finance"
+          title={t("dashboard.cards.finance")}
           icon={DollarSign}
           href="/dashboard/finance"
         >
@@ -54,7 +57,7 @@ export default function DashboardPage() {
         </BentoCard>
 
         <BentoCard
-          title="Plans"
+          title={t("dashboard.cards.plans")}
           icon={FileText}
           href="/dashboard/plans"
           className="md:col-span-2"
@@ -62,11 +65,11 @@ export default function DashboardPage() {
           <PlansPreview />
         </BentoCard>
 
-        <BentoCard title="Vault" icon={Lock} href="/dashboard/vault">
+        <BentoCard title={t("dashboard.cards.vault")} icon={Lock} href="/dashboard/vault">
           <VaultPreview />
         </BentoCard>
 
-        <BentoCard title="My Claw" icon={Shell} href="/dashboard/claw">
+        <BentoCard title={t("dashboard.cards.myClaw")} icon={Shell} href="/dashboard/claw">
           <ClawPreview />
         </BentoCard>
       </BentoGrid>

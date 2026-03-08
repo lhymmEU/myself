@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { WifiOff, Shell } from "lucide-react";
+import { useT } from "@/lib/i18n/context";
 
 interface PreviewConnection {
   id: string;
@@ -10,6 +11,7 @@ interface PreviewConnection {
 }
 
 export function ClawPreview() {
+  const t = useT();
   const [connections, setConnections] = useState<PreviewConnection[]>([]);
 
   useEffect(() => {
@@ -26,7 +28,7 @@ export function ClawPreview() {
       <div className="flex items-center gap-3">
         <Shell className="h-5 w-5 text-muted-foreground" />
         <p className="text-sm text-muted-foreground">
-          Set up your OpenClaw connection
+          {t("claw.preview.setupConnection")}
         </p>
       </div>
     );
@@ -37,13 +39,13 @@ export function ClawPreview() {
       <div>
         <p className="text-2xl font-bold">{connections.length}</p>
         <p className="text-sm text-muted-foreground">
-          {connections.length === 1 ? "server" : "servers"} configured
+          {connections.length === 1 ? t("claw.preview.server") : t("claw.preview.servers")}{" "}{t("claw.preview.configured")}
         </p>
       </div>
       <div className="flex items-center gap-1.5">
         <WifiOff className="h-4 w-4 text-muted-foreground" />
         <span className="text-xs font-medium text-muted-foreground">
-          Click to manage
+          {t("claw.preview.clickToManage")}
         </span>
       </div>
     </div>

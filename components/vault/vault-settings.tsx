@@ -20,6 +20,7 @@ import {
   FolderOpen,
   KeyRound,
 } from "lucide-react";
+import { useT } from "@/lib/i18n/context";
 import type { VaultStatus } from "@/lib/modules/vault/types";
 
 interface VaultSettingsProps {
@@ -35,11 +36,12 @@ export function VaultSettings({
   status,
   onStatusChange,
 }: VaultSettingsProps) {
+  const t = useT();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Vault Settings</DialogTitle>
+          <DialogTitle>{t("vault.settings.dialogTitle")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-6">
           <StoragePathSection
@@ -61,6 +63,7 @@ function StoragePathSection({
   currentPath: string;
   onChanged: () => void;
 }) {
+  const t = useT();
   const [newPath, setNewPath] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -83,7 +86,7 @@ function StoragePathSection({
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error ?? "Failed to change path");
+        setError(data.error ?? t("vault.settings.failedChangePath"));
         return;
       }
 
@@ -92,7 +95,7 @@ function StoragePathSection({
       onChanged();
       setTimeout(() => setSuccess(false), 3000);
     } catch {
-      setError("Network error");
+      setError(t("vault.settings.errorNetwork"));
     } finally {
       setSubmitting(false);
     }
@@ -102,7 +105,7 @@ function StoragePathSection({
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <FolderOpen className="h-4 w-4 text-muted-foreground" />
-        <h3 className="text-sm font-medium">Storage Location</h3>
+        <h3 className="text-sm font-medium">{t("vault.settings.storageLocation")}</h3>
       </div>
       <div className="rounded-md border bg-muted/30 p-2.5">
         <p className="text-xs font-mono text-muted-foreground break-all">
@@ -111,12 +114,12 @@ function StoragePathSection({
       </div>
       <form onSubmit={handleChangePath} className="space-y-2">
         <Label htmlFor="new-path" className="text-xs">
-          New Location
+          {t("vault.settings.newLocation")}
         </Label>
         <div className="flex gap-2">
           <Input
             id="new-path"
-            placeholder="/path/to/vault.db"
+            placeholder={t("vault.settings.placeholderPath")}
             value={newPath}
             onChange={(e) => setNewPath(e.target.value)}
             className="font-mono text-xs flex-1"
@@ -131,7 +134,7 @@ function StoragePathSection({
             ) : success ? (
               <Check className="h-3.5 w-3.5" />
             ) : (
-              "Move"
+              t("vault.settings.move")
             )}
           </Button>
         </div>
@@ -142,7 +145,7 @@ function StoragePathSection({
           </p>
         )}
         <p className="text-xs text-muted-foreground">
-          The vault database will be copied to the new location.
+          {t("vault.settings.moveHelp")}
         </p>
       </form>
     </div>
@@ -150,6 +153,7 @@ function StoragePathSection({
 }
 
 function ChangePasswordSection() {
+  const t = useT();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -164,11 +168,11 @@ function ChangePasswordSection() {
     setSuccess(false);
 
     if (newPassword.length < 8) {
-      setError("New password must be at least 8 characters");
+      setError(t("vault.settings.errorMinLength"));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError("New passwords do not match");
+      setError(t("vault.settings.errorMismatch"));
       return;
     }
 
@@ -183,7 +187,7 @@ function ChangePasswordSection() {
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error ?? "Failed to change password");
+        setError(data.error ?? t("vault.settings.failedChangePassword"));
         return;
       }
 
@@ -193,7 +197,7 @@ function ChangePasswordSection() {
       setConfirmPassword("");
       setTimeout(() => setSuccess(false), 3000);
     } catch {
-      setError("Network error");
+      setError(t("vault.settings.errorNetwork"));
     } finally {
       setSubmitting(false);
     }
@@ -203,12 +207,12 @@ function ChangePasswordSection() {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <KeyRound className="h-4 w-4 text-muted-foreground" />
-        <h3 className="text-sm font-medium">Change Password</h3>
+        <h3 className="text-sm font-medium">{t("vault.settings.changePassword")}</h3>
       </div>
       <form onSubmit={handleChangePassword} className="space-y-3">
         <div className="space-y-2">
           <Label htmlFor="current-pw" className="text-xs">
-            Current Password
+            {t("vault.settings.currentPassword")}
           </Label>
           <Input
             id="current-pw"
@@ -219,7 +223,7 @@ function ChangePasswordSection() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="new-pw" className="text-xs">
-            New Password
+            {t("vault.settings.newPassword")}
           </Label>
           <Input
             id="new-pw"
@@ -230,7 +234,7 @@ function ChangePasswordSection() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="confirm-pw" className="text-xs">
-            Confirm New Password
+            {t("vault.settings.confirmNewPassword")}
           </Label>
           <Input
             id="confirm-pw"
@@ -252,7 +256,7 @@ function ChangePasswordSection() {
             ) : (
               <Eye className="h-3 w-3 mr-1" />
             )}
-            {showPasswords ? "Hide" : "Show"} passwords
+            {showPasswords ? t("vault.settings.hidePasswords") : t("vault.settings.showPasswords")}
           </Button>
         </div>
         {error && (
@@ -264,7 +268,7 @@ function ChangePasswordSection() {
         {success && (
           <p className="text-xs text-emerald-500 flex items-center gap-1">
             <Check className="h-3 w-3" />
-            Password changed. All secrets re-encrypted.
+            {t("vault.settings.passwordChanged")}
           </p>
         )}
         <Button
@@ -281,11 +285,11 @@ function ChangePasswordSection() {
           {submitting ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
-            "Change Password"
+            t("vault.settings.changePasswordBtn")
           )}
         </Button>
         <p className="text-xs text-muted-foreground">
-          All secrets will be re-encrypted with the new password.
+          {t("vault.settings.changePasswordHelp")}
         </p>
       </form>
     </div>

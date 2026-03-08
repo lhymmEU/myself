@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { CodeEditor } from "@/components/claw/code-editor";
+import { useT } from "@/lib/i18n/context";
 
 interface SoulEditorProps {
   connectionId: string | null;
@@ -19,6 +20,7 @@ interface SoulEditorProps {
 }
 
 export function SoulEditor({ connectionId, connected }: SoulEditorProps) {
+  const t = useT();
   const [content, setContent] = useState("");
   const [originalContent, setOriginalContent] = useState("");
   const [loading, setLoading] = useState(false);
@@ -43,11 +45,11 @@ export function SoulEditor({ connectionId, connected }: SoulEditorProps) {
       setContent(text);
       setOriginalContent(text);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
+      setError(err instanceof Error ? err.message : t("claw.soul.failedLoad"));
     } finally {
       setLoading(false);
     }
-  }, [connectionId, connected]);
+  }, [connectionId, connected, t]);
 
   const save = useCallback(async () => {
     if (!connectionId || !connected) return;
@@ -74,11 +76,11 @@ export function SoulEditor({ connectionId, connected }: SoulEditorProps) {
         setTimeout(() => setSaved(false), 3000);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
+      setError(err instanceof Error ? err.message : t("claw.soul.failedSave"));
     } finally {
       setSaving(false);
     }
-  }, [connectionId, connected, content]);
+  }, [connectionId, connected, content, t]);
 
   useEffect(() => {
     if (connected) load();
@@ -95,7 +97,7 @@ export function SoulEditor({ connectionId, connected }: SoulEditorProps) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <Server className="h-10 w-10 mb-3 opacity-40" />
-        <p className="text-sm">Connect to a server to edit the soul</p>
+        <p className="text-sm">{t("claw.soul.connectToEdit")}</p>
       </div>
     );
   }
@@ -109,7 +111,7 @@ export function SoulEditor({ connectionId, connected }: SoulEditorProps) {
           ) : (
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
           )}
-          Reload
+          {t("common.reload")}
         </Button>
         <Button size="sm" onClick={save} disabled={saving || !hasChanges}>
           {saving ? (
@@ -117,13 +119,13 @@ export function SoulEditor({ connectionId, connected }: SoulEditorProps) {
           ) : (
             <Save className="h-3.5 w-3.5 mr-1.5" />
           )}
-          Save
+          {t("common.save")}
         </Button>
         {hasChanges && (
-          <span className="text-xs text-yellow-500 ml-2">Unsaved changes</span>
+          <span className="text-xs text-yellow-500 ml-2">{t("common.unsavedChanges")}</span>
         )}
         {saved && (
-          <span className="text-xs text-emerald-500 ml-2">Saved</span>
+          <span className="text-xs text-emerald-500 ml-2">{t("common.saved")}</span>
         )}
       </div>
 
@@ -138,7 +140,7 @@ export function SoulEditor({ connectionId, connected }: SoulEditorProps) {
         <CardHeader className="pb-2">
           <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
             <Sparkles className="h-3.5 w-3.5" />
-            ~/.openclaw/workspace/SOUL.md
+            {t("claw.soul.soulPath")}
           </CardTitle>
         </CardHeader>
         <CardContent>

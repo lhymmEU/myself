@@ -5,8 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, ChevronRight } from "lucide-react";
 import { parseMindMapTodos } from "@/lib/modules/todos/parse-mind-map";
 import type { MindMapTodo } from "@/lib/modules/todos/types";
+import { useT } from "@/lib/i18n/context";
 
 export function TodoPreview() {
+  const t = useT();
   const [todos, setTodos] = useState<MindMapTodo[]>([]);
 
   useEffect(() => {
@@ -22,7 +24,7 @@ export function TodoPreview() {
         const parsed = parseMindMapTodos(
           elements as Parameters<typeof parseMindMapTodos>[0]
         );
-        setTodos(parsed.filter((t) => t.isUrgent));
+        setTodos(parsed.filter((td) => td.isUrgent));
       })
       .catch(() => {});
   }, []);
@@ -30,7 +32,7 @@ export function TodoPreview() {
   if (todos.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        No urgent todos
+        {t("todos.noUrgentTodosPreview")}
       </p>
     );
   }
@@ -61,7 +63,7 @@ export function TodoPreview() {
             </div>
             {todo.isUrgent && (
               <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                urgent
+                {t("todos.urgent")}
               </Badge>
             )}
           </div>

@@ -12,6 +12,7 @@ import {
   Users,
   Loader2,
 } from "lucide-react";
+import { useT } from "@/lib/i18n/context";
 
 interface StatusPanelProps {
   connectionId: string | null;
@@ -32,6 +33,7 @@ interface HealthData {
 }
 
 export function StatusPanel({ connectionId, connected }: StatusPanelProps) {
+  const t = useT();
   const [status, setStatus] = useState<StatusData | null>(null);
   const [health, setHealth] = useState<HealthData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -90,7 +92,7 @@ export function StatusPanel({ connectionId, connected }: StatusPanelProps) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <Server className="h-10 w-10 mb-3 opacity-40" />
-        <p className="text-sm">Connect to a server to view status</p>
+        <p className="text-sm">{t("claw.statusPanel.connectToView")}</p>
       </div>
     );
   }
@@ -99,7 +101,7 @@ export function StatusPanel({ connectionId, connected }: StatusPanelProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-muted-foreground">
-          Gateway Overview
+          {t("claw.statusPanel.gatewayOverview")}
         </h3>
         <Button
           size="sm"
@@ -112,7 +114,7 @@ export function StatusPanel({ connectionId, connected }: StatusPanelProps) {
           ) : (
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
           )}
-          Refresh
+          {t("common.refresh")}
         </Button>
       </div>
 
@@ -121,16 +123,16 @@ export function StatusPanel({ connectionId, connected }: StatusPanelProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
               <Activity className="h-3.5 w-3.5" />
-              Gateway
+              {t("claw.statusPanel.gateway")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {status?.gatewayRunning ? (
-              <Badge className="bg-emerald-600">Running</Badge>
+              <Badge className="bg-emerald-600">{t("claw.statusPanel.running")}</Badge>
             ) : status?.error ? (
-              <Badge variant="destructive">Error</Badge>
+              <Badge variant="destructive">{t("claw.statusPanel.errorState")}</Badge>
             ) : (
-              <Badge variant="secondary">Unknown</Badge>
+              <Badge variant="secondary">{t("claw.statusPanel.unknown")}</Badge>
             )}
           </CardContent>
         </Card>
@@ -139,16 +141,16 @@ export function StatusPanel({ connectionId, connected }: StatusPanelProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
               <MessageSquare className="h-3.5 w-3.5" />
-              Health
+              {t("claw.statusPanel.health")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {health?.healthy ? (
-              <Badge className="bg-emerald-600">Healthy</Badge>
+              <Badge className="bg-emerald-600">{t("claw.statusPanel.healthy")}</Badge>
             ) : health?.error ? (
-              <Badge variant="destructive">Unhealthy</Badge>
+              <Badge variant="destructive">{t("claw.statusPanel.unhealthy")}</Badge>
             ) : (
-              <Badge variant="secondary">Unknown</Badge>
+              <Badge variant="secondary">{t("claw.statusPanel.unknown")}</Badge>
             )}
           </CardContent>
         </Card>
@@ -157,12 +159,12 @@ export function StatusPanel({ connectionId, connected }: StatusPanelProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
               <Users className="h-3.5 w-3.5" />
-              Channels
+              {t("claw.tabs.channels")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <Badge variant="secondary">
-              {status ? "See details below" : "—"}
+              {status ? t("claw.statusPanel.seeDetails") : t("claw.statusPanel.noData")}
             </Badge>
           </CardContent>
         </Card>

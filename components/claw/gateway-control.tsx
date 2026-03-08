@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Activity,
 } from "lucide-react";
+import { useT } from "@/lib/i18n/context";
 
 interface GatewayControlProps {
   connectionId: string | null;
@@ -22,6 +23,7 @@ interface GatewayControlProps {
 }
 
 export function GatewayControl({ connectionId, connected }: GatewayControlProps) {
+  const t = useT();
   const [statusOutput, setStatusOutput] = useState("");
   const [actionOutput, setActionOutput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -78,17 +80,17 @@ export function GatewayControl({ connectionId, connected }: GatewayControlProps)
     return (
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <Server className="h-10 w-10 mb-3 opacity-40" />
-        <p className="text-sm">Connect to a server to control the gateway</p>
+        <p className="text-sm">{t("claw.gateway.connectToControl")}</p>
       </div>
     );
   }
 
   const actions = [
-    { command: "gateway-start", label: "Start", icon: Play, variant: "default" as const },
-    { command: "gateway-stop", label: "Stop", icon: Square, variant: "outline" as const },
-    { command: "gateway-restart", label: "Restart", icon: RotateCcw, variant: "outline" as const },
-    { command: "gateway-install", label: "Install Daemon", icon: Download, variant: "outline" as const },
-    { command: "gateway-uninstall", label: "Uninstall Daemon", icon: Trash2, variant: "destructive" as const },
+    { command: "gateway-start", label: t("claw.gateway.start"), icon: Play, variant: "default" as const },
+    { command: "gateway-stop", label: t("claw.gateway.stop"), icon: Square, variant: "outline" as const },
+    { command: "gateway-restart", label: t("claw.gateway.restart"), icon: RotateCcw, variant: "outline" as const },
+    { command: "gateway-install", label: t("claw.gateway.installDaemon"), icon: Download, variant: "outline" as const },
+    { command: "gateway-uninstall", label: t("claw.gateway.uninstallDaemon"), icon: Trash2, variant: "destructive" as const },
   ];
 
   return (
@@ -105,7 +107,7 @@ export function GatewayControl({ connectionId, connected }: GatewayControlProps)
           ) : (
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
           )}
-          Refresh Status
+          {t("claw.gateway.refreshStatus")}
         </Button>
       </div>
 
@@ -113,7 +115,7 @@ export function GatewayControl({ connectionId, connected }: GatewayControlProps)
         <CardHeader className="pb-2">
           <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
             <Activity className="h-3.5 w-3.5" />
-            Gateway Service Status
+            {t("claw.gateway.serviceStatus")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -122,7 +124,7 @@ export function GatewayControl({ connectionId, connected }: GatewayControlProps)
               {statusOutput}
             </pre>
           ) : (
-            <Badge variant="secondary">Loading...</Badge>
+            <Badge variant="secondary">{t("common.loading")}</Badge>
           )}
         </CardContent>
       </Card>
@@ -130,7 +132,7 @@ export function GatewayControl({ connectionId, connected }: GatewayControlProps)
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-xs font-medium text-muted-foreground">
-            Gateway Actions
+            {t("claw.gateway.gatewayActions")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -159,7 +161,7 @@ export function GatewayControl({ connectionId, connected }: GatewayControlProps)
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground">
-              Action Output
+              {t("claw.gateway.actionOutput")}
             </CardTitle>
           </CardHeader>
           <CardContent>

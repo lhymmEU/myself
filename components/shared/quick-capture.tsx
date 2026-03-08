@@ -5,18 +5,21 @@ import { Plus, DollarSign, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n/context";
+import type { TranslationKey } from "@/lib/i18n/types";
 
 type CaptureMode = "expense" | "note";
 
 export function QuickCapture() {
+  const t = useT();
   const [mode, setMode] = useState<CaptureMode>("expense");
   const [value, setValue] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const modes: { key: CaptureMode; icon: typeof DollarSign; label: string }[] =
+  const modes: { key: CaptureMode; icon: typeof DollarSign; labelKey: TranslationKey }[] =
     [
-      { key: "expense", icon: DollarSign, label: "Expense" },
-      { key: "note", icon: FileText, label: "Note" },
+      { key: "expense", icon: DollarSign, labelKey: "shared.quickCapture.expense" },
+      { key: "note", icon: FileText, labelKey: "shared.quickCapture.note" },
     ];
 
   async function handleSubmit(e: React.FormEvent) {
@@ -31,9 +34,9 @@ export function QuickCapture() {
         body: JSON.stringify({ module: mode, value: value.trim() }),
       });
       setValue("");
-      toast.success(`${mode === "expense" ? "Expense" : "Note"} added`);
+      toast.success(mode === "expense" ? t("shared.quickCapture.expenseAdded") : t("shared.quickCapture.noteAdded"));
     } catch {
-      toast.error("Failed to save");
+      toast.error(t("shared.quickCapture.failedSave"));
     }
     setLoading(false);
   }
@@ -50,7 +53,7 @@ export function QuickCapture() {
             onClick={() => setMode(m.key)}
           >
             <m.icon className="h-3 w-3 mr-1" />
-            {m.label}
+            {t(m.labelKey)}
           </Button>
         ))}
       </div>
@@ -60,8 +63,8 @@ export function QuickCapture() {
           onChange={(e) => setValue(e.target.value)}
           placeholder={
             mode === "expense"
-              ? "e.g. Coffee $4.50"
-              : "Jot down an idea..."
+              ? t("shared.quickCapture.placeholderExpense")
+              : t("shared.quickCapture.placeholderNote")
           }
           className="text-sm h-8"
         />

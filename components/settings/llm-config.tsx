@@ -16,6 +16,7 @@ import { Slider } from "@/components/ui/slider";
 import { LLM_MODELS } from "@/lib/modules/settings/defaults";
 import { Key, Brain, Thermometer, Eye, EyeOff, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n/context";
 
 interface LlmConfigProps {
   settings: Record<string, string>;
@@ -23,13 +24,14 @@ interface LlmConfigProps {
 }
 
 export function LlmConfig({ settings, onUpdate }: LlmConfigProps) {
+  const t = useT();
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testSuccess, setTestSuccess] = useState<boolean | null>(null);
 
   const handleTestConnection = async () => {
     if (!settings.openrouter_api_key) {
-      toast.error("Please enter an API key first");
+      toast.error(t("settings.llm.enterKeyFirst"));
       return;
     }
     setTesting(true);
@@ -40,14 +42,14 @@ export function LlmConfig({ settings, onUpdate }: LlmConfigProps) {
       });
       if (res.ok) {
         setTestSuccess(true);
-        toast.success("Connection successful");
+        toast.success(t("settings.llm.connectionSuccess"));
       } else {
         setTestSuccess(false);
-        toast.error("Invalid API key");
+        toast.error(t("settings.llm.invalidKey"));
       }
     } catch {
       setTestSuccess(false);
-      toast.error("Connection failed");
+      toast.error(t("settings.llm.connectionFailed"));
     } finally {
       setTesting(false);
     }
@@ -58,14 +60,14 @@ export function LlmConfig({ settings, onUpdate }: LlmConfigProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Brain className="size-5" />
-          LLM Configuration
+          {t("settings.llm.title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor="api-key" className="flex items-center gap-2">
             <Key className="size-4" />
-            OpenRouter API Key
+            {t("settings.llm.openRouterKey")}
           </Label>
           <div className="flex gap-2">
             <div className="relative flex-1">
@@ -74,7 +76,7 @@ export function LlmConfig({ settings, onUpdate }: LlmConfigProps) {
                 type={showKey ? "text" : "password"}
                 value={settings.openrouter_api_key ?? ""}
                 onChange={(e) => onUpdate("openrouter_api_key", e.target.value)}
-                placeholder="sk-or-..."
+                placeholder={t("settings.llm.placeholderKey")}
               />
               <Button
                 type="button"
@@ -102,7 +104,7 @@ export function LlmConfig({ settings, onUpdate }: LlmConfigProps) {
               ) : testSuccess ? (
                 <Check className="size-4 text-green-500" />
               ) : (
-                "Test"
+                t("common.test")
               )}
             </Button>
           </div>
@@ -111,7 +113,7 @@ export function LlmConfig({ settings, onUpdate }: LlmConfigProps) {
         <div className="space-y-2">
           <Label className="flex items-center gap-2">
             <Brain className="size-4" />
-            Preferred Model
+            {t("settings.llm.preferredModel")}
           </Label>
           <Select
             value={settings.llm_model ?? "anthropic/claude-sonnet-4"}
@@ -133,7 +135,7 @@ export function LlmConfig({ settings, onUpdate }: LlmConfigProps) {
         <div className="space-y-3">
           <Label className="flex items-center gap-2">
             <Thermometer className="size-4" />
-            Temperature
+            {t("settings.llm.temperature")}
             <span className="ml-auto text-sm font-mono text-muted-foreground">
               {parseFloat(settings.llm_temperature ?? "0.7").toFixed(1)}
             </span>

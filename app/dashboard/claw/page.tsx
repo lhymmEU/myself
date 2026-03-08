@@ -7,6 +7,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { useT } from "@/lib/i18n/context";
 import { ConnectionForm } from "@/components/claw/connection-form";
 import { StatusPanel } from "@/components/claw/status-panel";
 import { LogsViewer } from "@/components/claw/logs-viewer";
@@ -34,6 +35,7 @@ interface ConnectState {
 }
 
 export default function ClawPage() {
+  const t = useT();
   const [connectState, setConnectState] = useState<ConnectState>({
     connected: false,
     connectionId: null,
@@ -46,9 +48,9 @@ export default function ClawPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">My Claw</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("claw.title")}</h1>
         <p className="text-muted-foreground">
-          Manage your OpenClaw gateway running in the cloud
+          {t("claw.subtitle")}
         </p>
       </div>
 
@@ -59,16 +61,16 @@ export default function ClawPage() {
         <div className="w-1/2 min-w-0">
           <Tabs defaultValue="status" className="space-y-4">
             <TabsList variant="line" className="flex flex-wrap gap-2 w-full mb-12">
-              <TabsTrigger value="status" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Status</TabsTrigger>
-              <TabsTrigger value="logs" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Logs</TabsTrigger>
-              <TabsTrigger value="channels" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Channels</TabsTrigger>
-              <TabsTrigger value="sessions" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Sessions</TabsTrigger>
-              <TabsTrigger value="config" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Config</TabsTrigger>
-              <TabsTrigger value="terminal" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Terminal</TabsTrigger>
-              <TabsTrigger value="gateway" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Gateway</TabsTrigger>
-              <TabsTrigger value="memories" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Memories</TabsTrigger>
-              <TabsTrigger value="soul" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Soul</TabsTrigger>
-              <TabsTrigger value="files" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">Files</TabsTrigger>
+              <TabsTrigger value="status" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">{t("claw.tabs.status")}</TabsTrigger>
+              <TabsTrigger value="logs" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">{t("claw.tabs.logs")}</TabsTrigger>
+              <TabsTrigger value="channels" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">{t("claw.tabs.channels")}</TabsTrigger>
+              <TabsTrigger value="sessions" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">{t("claw.tabs.sessions")}</TabsTrigger>
+              <TabsTrigger value="config" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">{t("claw.tabs.config")}</TabsTrigger>
+              <TabsTrigger value="terminal" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">{t("claw.tabs.terminal")}</TabsTrigger>
+              <TabsTrigger value="gateway" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">{t("claw.tabs.gateway")}</TabsTrigger>
+              <TabsTrigger value="memories" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">{t("claw.tabs.memories")}</TabsTrigger>
+              <TabsTrigger value="soul" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">{t("claw.tabs.soul")}</TabsTrigger>
+              <TabsTrigger value="files" className="flex-none rounded-full border px-4 py-1.5 data-[state=active]:bg-muted data-[state=active]:border-border">{t("claw.tabs.files")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="status">

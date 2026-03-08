@@ -11,6 +11,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import { useT } from "@/lib/i18n/context";
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
@@ -47,6 +48,7 @@ function ObjectFields({
   depth: number;
   allowAddRemove?: boolean;
 }) {
+  const t = useT();
   const [newKey, setNewKey] = useState("");
 
   const updateField = useCallback(
@@ -88,7 +90,7 @@ function ObjectFields({
       {allowAddRemove && (
         <div className="flex items-center gap-2 pt-1">
           <Input
-            placeholder="New field name"
+            placeholder={t("claw.jsonForm.newFieldName")}
             value={newKey}
             onChange={(e) => setNewKey(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addField()}
@@ -103,7 +105,7 @@ function ObjectFields({
             className="h-7 px-2"
           >
             <Plus className="h-3 w-3 mr-1" />
-            Add
+            {t("common.add")}
           </Button>
         </div>
       )}
@@ -126,6 +128,7 @@ function FieldRenderer({
   onRemove?: () => void;
   depth: number;
 }) {
+  const t = useT();
   const [collapsed, setCollapsed] = useState(depth > 1);
 
   if (typeof value === "boolean") {
@@ -241,7 +244,7 @@ function FieldRenderer({
               className="h-6 px-2 text-xs"
             >
               <Plus className="h-3 w-3 mr-1" />
-              Add item
+              {t("claw.jsonForm.addItem")}
             </Button>
           </div>
         )}
@@ -287,7 +290,7 @@ function FieldRenderer({
   return (
     <div className="space-y-1" style={{ paddingLeft: depth * 12 }}>
       <div className="flex items-center justify-between">
-        <Label className="text-xs font-mono text-muted-foreground">{label} <span className="text-[10px] opacity-50">(null)</span></Label>
+        <Label className="text-xs font-mono text-muted-foreground">{label} <span className="text-[10px] opacity-50">({t("claw.jsonForm.nullValue")})</span></Label>
         {onRemove && (
           <Button type="button" size="sm" variant="ghost" onClick={onRemove} className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive">
             <Trash2 className="h-3 w-3" />
@@ -296,7 +299,7 @@ function FieldRenderer({
       </div>
       <Input
         value=""
-        placeholder="null"
+        placeholder={t("claw.jsonForm.nullValue")}
         onChange={(e) => onChange(e.target.value || null)}
         className="h-7 text-xs font-mono"
       />

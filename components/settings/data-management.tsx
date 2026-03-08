@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/dialog";
 import { Download, Upload, Trash2, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n/context";
 
 export function DataManagement() {
+  const t = useT();
   const [resetOpen, setResetOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -35,9 +37,9 @@ export function DataManagement() {
       a.download = `settings-export-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("Data exported successfully");
+      toast.success(t("settings.data.exportSuccess"));
     } catch {
-      toast.error("Failed to export data");
+      toast.error(t("settings.data.exportFailed"));
     } finally {
       setExporting(false);
     }
@@ -57,9 +59,9 @@ export function DataManagement() {
           body: JSON.stringify({ key, value }),
         });
       }
-      toast.success("Data imported successfully — reload to see changes");
+      toast.success(t("settings.data.importSuccess"));
     } catch {
-      toast.error("Failed to import data — invalid file");
+      toast.error(t("settings.data.importFailed"));
     } finally {
       setImporting(false);
       e.target.value = "";
@@ -75,10 +77,10 @@ export function DataManagement() {
         body: JSON.stringify({ key: "__reset__", value: "true" }),
       });
       if (!res.ok) throw new Error();
-      toast.success("Settings reset — reload to see changes");
+      toast.success(t("settings.data.resetSuccess"));
       setResetOpen(false);
     } catch {
-      toast.error("Failed to reset settings");
+      toast.error(t("settings.data.resetFailed"));
     } finally {
       setResetting(false);
     }
@@ -89,7 +91,7 @@ export function DataManagement() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Download className="size-5" />
-          Data Management
+          {t("settings.data.title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -105,7 +107,7 @@ export function DataManagement() {
             ) : (
               <Download className="size-4" />
             )}
-            Export Data
+            {t("settings.data.exportData")}
           </Button>
 
           <Button
@@ -120,7 +122,7 @@ export function DataManagement() {
               ) : (
                 <Upload className="size-4" />
               )}
-              Import Data
+              {t("settings.data.importData")}
               <input
                 type="file"
                 accept=".json"
@@ -135,23 +137,22 @@ export function DataManagement() {
           <DialogTrigger asChild>
             <Button variant="destructive" className="w-full gap-2">
               <Trash2 className="size-4" />
-              Reset Database
+              {t("settings.data.resetDatabase")}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <AlertTriangle className="size-5 text-destructive" />
-                Reset Database
+                {t("settings.data.resetTitle")}
               </DialogTitle>
             </DialogHeader>
             <p className="text-sm text-muted-foreground">
-              This will reset all settings to their default values. This action
-              cannot be undone.
+              {t("settings.data.resetDesc")}
             </p>
             <DialogFooter>
               <Button variant="outline" onClick={() => setResetOpen(false)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 variant="destructive"
@@ -161,7 +162,7 @@ export function DataManagement() {
                 {resetting ? (
                   <Loader2 className="size-4 animate-spin mr-2" />
                 ) : null}
-                Reset
+                {t("settings.data.reset")}
               </Button>
             </DialogFooter>
           </DialogContent>

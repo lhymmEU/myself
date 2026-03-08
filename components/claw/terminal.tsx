@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, Power } from "lucide-react";
+import { useT } from "@/lib/i18n/context";
 
 interface TerminalProps {
   connectionId: string | null;
@@ -10,6 +11,7 @@ interface TerminalProps {
 }
 
 export function ClawTerminal({ connectionId, connected }: TerminalProps) {
+  const t = useT();
   const termRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<import("@xterm/xterm").Terminal | null>(null);
   const fitRef = useRef<import("@xterm/addon-fit").FitAddon | null>(null);
@@ -178,22 +180,22 @@ export function ClawTerminal({ connectionId, connected }: TerminalProps) {
             disabled={!connected || loading}
           >
             <Power className="h-3.5 w-3.5 mr-1.5" />
-            {loading ? "Opening..." : "Open Shell"}
+            {loading ? t("claw.terminal.opening") : t("claw.terminal.openShell")}
           </Button>
         ) : (
           <>
             <Button size="sm" variant="outline" onClick={closeSession}>
               <Power className="h-3.5 w-3.5 mr-1.5" />
-              Close
+              {t("common.close")}
             </Button>
             <Button size="sm" variant="outline" onClick={openSession}>
               <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-              Restart
+              {t("claw.terminal.restart")}
             </Button>
           </>
         )}
         <span className="text-xs text-muted-foreground ml-auto">
-          {sessionOpen ? "Shell active" : "Shell closed"}
+          {sessionOpen ? t("claw.terminal.shellActive") : t("claw.terminal.shellClosed")}
         </span>
       </div>
       <div
