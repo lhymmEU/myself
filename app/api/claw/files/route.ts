@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
       sftp.end();
 
       const name = resolvedPath.split("/").pop() ?? "file";
-      return new NextResponse(buf, {
+      return new NextResponse(new Uint8Array(buf), {
         headers: {
           "Content-Type": "application/octet-stream",
           "Content-Disposition": `attachment; filename="${encodeURIComponent(name)}"`,
