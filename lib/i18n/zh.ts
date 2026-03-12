@@ -415,6 +415,7 @@ export const zh: Translations = {
     noTodos: "未找到待办事项。在思维导图中添加矩形元素以创建待办事项。",
     noUrgentTodos: "没有紧急待办事项。",
     noUrgentTodosPreview: "没有紧急待办事项",
+    complete: "完成",
   },
 
   plans: {

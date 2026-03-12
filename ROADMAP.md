@@ -22,7 +22,7 @@ Want to influence what gets built next? [Open an issue](https://github.com/lhymm
 
 ### Dashboard
 
-- [ ] Tick-box on to-do items — completing a task removes related entries from the mind map
+- [x] Tick-box on to-do items — completing a task removes the leaf and the connecting error from the mind map
 
 ### UI / UX
 

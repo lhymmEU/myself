@@ -1,29 +1,63 @@
 "use client";
 
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, ChevronRight } from "lucide-react";
+import { AlertTriangle, Check, ChevronRight } from "lucide-react";
 import type { MindMapTodo } from "@/lib/modules/todos/types";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/context";
 
 interface TodoItemProps {
   todo: MindMapTodo;
+  onComplete?: (id: string) => void;
 }
 
-export function TodoItem({ todo }: TodoItemProps) {
+export function TodoItem({ todo, onComplete }: TodoItemProps) {
   const t = useT();
+  const [completing, setCompleting] = useState(false);
   const traceWithoutTitle = todo.trace.slice(0, -1);
+
+  const handleComplete = () => {
+    if (completing || !onComplete) return;
+    setCompleting(true);
+    onComplete(todo.id);
+  };
 
   return (
     <div
       className={cn(
-        "rounded-lg border bg-card px-3 py-2.5 transition-colors hover:bg-accent/50",
-        todo.isUrgent && "border-red-500/30"
+        "rounded-lg border bg-card px-3 py-2.5 transition-all duration-500",
+        todo.isUrgent && "border-red-500/30",
+        completing ? "opacity-50" : "hover:bg-accent/50"
       )}
     >
       <div className="flex items-center gap-3">
+        {onComplete && (
+          <button
+            onClick={handleComplete}
+            disabled={completing}
+            title={t("todos.complete")}
+            className={cn(
+              "h-[18px] w-[18px] rounded-full border-2 shrink-0 flex items-center justify-center transition-all",
+              completing
+                ? "border-primary bg-primary"
+                : "border-muted-foreground/30 hover:border-primary/60 hover:bg-primary/10"
+            )}
+          >
+            {completing && (
+              <Check className="h-3 w-3 text-primary-foreground" />
+            )}
+          </button>
+        )}
         <div className="flex-1 min-w-0">
-          <span className="text-sm font-medium">{todo.title}</span>
+          <span
+            className={cn(
+              "text-sm font-medium transition-all duration-300",
+              completing && "line-through text-muted-foreground"
+            )}
+          >
+            {todo.title}
+          </span>
 
           {traceWithoutTitle.length > 0 && (
             <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">

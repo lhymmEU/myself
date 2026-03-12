@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { TodoItem } from "./todo-item";
 import { parseMindMapTodos } from "@/lib/modules/todos/parse-mind-map";
+import { completeTodo } from "@/lib/modules/todos/complete-todo";
 import type { MindMapTodo } from "@/lib/modules/todos/types";
 import { useT } from "@/lib/i18n/context";
 
@@ -44,6 +45,15 @@ export function TodoList() {
   useEffect(() => {
     fetchTodos();
   }, [fetchTodos]);
+
+  const handleComplete = useCallback(async (todoId: string) => {
+    const success = await completeTodo(todoId);
+    if (success) {
+      setTimeout(() => {
+        setTodos((prev) => prev.filter((td) => td.id !== todoId));
+      }, 1000);
+    }
+  }, []);
 
   const filtered = urgentOnly ? todos.filter((td) => td.isUrgent) : todos;
   const urgentCount = todos.filter((td) => td.isUrgent).length;
@@ -103,7 +113,7 @@ export function TodoList() {
       ) : (
         <div className="space-y-1.5">
           {filtered.map((todo) => (
-            <TodoItem key={todo.id} todo={todo} />
+            <TodoItem key={todo.id} todo={todo} onComplete={handleComplete} />
           ))}
         </div>
       )}

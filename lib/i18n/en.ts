@@ -413,6 +413,7 @@ export const en = {
     noTodos: "No todos found. Add rectangle items to your mind map to create todos.",
     noUrgentTodos: "No urgent todos.",
     noUrgentTodosPreview: "No urgent todos",
+    complete: "Complete",
   },
 
   plans: {
