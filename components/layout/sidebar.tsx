@@ -14,7 +14,6 @@ import {
   ChevronRight,
   Shell,
   Receipt,
-  Languages,
   Blend,
   MapPlus,
 } from "lucide-react";
@@ -26,7 +25,7 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import { useState } from "react";
-import { useT, useLanguage } from "@/lib/i18n/context";
+import { useT } from "@/lib/i18n/context";
 import type { TranslationKey } from "@/lib/i18n/types";
 
 const NAV_ITEMS: { href: string; labelKey: TranslationKey; icon: typeof LayoutDashboard }[] = [
@@ -48,9 +47,6 @@ export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const t = useT();
-  const { lang, setLang } = useLanguage();
-
-  const toggleLang = () => setLang(lang === "en" ? "zh" : "en");
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -150,33 +146,6 @@ export function Sidebar() {
             return link;
           })}
 
-          {/* Language switcher */}
-          {collapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-full h-9 mt-1"
-                  onClick={toggleLang}
-                >
-                  <Languages className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                {lang === "en" ? "切换到中文" : "Switch to English"}
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-3 px-3 py-2 mt-1 text-sm font-medium text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-              onClick={toggleLang}
-            >
-              <Languages className="h-4 w-4 shrink-0" />
-              <span>{lang === "en" ? "中文" : "English"}</span>
-            </Button>
-          )}
         </div>
       </aside>
     </TooltipProvider>

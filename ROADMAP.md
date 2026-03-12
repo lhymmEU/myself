@@ -28,7 +28,7 @@ Want to influence what gets built next? [Open an issue](https://github.com/lhymm
 
 - [x] Sidebar title style refresh
 - [x] New logo
-- [ ] Repositioned bilingual toggle button
+- [x] Repositioned bilingual toggle button
 
 ### New Features
 
