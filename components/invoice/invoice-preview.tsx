@@ -18,9 +18,10 @@ import type { InvoiceWithDetails } from "@/lib/modules/invoice/types";
 interface InvoicePreviewProps {
   invoiceId: string | null;
   onClose: () => void;
+  onSent?: () => void;
 }
 
-export function InvoicePreview({ invoiceId, onClose }: InvoicePreviewProps) {
+export function InvoicePreview({ invoiceId, onClose, onSent }: InvoicePreviewProps) {
   const t = useT();
   const [invoice, setInvoice] = useState<InvoiceWithDetails | null>(null);
   const [view, setView] = useState<"preview" | "send">("preview");
@@ -59,8 +60,8 @@ export function InvoicePreview({ invoiceId, onClose }: InvoicePreviewProps) {
     });
 
     const pdf = new jsPDF("p", "mm", "a4");
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
 
     const img = new Image();
     await new Promise<void>((resolve, reject) => {
@@ -69,14 +70,65 @@ export function InvoicePreview({ invoiceId, onClose }: InvoicePreviewProps) {
       img.src = imgData;
     });
 
-    const imgWidth = pageWidth;
-    const imgHeight = (img.height * imgWidth) / img.width;
+    const contentH = (img.height * pageW) / img.width;
 
-    let y = 0;
-    while (y < imgHeight) {
-      if (y > 0) pdf.addPage();
-      pdf.addImage(imgData, "PNG", 0, -y, imgWidth, imgHeight);
-      y += pageHeight;
+    if (contentH <= pageH) {
+      pdf.addImage(imgData, "PNG", 0, 0, pageW, contentH);
+      return pdf;
+    }
+
+    const scale = pageW / el.offsetWidth;
+    const sectionEls = el.querySelectorAll("[data-pdf-section]");
+    const sectionBounds = Array.from(sectionEls).map((s) => ({
+      top: (s as HTMLElement).offsetTop * scale,
+      bottom:
+        ((s as HTMLElement).offsetTop + (s as HTMLElement).offsetHeight) *
+        scale,
+    }));
+
+    const breakpoints: number[] = [0];
+    let pageBottom = pageH;
+    const totalMm = el.scrollHeight * scale;
+
+    for (const sec of sectionBounds) {
+      if (sec.top < pageBottom && sec.bottom > pageBottom) {
+        breakpoints.push(sec.top);
+        pageBottom = sec.top + pageH;
+      }
+      while (sec.top >= pageBottom) {
+        breakpoints.push(pageBottom);
+        pageBottom += pageH;
+      }
+    }
+    if (breakpoints[breakpoints.length - 1] < totalMm) {
+      breakpoints.push(totalMm);
+    }
+
+    const srcCanvas = document.createElement("canvas");
+    srcCanvas.width = img.width;
+    srcCanvas.height = img.height;
+    srcCanvas.getContext("2d")!.drawImage(img, 0, 0);
+
+    const pxPerMm = img.width / pageW;
+
+    for (let i = 0; i < breakpoints.length - 1; i++) {
+      if (i > 0) pdf.addPage();
+      const topMm = breakpoints[i];
+      const bottomMm = breakpoints[i + 1];
+      const sliceH = bottomMm - topMm;
+
+      const srcY = Math.round(topMm * pxPerMm);
+      const srcH = Math.round(sliceH * pxPerMm);
+      if (srcH <= 0) continue;
+
+      const slice = document.createElement("canvas");
+      slice.width = img.width;
+      slice.height = srcH;
+      slice.getContext("2d")!.drawImage(
+        srcCanvas, 0, srcY, img.width, srcH, 0, 0, img.width, srcH
+      );
+
+      pdf.addImage(slice.toDataURL("image/png"), "PNG", 0, 0, pageW, sliceH);
     }
 
     return pdf;
@@ -97,28 +149,16 @@ export function InvoicePreview({ invoiceId, onClose }: InvoicePreviewProps) {
 
   const handlePrepareEmail = async () => {
     try {
-      // #region agent log
-      fetch('http://127.0.0.1:7491/ingest/599ee872-411b-4edc-a1b8-877fd5fc2059',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b5bbb4'},body:JSON.stringify({sessionId:'b5bbb4',location:'invoice-preview.tsx:handlePrepareEmail',message:'Starting PDF generation',data:{previewRefExists:!!previewRef.current,invoiceId:invoice?.id},timestamp:Date.now(),hypothesisId:'H-B'})}).catch(()=>{});
-      // #endregion
       const pdf = await generatePdfFromPreview();
       const base64 = pdf.output("datauristring").split(",")[1];
-      // #region agent log
-      fetch('http://127.0.0.1:7491/ingest/599ee872-411b-4edc-a1b8-877fd5fc2059',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b5bbb4'},body:JSON.stringify({sessionId:'b5bbb4',location:'invoice-preview.tsx:handlePrepareEmail',message:'PDF generated successfully',data:{base64Length:base64?.length},timestamp:Date.now(),hypothesisId:'H-B'})}).catch(()=>{});
-      // #endregion
       setPendingPdf(base64);
       setView("send");
-    } catch (err) {
-      // #region agent log
-      fetch('http://127.0.0.1:7491/ingest/599ee872-411b-4edc-a1b8-877fd5fc2059',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b5bbb4'},body:JSON.stringify({sessionId:'b5bbb4',location:'invoice-preview.tsx:handlePrepareEmail',message:'PDF generation FAILED',data:{error:err instanceof Error ? err.message : String(err)},timestamp:Date.now(),hypothesisId:'H-B'})}).catch(()=>{});
-      // #endregion
+    } catch {
       toast.error(t("invoice.preview.sendFailed"));
     }
   };
 
   const handleSend = async () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7491/ingest/599ee872-411b-4edc-a1b8-877fd5fc2059',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b5bbb4'},body:JSON.stringify({sessionId:'b5bbb4',location:'invoice-preview.tsx:handleSend',message:'handleSend called',data:{hasInvoice:!!invoice,sendEmail,hasPendingPdf:!!pendingPdf,pendingPdfLength:pendingPdf?.length},timestamp:Date.now(),hypothesisId:'H-C'})}).catch(()=>{});
-    // #endregion
     if (!invoice || !sendEmail || !pendingPdf) return;
     setSending(true);
     try {
@@ -132,26 +172,16 @@ export function InvoicePreview({ invoiceId, onClose }: InvoicePreviewProps) {
         }),
       });
 
-      // #region agent log
-      fetch('http://127.0.0.1:7491/ingest/599ee872-411b-4edc-a1b8-877fd5fc2059',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b5bbb4'},body:JSON.stringify({sessionId:'b5bbb4',location:'invoice-preview.tsx:handleSend',message:'API response received',data:{status:res.status,ok:res.ok},timestamp:Date.now(),hypothesisId:'H-C'})}).catch(()=>{});
-      // #endregion
-
       if (res.ok) {
         toast.success(t("invoice.preview.sent"));
-        setView("preview");
         setPendingPdf(null);
-        loadInvoice();
+        onClose();
+        onSent?.();
       } else {
         const err = await res.json();
-        // #region agent log
-        fetch('http://127.0.0.1:7491/ingest/599ee872-411b-4edc-a1b8-877fd5fc2059',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b5bbb4'},body:JSON.stringify({sessionId:'b5bbb4',location:'invoice-preview.tsx:handleSend',message:'API returned error',data:{error:err.error,status:res.status},timestamp:Date.now(),hypothesisId:'H-C'})}).catch(()=>{});
-        // #endregion
         toast.error(err.error || t("invoice.preview.sendFailed"));
       }
-    } catch (err) {
-      // #region agent log
-      fetch('http://127.0.0.1:7491/ingest/599ee872-411b-4edc-a1b8-877fd5fc2059',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b5bbb4'},body:JSON.stringify({sessionId:'b5bbb4',location:'invoice-preview.tsx:handleSend',message:'Fetch threw exception',data:{error:err instanceof Error ? err.message : String(err)},timestamp:Date.now(),hypothesisId:'H-D'})}).catch(()=>{});
-      // #endregion
+    } catch {
       toast.error(t("invoice.preview.sendFailed"));
     }
     setSending(false);
@@ -226,40 +256,45 @@ export function InvoicePreview({ invoiceId, onClose }: InvoicePreviewProps) {
         ) : (
           <div
             ref={previewRef}
-            className="bg-white text-black p-8 rounded-md shadow-sm"
-            style={{ fontFamily: "'Inter', 'Helvetica Neue', sans-serif" }}
+            className="bg-white text-black rounded-md shadow-sm"
+            style={{
+              fontFamily: "'Inter', 'Helvetica Neue', sans-serif",
+              fontSize: "9px",
+              lineHeight: "1.5",
+              padding: "24px 28px",
+            }}
           >
             {/* Header */}
-            <div className="flex justify-between items-start mb-8">
+            <div data-pdf-section className="flex justify-between items-start" style={{ marginBottom: "18px" }}>
               <div>
-                <h2 className="text-xl font-bold text-gray-900">
+                <h2 style={{ fontSize: "14px", fontWeight: 700, color: "#111827", margin: 0 }}>
                   {invoice.senderName || "—"}
                 </h2>
                 {invoice.senderPhone && (
-                  <p className="text-sm text-gray-600">{invoice.senderPhone}</p>
+                  <p style={{ fontSize: "9px", color: "#4b5563", margin: "2px 0 0" }}>{invoice.senderPhone}</p>
                 )}
                 {invoice.senderEmail && (
-                  <p className="text-sm text-gray-600">{invoice.senderEmail}</p>
+                  <p style={{ fontSize: "9px", color: "#4b5563", margin: "2px 0 0" }}>{invoice.senderEmail}</p>
                 )}
               </div>
               <div className="text-right">
-                <p className="text-xs text-gray-500 uppercase tracking-wider">
+                <p style={{ fontSize: "8px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>
                   {t("invoice.preview.invoiceLabel")}
                 </p>
-                <p className="font-mono font-bold text-lg">
+                <p style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "12px", margin: "2px 0 0" }}>
                   {invoice.invoiceNumber}
                 </p>
-                <div className="mt-2 space-y-1 text-sm text-gray-600">
-                  <p>
-                    <span className="text-xs text-gray-500 uppercase">
+                <div style={{ marginTop: "6px", fontSize: "9px", color: "#4b5563" }}>
+                  <p style={{ margin: "2px 0" }}>
+                    <span style={{ fontSize: "7px", color: "#6b7280", textTransform: "uppercase" }}>
                       {t("invoice.preview.dateLabel")}
                     </span>
                     <br />
                     {invoice.date}
                   </p>
                   {invoice.dueDate && (
-                    <p>
-                      <span className="text-xs text-gray-500 uppercase">
+                    <p style={{ margin: "2px 0" }}>
+                      <span style={{ fontSize: "7px", color: "#6b7280", textTransform: "uppercase" }}>
                         {t("invoice.preview.dueDateLabel")}
                       </span>
                       <br />
@@ -272,54 +307,54 @@ export function InvoicePreview({ invoiceId, onClose }: InvoicePreviewProps) {
 
             {/* Bill to */}
             {invoice.client && (
-              <div className="mb-8 pb-4 border-b border-gray-200">
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
+              <div data-pdf-section style={{ marginBottom: "18px", paddingBottom: "10px", borderBottom: "1px solid #e5e7eb" }}>
+                <p style={{ fontSize: "7px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "3px" }}>
                   {t("invoice.preview.billTo")}
                 </p>
-                <p className="font-semibold text-gray-900">{invoice.client.name}</p>
+                <p style={{ fontWeight: 600, color: "#111827", margin: "0 0 1px" }}>{invoice.client.name}</p>
                 {invoice.client.company && (
-                  <p className="text-sm text-gray-600">{invoice.client.company}</p>
+                  <p style={{ fontSize: "9px", color: "#4b5563", margin: "1px 0" }}>{invoice.client.company}</p>
                 )}
                 {invoice.client.email && (
-                  <p className="text-sm text-gray-600">{invoice.client.email}</p>
+                  <p style={{ fontSize: "9px", color: "#4b5563", margin: "1px 0" }}>{invoice.client.email}</p>
                 )}
                 {invoice.client.address && (
-                  <p className="text-sm text-gray-600">{invoice.client.address}</p>
+                  <p style={{ fontSize: "9px", color: "#4b5563", margin: "1px 0" }}>{invoice.client.address}</p>
                 )}
               </div>
             )}
 
             {/* Items table */}
-            <table className="w-full mb-6">
+            <table data-pdf-section className="w-full" style={{ marginBottom: "14px", borderCollapse: "collapse" }}>
               <thead>
-                <tr className="border-b-2 border-gray-200">
-                  <th className="text-left text-xs text-gray-500 uppercase tracking-wider py-2 font-medium">
+                <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                  <th style={{ textAlign: "left", fontSize: "7px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", padding: "4px 0", fontWeight: 500 }}>
                     {t("invoice.preview.descriptionCol")}
                   </th>
-                  <th className="text-right text-xs text-gray-500 uppercase tracking-wider py-2 font-medium">
+                  <th style={{ textAlign: "right", fontSize: "7px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", padding: "4px 0", fontWeight: 500 }}>
                     {t("invoice.preview.rateCol")}
                   </th>
-                  <th className="text-right text-xs text-gray-500 uppercase tracking-wider py-2 font-medium">
+                  <th style={{ textAlign: "right", fontSize: "7px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", padding: "4px 0", fontWeight: 500 }}>
                     {t("invoice.preview.qtyCol")}
                   </th>
-                  <th className="text-right text-xs text-gray-500 uppercase tracking-wider py-2 font-medium">
+                  <th style={{ textAlign: "right", fontSize: "7px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", padding: "4px 0", fontWeight: 500 }}>
                     {t("invoice.preview.amountCol")}
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {invoice.items.map((item) => (
-                  <tr key={item.id} className="border-b border-gray-100">
-                    <td className="py-3 text-sm">
-                      <p className="font-medium text-gray-900">{item.description}</p>
+                  <tr key={item.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                    <td style={{ padding: "6px 0" }}>
+                      <p style={{ fontWeight: 500, color: "#111827", margin: 0 }}>{item.description}</p>
                     </td>
-                    <td className="py-3 text-sm text-right text-gray-600">
+                    <td style={{ padding: "6px 0", textAlign: "right", color: "#4b5563" }}>
                       {invoice.currency} {item.rate.toFixed(2)}
                     </td>
-                    <td className="py-3 text-sm text-right text-gray-600">
+                    <td style={{ padding: "6px 0", textAlign: "right", color: "#4b5563" }}>
                       {item.quantity}
                     </td>
-                    <td className="py-3 text-sm text-right font-medium">
+                    <td style={{ padding: "6px 0", textAlign: "right", fontWeight: 500 }}>
                       {invoice.currency} {item.amount.toFixed(2)}
                     </td>
                   </tr>
@@ -328,55 +363,49 @@ export function InvoicePreview({ invoiceId, onClose }: InvoicePreviewProps) {
             </table>
 
             {/* Totals */}
-            <div className="flex justify-end mb-8">
-              <div className="w-64 space-y-1">
-                <div className="flex justify-between text-sm text-gray-600">
+            <div data-pdf-section className="flex justify-end" style={{ marginBottom: "18px" }}>
+              <div style={{ width: "160px" }}>
+                <div className="flex justify-between" style={{ color: "#4b5563", marginBottom: "2px" }}>
                   <span>{t("invoice.preview.subtotal")}</span>
-                  <span>
-                    {invoice.currency} {invoice.subtotal.toFixed(2)}
-                  </span>
+                  <span>{invoice.currency} {invoice.subtotal.toFixed(2)}</span>
                 </div>
                 {invoice.tax > 0 && (
-                  <div className="flex justify-between text-sm text-gray-600">
+                  <div className="flex justify-between" style={{ color: "#4b5563", marginBottom: "2px" }}>
                     <span>{t("invoice.preview.tax")}</span>
-                    <span>
-                      {invoice.currency} {invoice.tax.toFixed(2)}
-                    </span>
+                    <span>{invoice.currency} {invoice.tax.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-base font-bold pt-2 border-t-2 border-gray-900">
+                <div className="flex justify-between" style={{ fontWeight: 700, fontSize: "10px", paddingTop: "4px", borderTop: "2px solid #111827" }}>
                   <span>{t("invoice.preview.total")}</span>
-                  <span>
-                    {invoice.currency} {invoice.total.toFixed(2)}
-                  </span>
+                  <span>{invoice.currency} {invoice.total.toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
             {/* Payment info */}
             {invoice.paymentInfo && (
-              <div className="mb-6 text-sm text-gray-600">
-                <p>{invoice.paymentInfo}</p>
+              <div data-pdf-section style={{ marginBottom: "12px", color: "#4b5563" }}>
+                <p style={{ margin: 0 }}>{invoice.paymentInfo}</p>
               </div>
             )}
 
             {/* Notes */}
             {invoice.notes && (
-              <div className="mb-6 text-sm text-gray-500 border-t border-gray-100 pt-4">
-                <p>{invoice.notes}</p>
+              <div data-pdf-section style={{ marginBottom: "12px", color: "#6b7280", borderTop: "1px solid #f3f4f6", paddingTop: "8px" }}>
+                <p style={{ margin: 0 }}>{invoice.notes}</p>
               </div>
             )}
 
             {/* Signature */}
             {invoice.signature && (
-              <div className="mt-8 pt-4">
+              <div data-pdf-section style={{ marginTop: "16px", paddingTop: "8px" }}>
                 <img
                   src={invoice.signature.dataUrl}
                   alt="Signature"
-                  className="h-16 object-contain"
+                  style={{ height: "36px", objectFit: "contain", display: "block" }}
                 />
-                <div className="border-t border-gray-300 w-48 mt-1" />
-                <p className="text-xs text-gray-500 mt-1">
+                <div style={{ borderTop: "1px solid #d1d5db", width: "120px", marginTop: "3px" }} />
+                <p style={{ fontSize: "7px", color: "#6b7280", marginTop: "2px" }}>
                   {invoice.senderName}
                 </p>
               </div>

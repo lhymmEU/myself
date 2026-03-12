@@ -28,7 +28,7 @@ interface InvoiceEditorProps {
   invoiceId?: string;
   onBack: () => void;
   onPreview: (id: string) => void;
-  onSaved: () => void;
+  onSaved?: () => void;
 }
 
 const EMPTY_ITEM: CreateInvoiceItemInput = {
@@ -180,8 +180,10 @@ export function InvoiceEditor({ invoiceId, onBack, onPreview, onSaved }: Invoice
 
     setSaving(false);
     if (res.ok) {
+      const data = await res.json();
+      const savedId = invoiceId || data.id;
       toast.success(invoiceId ? t("invoice.editor.updated") : t("invoice.editor.created"));
-      onSaved();
+      onPreview(savedId);
     } else {
       toast.error(t("invoice.editor.failedSave"));
     }
@@ -198,11 +200,11 @@ export function InvoiceEditor({ invoiceId, onBack, onPreview, onSaved }: Invoice
           {invoiceId && (
             <Button type="button" variant="outline" size="sm" onClick={() => onPreview(invoiceId)}>
               <Eye className="h-4 w-4 mr-1" />
-              {t("invoice.editor.preview")}
+              {t("invoice.editor.previewBeforeSend")}
             </Button>
           )}
           <Button type="submit" size="sm" disabled={saving}>
-            {saving ? t("common.loading") : t("common.save")}
+            {saving ? t("common.loading") : t("invoice.editor.saveToPreview")}
           </Button>
         </div>
       </div>

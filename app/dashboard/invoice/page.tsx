@@ -92,6 +92,11 @@ export default function InvoicePage() {
       <InvoicePreview
         invoiceId={previewId}
         onClose={() => setPreviewId(null)}
+        onSent={() => {
+          setView("list");
+          setEditingId(undefined);
+          setRefreshKey((k) => k + 1);
+        }}
       />
     </div>
   );

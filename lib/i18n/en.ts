@@ -706,6 +706,8 @@ export const en = {
       selectSignature: "Select a signature",
       noSignatures: "No signatures saved. Go to the Signatures tab to create one.",
       preview: "Preview",
+      saveToPreview: "Save to Preview",
+      previewBeforeSend: "Preview before Send",
       created: "Invoice created",
       updated: "Invoice updated",
       failedSave: "Failed to save invoice",

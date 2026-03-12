@@ -708,6 +708,8 @@ export const zh: Translations = {
       selectSignature: "选择签名",
       noSignatures: "还没有保存签名。前往签名标签页创建。",
       preview: "预览",
+      saveToPreview: "保存并预览",
+      previewBeforeSend: "发送前预览",
       created: "发票已创建",
       updated: "发票已更新",
       failedSave: "保存发票失败",

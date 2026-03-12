@@ -10,12 +10,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { invoiceId, pdfBase64, recipientEmail } = body;
 
-    // #region agent log
-    const fs = await import("fs");
-    const logEntry = (msg: string, data: Record<string, unknown>, hId: string) => { try { fs.appendFileSync("/Users/magicsheep/Portfolio/myself/.cursor/debug-b5bbb4.log", JSON.stringify({sessionId:"b5bbb4",location:"send/route.ts",message:msg,data,timestamp:Date.now(),hypothesisId:hId})+"\n"); } catch {} };
-    logEntry("POST /api/invoice/send entered", {hasInvoiceId:!!invoiceId,hasPdfBase64:!!pdfBase64,pdfBase64Length:pdfBase64?.length,recipientEmail}, "H-C");
-    // #endregion
-
     if (!invoiceId || !pdfBase64) {
       return NextResponse.json({ error: "Missing invoiceId or pdfBase64" }, { status: 400 });
     }
@@ -31,14 +25,7 @@ export async function POST(req: NextRequest) {
     const smtpPass = getSetting("smtp_pass");
     const smtpSecure = getSetting("smtp_secure");
 
-    // #region agent log
-    logEntry("SMTP settings loaded", {smtpHost,smtpPort,smtpUser,hasSmtpPass:!!smtpPass,smtpSecure}, "H-E");
-    // #endregion
-
     if (!smtpHost || !smtpUser || !smtpPass) {
-      // #region agent log
-      logEntry("SMTP not configured - returning 400", {smtpHost,smtpUser,hasSmtpPass:!!smtpPass}, "H-C");
-      // #endregion
       return NextResponse.json(
         { error: "SMTP not configured. Go to Settings to set up email." },
         { status: 400 }
@@ -77,15 +64,9 @@ ${invoice.paymentInfo ? `<p>${invoice.paymentInfo}</p>` : ""}`,
       ],
     });
 
-    // #region agent log
-    logEntry("Email sent successfully", {toEmail,subject}, "H-E");
-    // #endregion
     await markInvoiceStatus(invoiceId, "sent");
     return NextResponse.json({ success: true });
   } catch (err) {
-    // #region agent log
-    logEntry("CAUGHT ERROR in send route", {error:err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined}, "H-E");
-    // #endregion
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to send email" },
       { status: 500 }
