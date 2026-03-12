@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Image from "next/image";
 import { Plus, Trash2, Star, StarOff, Pen, Type } from "lucide-react";
 import SignaturePadLib from "signature_pad";
 import { Button } from "@/components/ui/button";
@@ -90,14 +91,19 @@ export function SignatureManager() {
   const [selectedFont, setSelectedFont] = useState(SIGNATURE_FONTS[0].id);
   const typePreviewRef = useRef<HTMLCanvasElement>(null);
 
-  const loadSignatures = useCallback(async () => {
+  const fetchSignatures = useCallback(async () => {
     const res = await fetch("/api/invoice?action=signatures");
-    if (res.ok) setSignatures(await res.json());
+    return res.ok ? await res.json() : null;
   }, []);
 
+  const loadSignatures = useCallback(async () => {
+    const data = await fetchSignatures();
+    if (data) setSignatures(data);
+  }, [fetchSignatures]);
+
   useEffect(() => {
-    loadSignatures();
-  }, [loadSignatures]);
+    fetchSignatures().then((data) => { if (data) setSignatures(data); });
+  }, [fetchSignatures]);
 
   useEffect(() => {
     ensureFontsLoaded();
@@ -394,10 +400,13 @@ export function SignatureManager() {
                   </div>
                 </div>
                 <div className="border rounded bg-white p-2">
-                  <img
+                  <Image
                     src={sig.dataUrl}
                     alt={sig.name}
+                    width={400}
+                    height={64}
                     className="h-16 w-full object-contain"
+                    unoptimized
                   />
                 </div>
                 {sig.isDefault && (

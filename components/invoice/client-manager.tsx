@@ -32,14 +32,19 @@ export function ClientManager() {
     notes: "",
   });
 
-  const loadClients = useCallback(async () => {
+  const fetchClients = useCallback(async () => {
     const res = await fetch("/api/invoice?action=clients");
-    if (res.ok) setClients(await res.json());
+    return res.ok ? await res.json() : null;
   }, []);
 
+  const loadClients = useCallback(async () => {
+    const data = await fetchClients();
+    if (data) setClients(data);
+  }, [fetchClients]);
+
   useEffect(() => {
-    loadClients();
-  }, [loadClients]);
+    fetchClients().then((data) => { if (data) setClients(data); });
+  }, [fetchClients]);
 
   const resetForm = () => {
     setForm({ name: "", email: "", phone: "", address: "", company: "", notes: "" });

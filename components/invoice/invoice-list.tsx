@@ -36,14 +36,19 @@ export function InvoiceList({ onEdit, onPreview, onNew, refreshKey }: InvoiceLis
   const [invoiceList, setInvoiceList] = useState<Invoice[]>([]);
   const [search, setSearch] = useState("");
 
-  const loadInvoices = useCallback(async () => {
+  const fetchInvoices = useCallback(async () => {
     const res = await fetch("/api/invoice");
-    if (res.ok) setInvoiceList(await res.json());
+    return res.ok ? await res.json() : null;
   }, []);
 
+  const loadInvoices = useCallback(async () => {
+    const data = await fetchInvoices();
+    if (data) setInvoiceList(data);
+  }, [fetchInvoices]);
+
   useEffect(() => {
-    loadInvoices();
-  }, [loadInvoices, refreshKey]);
+    fetchInvoices().then((data) => { if (data) setInvoiceList(data); });
+  }, [fetchInvoices, refreshKey]);
 
   const handleDelete = async (id: string) => {
     const res = await fetch(`/api/invoice?id=${id}`, { method: "DELETE" });

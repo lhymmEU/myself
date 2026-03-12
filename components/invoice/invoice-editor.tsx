@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import Image from "next/image";
 import { Plus, Trash2, ArrowLeft, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +39,7 @@ const EMPTY_ITEM: CreateInvoiceItemInput = {
   amount: 0,
 };
 
-export function InvoiceEditor({ invoiceId, onBack, onPreview, onSaved }: InvoiceEditorProps) {
+export function InvoiceEditor({ invoiceId, onBack, onPreview }: InvoiceEditorProps) {
   const t = useT();
   const [clients, setClients] = useState<InvoiceClient[]>([]);
   const [signatures, setSignatures] = useState<InvoiceSignature[]>([]);
@@ -61,76 +62,79 @@ export function InvoiceEditor({ invoiceId, onBack, onPreview, onSaved }: Invoice
 
   const [items, setItems] = useState<CreateInvoiceItemInput[]>([{ ...EMPTY_ITEM }]);
 
-  const loadData = useCallback(async () => {
-    const [clientsRes, sigsRes, numRes, settingsRes] = await Promise.all([
-      fetch("/api/invoice?action=clients"),
-      fetch("/api/invoice?action=signatures"),
-      fetch("/api/invoice?action=nextNumber"),
-      fetch("/api/settings"),
-    ]);
+  useEffect(() => {
+    let ignore = false;
 
-    if (clientsRes.ok) setClients(await clientsRes.json());
-    if (sigsRes.ok) {
-      const sigs = await sigsRes.json();
-      setSignatures(sigs);
-      if (!invoiceId) {
-        const defaultSig = sigs.find((s: InvoiceSignature) => s.isDefault);
-        if (defaultSig) setForm((f) => ({ ...f, signatureId: defaultSig.id }));
+    async function init() {
+      const [clientsRes, sigsRes, numRes, settingsRes] = await Promise.all([
+        fetch("/api/invoice?action=clients"),
+        fetch("/api/invoice?action=signatures"),
+        fetch("/api/invoice?action=nextNumber"),
+        fetch("/api/settings"),
+      ]);
+
+      if (ignore) return;
+
+      if (clientsRes.ok) setClients(await clientsRes.json());
+      if (sigsRes.ok) {
+        const sigs = await sigsRes.json();
+        setSignatures(sigs);
+        if (!invoiceId) {
+          const defaultSig = sigs.find((s: InvoiceSignature) => s.isDefault);
+          if (defaultSig) setForm((f) => ({ ...f, signatureId: defaultSig.id }));
+        }
+      }
+      if (numRes.ok && !invoiceId) {
+        const data = await numRes.json();
+        setInvoiceNumber(data.number);
+      }
+      if (settingsRes.ok && !invoiceId) {
+        const settings = await settingsRes.json();
+        setForm((f) => ({
+          ...f,
+          senderName: settings.invoice_sender_name || f.senderName,
+          senderEmail: settings.invoice_sender_email || f.senderEmail,
+          senderPhone: settings.invoice_sender_phone || f.senderPhone,
+          paymentInfo: settings.invoice_payment_info || f.paymentInfo,
+        }));
+      }
+
+      if (invoiceId) {
+        const res = await fetch(`/api/invoice?action=detail&id=${invoiceId}`);
+        if (!ignore && res.ok) {
+          const inv: InvoiceWithDetails = await res.json();
+          setInvoiceNumber(inv.invoiceNumber);
+          setForm({
+            clientId: inv.clientId || "",
+            date: inv.date,
+            dueDate: inv.dueDate || "",
+            currency: inv.currency,
+            senderName: inv.senderName || "",
+            senderEmail: inv.senderEmail || "",
+            senderPhone: inv.senderPhone || "",
+            paymentInfo: inv.paymentInfo || "",
+            signatureId: inv.signatureId || "",
+            notes: inv.notes || "",
+            tax: inv.tax,
+          });
+          setItems(
+            inv.items.length > 0
+              ? inv.items.map((it) => ({
+                  description: it.description,
+                  rate: it.rate,
+                  quantity: it.quantity,
+                  amount: it.amount,
+                  sortOrder: it.sortOrder,
+                }))
+              : [{ ...EMPTY_ITEM }]
+          );
+        }
       }
     }
-    if (numRes.ok && !invoiceId) {
-      const data = await numRes.json();
-      setInvoiceNumber(data.number);
-    }
 
-    if (settingsRes.ok && !invoiceId) {
-      const settings = await settingsRes.json();
-      setForm((f) => ({
-        ...f,
-        senderName: settings.invoice_sender_name || f.senderName,
-        senderEmail: settings.invoice_sender_email || f.senderEmail,
-        senderPhone: settings.invoice_sender_phone || f.senderPhone,
-        paymentInfo: settings.invoice_payment_info || f.paymentInfo,
-      }));
-    }
+    init();
+    return () => { ignore = true; };
   }, [invoiceId]);
-
-  const loadInvoice = useCallback(async () => {
-    if (!invoiceId) return;
-    const res = await fetch(`/api/invoice?action=detail&id=${invoiceId}`);
-    if (!res.ok) return;
-    const inv: InvoiceWithDetails = await res.json();
-    setInvoiceNumber(inv.invoiceNumber);
-    setForm({
-      clientId: inv.clientId || "",
-      date: inv.date,
-      dueDate: inv.dueDate || "",
-      currency: inv.currency,
-      senderName: inv.senderName || "",
-      senderEmail: inv.senderEmail || "",
-      senderPhone: inv.senderPhone || "",
-      paymentInfo: inv.paymentInfo || "",
-      signatureId: inv.signatureId || "",
-      notes: inv.notes || "",
-      tax: inv.tax,
-    });
-    setItems(
-      inv.items.length > 0
-        ? inv.items.map((it) => ({
-            description: it.description,
-            rate: it.rate,
-            quantity: it.quantity,
-            amount: it.amount,
-            sortOrder: it.sortOrder,
-          }))
-        : [{ ...EMPTY_ITEM }]
-    );
-  }, [invoiceId]);
-
-  useEffect(() => {
-    loadData();
-    loadInvoice();
-  }, [loadData, loadInvoice]);
 
   const updateItem = (idx: number, field: keyof CreateInvoiceItemInput, value: string | number) => {
     setItems((prev) => {
@@ -440,10 +444,13 @@ export function InvoiceEditor({ invoiceId, onBack, onPreview, onSaved }: Invoice
             )}
             {form.signatureId && (
               <div className="mt-3 border rounded bg-white p-2">
-                <img
-                  src={signatures.find((s) => s.id === form.signatureId)?.dataUrl}
+                <Image
+                  src={signatures.find((s) => s.id === form.signatureId)?.dataUrl || ""}
                   alt="Signature"
+                  width={400}
+                  height={48}
                   className="h-12 w-full object-contain"
+                  unoptimized
                 />
               </div>
             )}

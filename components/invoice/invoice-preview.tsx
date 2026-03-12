@@ -399,6 +399,7 @@ export function InvoicePreview({ invoiceId, onClose, onSent }: InvoicePreviewPro
             {/* Signature */}
             {invoice.signature && (
               <div data-pdf-section style={{ marginTop: "16px", paddingTop: "8px" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- raw <img> required for html-to-image PDF capture */}
                 <img
                   src={invoice.signature.dataUrl}
                   alt="Signature"
