@@ -3,14 +3,16 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { PageList } from "@/components/plans/page-list";
 import { Editor } from "@/components/plans/editor";
-import { FileText, PenLine } from "lucide-react";
+import { FileText, PenLine, PanelLeft, PanelLeftClose } from "lucide-react";
 import type { Block } from "@blocknote/core";
 import { useT } from "@/lib/i18n/context";
+import { Button } from "@/components/ui/button";
 
 interface Plan {
   id: string;
   title: string;
   content: Block[];
+  sortOrder: number;
   createdAt: number;
   updatedAt: number;
 }
@@ -21,6 +23,7 @@ export default function PlansPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activePlan, setActivePlan] = useState<Plan | null>(null);
   const [title, setTitle] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const titleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchPlans = useCallback(async () => {
@@ -135,6 +138,23 @@ export default function PlansPage() {
     [activeId, fetchPlans]
   );
 
+  const handleReorder = useCallback(
+    async (ids: string[]) => {
+      const reordered = ids.map((id) => plans.find((p) => p.id === id)!);
+      setPlans(reordered);
+      try {
+        await fetch("/api/plans", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "reorder", ids }),
+        });
+      } catch {
+        fetchPlans();
+      }
+    },
+    [plans, fetchPlans]
+  );
+
   useEffect(() => {
     return () => {
       if (titleDebounceRef.current) clearTimeout(titleDebounceRef.current);
@@ -143,19 +163,40 @@ export default function PlansPage() {
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-      <div className="w-[260px] border-r shrink-0 bg-muted/30">
-        <PageList
-          plans={plans}
-          activeId={activeId}
-          onSelect={handleSelect}
-          onDelete={handleDelete}
-          onCreate={handleCreate}
-        />
+      <div
+        className={`shrink-0 bg-muted/30 transition-all duration-300 ease-in-out overflow-hidden ${
+          sidebarOpen ? "w-[280px] border-r px-2" : "w-0"
+        }`}
+      >
+        <div className="w-[260px] h-full">
+          <PageList
+            plans={plans}
+            activeId={activeId}
+            onSelect={handleSelect}
+            onDelete={handleDelete}
+            onCreate={handleCreate}
+            onReorder={handleReorder}
+          />
+        </div>
       </div>
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <div className="flex items-center h-10 px-2 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+          >
+            {sidebarOpen ? (
+              <PanelLeftClose className="h-4 w-4" />
+            ) : (
+              <PanelLeft className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
         {activePlan ? (
           <div className="flex-1 overflow-y-auto">
-            <div className="max-w-3xl mx-auto px-6 pt-12 pb-24">
+            <div className="max-w-3xl mx-auto px-6 pt-4 pb-24">
               <input
                 value={title}
                 onChange={(e) => handleTitleChange(e.target.value)}

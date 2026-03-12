@@ -47,14 +47,7 @@ export default function ClawPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t("claw.title")}</h1>
-        <p className="text-muted-foreground">
-          {t("claw.subtitle")}
-        </p>
-      </div>
-
+    <div className="space-y-6 px-8 py-4">
       <ConnectionForm onConnectionChange={handleConnectionChange} />
 
       <div className="flex gap-6 items-start">

@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS plan_pages (
   title TEXT NOT NULL,
   content TEXT NOT NULL DEFAULT '{}',
   linked_node_id TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -140,5 +141,17 @@ export function initDatabase() {
   if (initialized) return;
   const sqlite = getSqlite();
   sqlite.exec(CREATE_TABLES_SQL);
+
+  try {
+    sqlite.exec(`ALTER TABLE plan_pages ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0`);
+    const plans = sqlite
+      .prepare(`SELECT id FROM plan_pages ORDER BY created_at ASC`)
+      .all() as { id: string }[];
+    const stmt = sqlite.prepare(`UPDATE plan_pages SET sort_order = ? WHERE id = ?`);
+    plans.forEach((plan, index) => stmt.run(index, plan.id));
+  } catch {
+    // column already exists
+  }
+
   initialized = true;
 }

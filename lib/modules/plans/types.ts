@@ -3,6 +3,7 @@ export interface PlanPage {
   title: string;
   content: unknown;
   linkedNodeId?: string | null;
+  sortOrder: number;
   createdAt: number;
   updatedAt: number;
 }

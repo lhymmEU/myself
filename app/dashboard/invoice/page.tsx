@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Receipt } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InvoiceList } from "@/components/invoice/invoice-list";
 import { InvoiceEditor } from "@/components/invoice/invoice-editor";
@@ -45,15 +44,7 @@ export default function InvoicePage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <Receipt className="h-6 w-6" />
-          {t("invoice.title")}
-        </h1>
-        <p className="text-muted-foreground">{t("invoice.subtitle")}</p>
-      </div>
-
+    <div className="space-y-6 px-8 py-4">
       <Tabs defaultValue="invoices">
         <TabsList>
           <TabsTrigger value="invoices">{t("invoice.tabs.invoices")}</TabsTrigger>

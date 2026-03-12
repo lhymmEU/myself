@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { eq } from "drizzle-orm";
+import { eq, asc, sql } from "drizzle-orm";
 import { getDb } from "@/lib/core/db";
 import { eventBus } from "@/lib/core/event-bus";
 import { planPages } from "./schema";
@@ -18,6 +18,7 @@ function parseRow(row: (typeof planPages.$inferSelect)): PlanPage {
     title: row.title,
     content,
     linkedNodeId: row.linkedNodeId ?? undefined,
+    sortOrder: row.sortOrder,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -25,7 +26,7 @@ function parseRow(row: (typeof planPages.$inferSelect)): PlanPage {
 
 export function getAllPlans(): PlanPage[] {
   const db = getDb();
-  const rows = db.select().from(planPages).all();
+  const rows = db.select().from(planPages).orderBy(asc(planPages.sortOrder)).all();
   return rows.map(parseRow);
 }
 
@@ -40,11 +41,17 @@ export function createPlan(input: CreatePlanInput): PlanPage {
   const now = Date.now();
   const id = nanoid();
   const content = input.content !== undefined ? JSON.stringify(input.content) : "{}";
+  const maxRow = db
+    .select({ max: sql<number>`COALESCE(MAX(${planPages.sortOrder}), -1)` })
+    .from(planPages)
+    .get();
+  const sortOrder = (maxRow?.max ?? -1) + 1;
   const row = {
     id,
     title: input.title,
     content,
     linkedNodeId: input.linkedNodeId ?? null,
+    sortOrder,
     createdAt: now,
     updatedAt: now,
   };
@@ -84,4 +91,14 @@ export function deletePlan(id: string): void {
   if (existing) {
     eventBus.emit("plans", PLAN_EVENTS.PLAN_DELETED, { id });
   }
+}
+
+export function reorderPlans(ids: string[]): void {
+  const db = getDb();
+  ids.forEach((id, index) => {
+    db.update(planPages)
+      .set({ sortOrder: index })
+      .where(eq(planPages.id, id))
+      .run();
+  });
 }

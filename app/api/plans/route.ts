@@ -6,6 +6,7 @@ import {
   createPlan,
   updatePlan,
   deletePlan,
+  reorderPlans,
 } from "@/lib/modules/plans/actions";
 
 export async function GET(req: NextRequest) {
@@ -57,6 +58,10 @@ export async function PUT(req: NextRequest) {
   bootApp();
   try {
     const body = await req.json();
+    if (body.action === "reorder" && Array.isArray(body.ids)) {
+      reorderPlans(body.ids);
+      return NextResponse.json({ success: true });
+    }
     const plan = updatePlan({
       id: body.id,
       title: body.title,

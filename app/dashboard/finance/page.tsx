@@ -1,6 +1,5 @@
 "use client";
 
-import { DollarSign } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LiveView } from "@/components/finance/live-view";
 import { PlanView } from "@/components/finance/plan-view";
@@ -10,17 +9,7 @@ export default function FinancePage() {
   const t = useT();
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <DollarSign className="h-6 w-6" />
-          {t("finance.title")}
-        </h1>
-        <p className="text-muted-foreground">
-          {t("finance.subtitle")}
-        </p>
-      </div>
-
+    <div className="space-y-6 px-8 py-4">
       <Tabs defaultValue="live">
         <TabsList>
           <TabsTrigger value="live">{t("finance.tabs.livePortfolio")}</TabsTrigger>

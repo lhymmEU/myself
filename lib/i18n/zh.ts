@@ -50,8 +50,6 @@ export const zh: Translations = {
   },
 
   dashboard: {
-    title: "仪表盘",
-    subtitle: "一览你的生活",
     cards: {
       todos: "待办事项",
       quickCapture: "快速记录",
@@ -409,8 +407,6 @@ export const zh: Translations = {
   },
 
   todos: {
-    title: "待办事项",
-    subtitle: "从思维导图派生的任务",
     failedLoadMindMap: "加载思维导图失败",
     failedLoadTodos: "加载待办事项失败",
     derivedFromMindMap: "个待办事项来自思维导图",
@@ -651,8 +647,6 @@ export const zh: Translations = {
   },
 
   mindMap: {
-    title: "思维导图",
-    subtitle: "自由画布，整理你的思绪",
     loading: "正在加载思维导图...",
     name: "思维导图",
   },

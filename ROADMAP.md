@@ -16,9 +16,9 @@ Want to influence what gets built next? [Open an issue](https://github.com/lhymm
 
 ### Plans Page
 
-- [ ] Drag-to-rearrange plan items
-- [ ] Switch sub-lists from numbered to bullet points
-- [ ] In-page sidebar layout
+- [x] Drag-to-rearrange plan items
+- [x] Switch sub-lists form from numbered to bullet points
+- [x] In-page sidebar layout
 
 ### Dashboard
 

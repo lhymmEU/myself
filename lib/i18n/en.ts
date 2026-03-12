@@ -48,8 +48,6 @@ export const en = {
   },
 
   dashboard: {
-    title: "Dashboard",
-    subtitle: "Your life at a glance",
     cards: {
       todos: "Todos",
       quickCapture: "Quick Capture",
@@ -407,8 +405,6 @@ export const en = {
   },
 
   todos: {
-    title: "Todos",
-    subtitle: "Tasks derived from your mind map",
     failedLoadMindMap: "Failed to load mind map",
     failedLoadTodos: "Failed to load todos",
     derivedFromMindMap: "todo(s) derived from mind map",
@@ -649,8 +645,6 @@ export const en = {
   },
 
   mindMap: {
-    title: "Mind Map",
-    subtitle: "Freeform canvas for organizing your thoughts",
     loading: "Loading mind map...",
     name: "Mind Map",
   },

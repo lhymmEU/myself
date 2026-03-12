@@ -5,11 +5,11 @@ A modular, agent-ready personal life management dashboard. Manage every aspect o
 ## Features
 
 - **Mind Map** — Interactive visual map of your life. Add categories (Health, Career, Finance, etc.) and items. Drag, connect, and organize freely.
-- **Smart Todos** — Manual task management with AI-powered auto-generation via OpenRouter. The LLM analyzes your mind map, goals, habits, and finances to suggest actionable tasks.
+- **Smart Todos** — Automaticly created from your mind map, no manual work needed.
 - **Finance Tracker** — Track income, expenses, and investments. Bar and pie charts. Budget tracking with progress bars.
 - **Plans** — Rich text editor for jotting down ideas, plans, and notes.
-- **Habits** — Daily/weekly habit tracking with streak counters and a contribution heatmap.
-- **Goals** — Long-term goal tracking with milestones, progress rings, and deadline countdown.
+- **Invoice** - Bill your clients with ease.
+- **Vault** - Manage your secrets on your local device.
 - **Settings** — Configure API keys, preferences, and appearance from the UI. No `.env` files needed.
 
 ## Quick Start
