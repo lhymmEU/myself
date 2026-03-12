@@ -108,6 +108,10 @@ Core infrastructure (`lib/core/`):
 - **OpenRouter** for LLM integration (OpenAI SDK)
 - **Recharts** for financial visualizations
 
+## Roadmap
+
+See [ROADMAP.md](./ROADMAP.md) for planned features and upcoming releases.
+
 ## License
 
 MIT
