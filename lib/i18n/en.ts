@@ -34,7 +34,7 @@ export const en = {
   },
 
   sidebar: {
-    title: "Life Dashboard",
+    title: "Life",
     dashboard: "Dashboard",
     mindMap: "Mind Map",
     todos: "Todos",

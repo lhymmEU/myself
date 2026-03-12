@@ -4,10 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  Brain,
+  Activity,
   CheckSquare,
   DollarSign,
-  FileText,
   Lock,
   Settings,
   LayoutDashboard,
@@ -16,6 +15,8 @@ import {
   Shell,
   Receipt,
   Languages,
+  Blend,
+  MapPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,10 +31,10 @@ import type { TranslationKey } from "@/lib/i18n/types";
 
 const NAV_ITEMS: { href: string; labelKey: TranslationKey; icon: typeof LayoutDashboard }[] = [
   { href: "/dashboard", labelKey: "sidebar.dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/mind-map", labelKey: "sidebar.mindMap", icon: Brain },
+  { href: "/dashboard/mind-map", labelKey: "sidebar.mindMap", icon: MapPlus },
   { href: "/dashboard/todos", labelKey: "sidebar.todos", icon: CheckSquare },
   { href: "/dashboard/finance", labelKey: "sidebar.finance", icon: DollarSign },
-  { href: "/dashboard/plans", labelKey: "sidebar.plans", icon: FileText },
+  { href: "/dashboard/plans", labelKey: "sidebar.plans", icon: Blend },
   { href: "/dashboard/invoice", labelKey: "sidebar.invoice", icon: Receipt },
   { href: "/dashboard/vault", labelKey: "sidebar.vault", icon: Lock },
   { href: "/dashboard/claw", labelKey: "sidebar.myClaw", icon: Shell },
@@ -61,8 +62,8 @@ export function Sidebar() {
       >
         <div className="flex items-center h-14 px-4 border-b border-border">
           {!collapsed && (
-            <Link href="/dashboard" className="flex items-center gap-2">
-              <Brain className="h-6 w-6 text-primary" />
+            <Link href="/dashboard" className="flex items-center gap-2 py-4">
+              <Activity className="h-6 w-6 text-primary" />
               <span className="font-semibold text-lg">{t("sidebar.title")}</span>
             </Link>
           )}
