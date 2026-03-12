@@ -34,7 +34,7 @@ Want to influence what gets built next? [Open an issue](https://github.com/lhymm
 
 - [ ] **Claw DM** — direct messaging within Claw
 - [ ] **Landing page** — public-facing intro page for the project
-- [ ] **Invoice** - create and send invoice to your clients
+- [x] **Invoice** - create and send invoice to your clients
 
 ### Distribution
 
