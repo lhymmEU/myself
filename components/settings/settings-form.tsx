@@ -7,6 +7,7 @@ import { LlmConfig } from "./llm-config";
 import { CryptoConfig } from "./crypto-config";
 import { FinanceDefaults } from "./finance-defaults";
 import { AppearanceConfig } from "./appearance-config";
+import { InvoiceConfig } from "./invoice-config";
 import { DataManagement } from "./data-management";
 import { Loader2 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
@@ -47,6 +48,19 @@ export function SettingsForm() {
     [t]
   );
 
+  const handleUpdateSilent = useCallback(
+    async (key: string, value: string) => {
+      setSettings((prev) => ({ ...prev, [key]: value }));
+      const res = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, value }),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+    },
+    []
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -62,6 +76,8 @@ export function SettingsForm() {
       <CryptoConfig settings={settings} onUpdate={handleUpdate} />
       <Separator />
       <FinanceDefaults settings={settings} onUpdate={handleUpdate} />
+      <Separator />
+      <InvoiceConfig settings={settings} onUpdate={handleUpdateSilent} />
       <Separator />
       <AppearanceConfig settings={settings} onUpdate={handleUpdate} />
       <Separator />

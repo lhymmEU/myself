@@ -82,6 +82,56 @@ CREATE TABLE IF NOT EXISTS mind_map_scenes (
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS invoice_clients (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  address TEXT,
+  company TEXT,
+  notes TEXT,
+  created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS invoice_signatures (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  data_url TEXT NOT NULL,
+  is_default INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS invoices (
+  id TEXT PRIMARY KEY,
+  invoice_number TEXT NOT NULL UNIQUE,
+  client_id TEXT REFERENCES invoice_clients(id),
+  date TEXT NOT NULL,
+  due_date TEXT,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','sent','paid','overdue')),
+  currency TEXT NOT NULL DEFAULT 'USD',
+  sender_name TEXT,
+  sender_email TEXT,
+  sender_phone TEXT,
+  payment_info TEXT,
+  signature_id TEXT REFERENCES invoice_signatures(id),
+  notes TEXT,
+  subtotal REAL NOT NULL DEFAULT 0,
+  tax REAL NOT NULL DEFAULT 0,
+  total REAL NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS invoice_items (
+  id TEXT PRIMARY KEY,
+  invoice_id TEXT NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+  description TEXT NOT NULL,
+  rate REAL NOT NULL DEFAULT 0,
+  quantity REAL NOT NULL DEFAULT 1,
+  amount REAL NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
 `;
 
 let initialized = false;

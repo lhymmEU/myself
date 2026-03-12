@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Shell,
+  Receipt,
   Languages,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ const NAV_ITEMS: { href: string; labelKey: TranslationKey; icon: typeof LayoutDa
   { href: "/dashboard/todos", labelKey: "sidebar.todos", icon: CheckSquare },
   { href: "/dashboard/finance", labelKey: "sidebar.finance", icon: DollarSign },
   { href: "/dashboard/plans", labelKey: "sidebar.plans", icon: FileText },
+  { href: "/dashboard/invoice", labelKey: "sidebar.invoice", icon: Receipt },
   { href: "/dashboard/vault", labelKey: "sidebar.vault", icon: Lock },
   { href: "/dashboard/claw", labelKey: "sidebar.myClaw", icon: Shell },
 ];

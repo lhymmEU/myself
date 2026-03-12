@@ -1,0 +1,7 @@
+{"sessionId":"b5bbb4","location":"invoice-preview.tsx:handlePrepareEmail","message":"Starting PDF generation","data":{"previewRefExists":true,"invoiceId":"kDU8IuDySq7otLqvQuj42"},"timestamp":1773300699128,"hypothesisId":"H-B"}
+{"sessionId":"b5bbb4","location":"invoice-preview.tsx:handlePrepareEmail","message":"PDF generated successfully","data":{"base64Length":5474984},"timestamp":1773300699383,"hypothesisId":"H-B"}
+{"sessionId":"b5bbb4","location":"invoice-preview.tsx:handleSend","message":"handleSend called","data":{"hasInvoice":true,"sendEmail":"1533289621@qq.com","hasPendingPdf":true,"pendingPdfLength":5474984},"timestamp":1773300739448,"hypothesisId":"H-C"}
+{"sessionId":"b5bbb4","location":"send/route.ts","message":"POST /api/invoice/send entered","data":{"hasInvoiceId":true,"hasPdfBase64":true,"pdfBase64Length":5474984,"recipientEmail":"1533289621@qq.com"},"timestamp":1773300740772,"hypothesisId":"H-C"}
+{"sessionId":"b5bbb4","location":"send/route.ts","message":"SMTP settings loaded","data":{"smtpHost":"smtp.gmail.com","smtpPort":"","smtpUser":"italy.18429@gmail.com","hasSmtpPass":true,"smtpSecure":""},"timestamp":1773300740774,"hypothesisId":"H-E"}
+{"sessionId":"b5bbb4","location":"send/route.ts","message":"Email sent successfully","data":{"toEmail":"1533289621@qq.com","subject":"Invoice INV0001 from Haoyang Li"},"timestamp":1773300770110,"hypothesisId":"H-E"}
+{"sessionId":"b5bbb4","location":"invoice-preview.tsx:handleSend","message":"API response received","data":{"status":200,"ok":true},"timestamp":1773300770123,"hypothesisId":"H-C"}
