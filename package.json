@@ -2,6 +2,7 @@
   "name": "myself",
   "version": "0.1.0",
   "private": true,
+  "main": "electron/dist/main.js",
   "engines": {
     "node": ">=18.0.0"
   },
@@ -12,7 +13,12 @@
     "lint": "eslint",
     "setup": "npm install && npm run build",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "electron:compile": "tsc -p tsconfig.electron.json",
+    "electron:dev": "npm run electron:compile && concurrently -k \"next dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron:build": "next build && bash scripts/prepare-standalone.sh && npm run electron:compile && electron-builder",
+    "electron:build:mac": "next build && bash scripts/prepare-standalone.sh && npm run electron:compile && electron-builder --mac",
+    "electron:build:win": "next build && bash scripts/prepare-standalone.sh && npm run electron:compile && electron-builder --win"
   },
   "dependencies": {
     "@blocknote/core": "^0.47.1",
@@ -64,12 +70,16 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/ssh2": "^1.15.5",
+    "concurrently": "^9.1.2",
     "drizzle-kit": "^0.31.9",
+    "electron": "^35.1.2",
+    "electron-builder": "^26.0.12",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "shadcn": "^3.8.5",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.4.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^8.0.3"
   }
 }

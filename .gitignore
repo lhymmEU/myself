@@ -15,6 +15,7 @@
 
 # next.js
 /.next/
+/.next/standalone-flat/
 /out/
 
 # production
@@ -40,3 +41,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 data/
+
+# electron
+electron/dist/
+dist-electron/
