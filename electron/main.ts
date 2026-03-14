@@ -42,6 +42,7 @@ function startServer(port: number): Promise<void> {
         HOSTNAME: "localhost",
         ELECTRON_RUN_AS_NODE: "1",
         NODE_PATH: nodePath,
+        DATA_DIR: app.getPath("userData"),
       },
       cwd: standaloneDir,
       stdio: "pipe",

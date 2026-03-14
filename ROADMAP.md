@@ -38,7 +38,7 @@ Want to influence what gets built next? [Open an issue](https://github.com/lhymm
 
 ### Distribution
 
-- [ ] macOS release
+- [x] macOS release
 - [ ] Windows release
 - [ ] iPhone release
 

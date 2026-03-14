@@ -127,6 +127,13 @@
   }
 }
 
+.titlebar-drag {
+  -webkit-app-region: drag;
+}
+.titlebar-no-drag {
+  -webkit-app-region: no-drag;
+}
+
 .bn-seamless .bn-container {
   background: transparent !important;
   border: none !important;

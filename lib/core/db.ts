@@ -3,7 +3,8 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import path from "path";
 import fs from "fs";
 
-const DB_PATH = path.join(process.cwd(), "data", "dashboard.db");
+const dataRoot = process.env.DATA_DIR || process.cwd();
+const DB_PATH = path.join(dataRoot, "data", "dashboard.db");
 
 function ensureDbDirectory() {
   const dir = path.dirname(DB_PATH);

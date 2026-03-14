@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS vault_secrets (
 );
 `;
 
-const DEFAULT_VAULT_PATH = path.join(process.cwd(), "data", "vault.db");
+const dataRoot = process.env.DATA_DIR || process.cwd();
+const DEFAULT_VAULT_PATH = path.join(dataRoot, "data", "vault.db");
 
 let _vaultDb: Database.Database | null = null;
 let _currentPath: string | null = null;

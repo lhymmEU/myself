@@ -49,13 +49,13 @@ export function ContentHeader() {
   const title = current ? t(current.labelKey) : "";
 
   return (
-    <header className="sticky top-0 z-10 flex items-center h-14 px-8 border-b border-border bg-background/80 backdrop-blur-sm">
+    <header className="titlebar-drag sticky top-0 z-10 flex items-center h-14 px-8 border-b border-border bg-background/80 backdrop-blur-sm">
       <div className="flex items-center gap-2">
         <Icon className="h-5 w-5 text-primary" />
         <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
       </div>
 
-      <div className="ml-auto">
+      <div className="ml-auto titlebar-no-drag">
         <Button
           variant="ghost"
           size="sm"

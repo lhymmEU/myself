@@ -12,11 +12,8 @@ import {
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const { numberedListItem: _, ...bulletOnlySpecs } = defaultBlockSpecs;
-
 const schema = BlockNoteSchema.create({
-  blockSpecs: bulletOnlySpecs,
+  blockSpecs: defaultBlockSpecs,
 });
 
 interface EditorProps {
