@@ -650,6 +650,21 @@ export const zh: Translations = {
   mindMap: {
     loading: "正在加载思维导图...",
     name: "思维导图",
+    grid: {
+      createNew: "新建画布",
+      createTitle: "创建新画布",
+      renameTitle: "重命名画布",
+      deleteTitle: "删除画布",
+      deleteConfirm: "此画布将被永久删除，此操作无法撤销。",
+      namePlaceholder: "画布名称",
+      untitled: "未命名",
+      create: "创建",
+      save: "保存",
+      cancel: "取消",
+      delete: "删除",
+      rename: "重命名",
+      back: "所有画布",
+    },
   },
 
   invoice: {

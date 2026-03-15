@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import { useT } from "@/lib/i18n/context";
+import { CanvasGrid } from "./canvas-grid";
 
 const ExcalidrawCanvas = dynamic(
   () =>
@@ -27,9 +29,22 @@ function MindMapLoading() {
 }
 
 export function MindMapCanvas() {
+  const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
+
+  if (activeSceneId) {
+    return (
+      <div className="h-full w-full">
+        <ExcalidrawCanvas
+          sceneId={activeSceneId}
+          onBack={() => setActiveSceneId(null)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="h-full w-full">
-      <ExcalidrawCanvas />
+      <CanvasGrid onOpen={(id) => setActiveSceneId(id)} />
     </div>
   );
 }

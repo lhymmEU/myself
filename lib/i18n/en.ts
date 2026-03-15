@@ -648,6 +648,21 @@ export const en = {
   mindMap: {
     loading: "Loading mind map...",
     name: "Mind Map",
+    grid: {
+      createNew: "New Canvas",
+      createTitle: "Create New Canvas",
+      renameTitle: "Rename Canvas",
+      deleteTitle: "Delete Canvas",
+      deleteConfirm: "This canvas will be permanently deleted. This action cannot be undone.",
+      namePlaceholder: "Canvas name",
+      untitled: "Untitled",
+      create: "Create",
+      save: "Save",
+      cancel: "Cancel",
+      delete: "Delete",
+      rename: "Rename",
+      back: "All Canvases",
+    },
   },
 
   invoice: {

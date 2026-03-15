@@ -11,6 +11,8 @@ import type {
 } from "@excalidraw/excalidraw/types";
 import type { MindMapScene } from "@/lib/modules/mind-map/types";
 import { useT } from "@/lib/i18n/context";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const SAVE_DEBOUNCE_MS = 1500;
 
@@ -38,7 +40,12 @@ function pickAppState(
   return picked;
 }
 
-export function ExcalidrawCanvas() {
+interface ExcalidrawCanvasProps {
+  sceneId: string;
+  onBack: () => void;
+}
+
+export function ExcalidrawCanvas({ sceneId, onBack }: ExcalidrawCanvasProps) {
   const t = useT();
   const [initialData, setInitialData] = useState<{
     elements: readonly ExcalidrawElement[];
@@ -46,16 +53,16 @@ export function ExcalidrawCanvas() {
     files: BinaryFiles;
   } | null>(null);
   const [loading, setLoading] = useState(true);
-  const sceneIdRef = useRef<string>("default");
+  const [sceneName, setSceneName] = useState("");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const apiRef = useRef<ExcalidrawImperativeAPI | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("/api/mind-map");
+        const res = await fetch(`/api/mind-map?id=${sceneId}`);
         const scene: MindMapScene = await res.json();
-        sceneIdRef.current = scene.id;
+        setSceneName(scene.name);
 
         let elements: ExcalidrawElement[] = [];
         let appState: Partial<AppState> = {};
@@ -84,7 +91,7 @@ export function ExcalidrawCanvas() {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, []);
+  }, [sceneId]);
 
   const saveScene = useCallback(
     (
@@ -100,7 +107,7 @@ export function ExcalidrawCanvas() {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            id: sceneIdRef.current,
+            id: sceneId,
             elements: JSON.stringify(nonDeleted),
             appState: JSON.stringify(pickAppState(appState)),
             files: JSON.stringify(files),
@@ -108,7 +115,7 @@ export function ExcalidrawCanvas() {
         }).catch((err) => console.error("Failed to save scene:", err));
       }, SAVE_DEBOUNCE_MS);
     },
-    []
+    [sceneId]
   );
 
   const handleChange = useCallback(
@@ -134,7 +141,21 @@ export function ExcalidrawCanvas() {
   }
 
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full flex flex-col">
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b bg-background shrink-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onBack}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          {t("mindMap.grid.back")}
+        </Button>
+        <span className="text-sm text-muted-foreground truncate">
+          {sceneName}
+        </span>
+      </div>
+      <div className="flex-1 min-h-0">
       <Excalidraw
         excalidrawAPI={(api) => {
           apiRef.current = api;
@@ -153,13 +174,14 @@ export function ExcalidrawCanvas() {
         }
         onChange={handleChange}
         theme={THEME.DARK}
-        name={t("mindMap.name")}
+        name={sceneName || t("mindMap.name")}
         UIOptions={{
           canvasActions: {
             loadScene: false,
           },
         }}
       />
+      </div>
     </div>
   );
 }
