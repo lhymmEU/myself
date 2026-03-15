@@ -80,6 +80,41 @@ CREATE TABLE IF NOT EXISTS mind_map_scenes (
   elements TEXT NOT NULL DEFAULT '[]',
   app_state TEXT NOT NULL DEFAULT '{}',
   files TEXT NOT NULL DEFAULT '{}',
+  mode TEXT NOT NULL DEFAULT 'mind' CHECK(mode IN ('mind','product')),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS pm_user_profiles (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL DEFAULT '',
+  company TEXT NOT NULL DEFAULT '',
+  role TEXT NOT NULL DEFAULT '',
+  notes TEXT NOT NULL DEFAULT '',
+  tags TEXT NOT NULL DEFAULT '[]',
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS pm_features (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'planned' CHECK(status IN ('planned','in-progress','done')),
+  priority TEXT NOT NULL DEFAULT 'medium' CHECK(priority IN ('low','medium','high','critical')),
+  notes TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS pm_demands (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  type TEXT NOT NULL DEFAULT 'demand' CHECK(type IN ('demand','assumption')),
+  status TEXT NOT NULL DEFAULT 'unvalidated' CHECK(status IN ('unvalidated','validating','validated','invalidated')),
+  evidence TEXT NOT NULL DEFAULT '',
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -149,6 +184,12 @@ export function initDatabase() {
       .all() as { id: string }[];
     const stmt = sqlite.prepare(`UPDATE plan_pages SET sort_order = ? WHERE id = ?`);
     plans.forEach((plan, index) => stmt.run(index, plan.id));
+  } catch {
+    // column already exists
+  }
+
+  try {
+    sqlite.exec(`ALTER TABLE mind_map_scenes ADD COLUMN mode TEXT NOT NULL DEFAULT 'mind'`);
   } catch {
     // column already exists
   }

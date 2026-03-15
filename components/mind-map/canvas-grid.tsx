@@ -18,9 +18,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useT } from "@/lib/i18n/context";
-import type { MindMapScene } from "@/lib/modules/mind-map/types";
+import type { MindMapScene, SceneMode } from "@/lib/modules/mind-map/types";
 
 interface CanvasGridProps {
+  mode?: SceneMode;
   onOpen: (sceneId: string) => void;
 }
 
@@ -38,7 +39,7 @@ function formatRelativeTime(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString();
 }
 
-export function CanvasGrid({ onOpen }: CanvasGridProps) {
+export function CanvasGrid({ mode = "mind", onOpen }: CanvasGridProps) {
   const t = useT();
   const [scenes, setScenes] = useState<MindMapScene[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +51,7 @@ export function CanvasGrid({ onOpen }: CanvasGridProps) {
 
   const fetchScenes = useCallback(async () => {
     try {
-      const res = await fetch("/api/mind-map?all=true");
+      const res = await fetch(`/api/mind-map?all=true&mode=${mode}`);
       const data: MindMapScene[] = await res.json();
       data.sort((a, b) => b.updatedAt - a.updatedAt);
       setScenes(data);
@@ -59,7 +60,7 @@ export function CanvasGrid({ onOpen }: CanvasGridProps) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [mode]);
 
   useEffect(() => {
     fetchScenes();
@@ -71,7 +72,7 @@ export function CanvasGrid({ onOpen }: CanvasGridProps) {
       const res = await fetch("/api/mind-map", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, mode }),
       });
       const scene: MindMapScene = await res.json();
       setCreateDialogOpen(false);

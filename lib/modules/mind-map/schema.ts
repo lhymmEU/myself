@@ -25,6 +25,9 @@ export const mindMapScenes = sqliteTable("mind_map_scenes", {
   elements: text("elements").notNull().default("[]"),
   appState: text("app_state").notNull().default("{}"),
   files: text("files").notNull().default("{}"),
+  mode: text("mode", { enum: ["mind", "product"] }).notNull().default("mind"),
   createdAt: integer("created_at", { mode: "number" }).notNull(),
   updatedAt: integer("updated_at", { mode: "number" }).notNull(),
 });
+
+export { pmUserProfiles, pmFeatures, pmDemands } from "./product-schema";

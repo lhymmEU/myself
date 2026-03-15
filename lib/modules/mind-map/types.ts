@@ -32,12 +32,15 @@ export interface UpdateNodeInput {
   metadata?: Record<string, unknown>;
 }
 
+export type { SceneMode } from "./product-types";
+
 export interface MindMapScene {
   id: string;
   name: string;
   elements: string;
   appState: string;
   files: string;
+  mode: "mind" | "product";
   createdAt: number;
   updatedAt: number;
 }
@@ -47,6 +50,7 @@ export interface CreateSceneInput {
   elements?: string;
   appState?: string;
   files?: string;
+  mode?: "mind" | "product";
 }
 
 export interface UpdateSceneInput {
@@ -56,3 +60,19 @@ export interface UpdateSceneInput {
   appState?: string;
   files?: string;
 }
+
+export type {
+  PmUserProfile,
+  CreateUserProfileInput,
+  UpdateUserProfileInput,
+  PmFeature,
+  CreateFeatureInput,
+  UpdateFeatureInput,
+  FeatureStatus,
+  FeaturePriority,
+  PmDemand,
+  CreateDemandInput,
+  UpdateDemandInput,
+  DemandType,
+  DemandStatus,
+} from "./product-types";

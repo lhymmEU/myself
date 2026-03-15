@@ -24,7 +24,8 @@ export async function GET(req: NextRequest) {
 
   const listAll = searchParams.get("all");
   if (listAll === "true") {
-    return NextResponse.json(getAllScenes());
+    const mode = searchParams.get("mode") as "mind" | "product" | null;
+    return NextResponse.json(getAllScenes(mode ?? undefined));
   }
 
   const scene = getOrCreateDefaultScene();
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest) {
     elements: body.elements,
     appState: body.appState,
     files: body.files,
+    mode: body.mode,
   });
   return NextResponse.json(scene, { status: 201 });
 }

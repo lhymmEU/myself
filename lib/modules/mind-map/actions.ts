@@ -133,6 +133,7 @@ function parseSceneRow(
     elements: row.elements,
     appState: row.appState,
     files: row.files,
+    mode: (row.mode as "mind" | "product") ?? "mind",
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -154,8 +155,16 @@ export function getOrCreateDefaultScene(): MindMapScene {
   return createScene({ name: "Mind Map" }, DEFAULT_SCENE_ID);
 }
 
-export function getAllScenes(): MindMapScene[] {
+export function getAllScenes(mode?: "mind" | "product"): MindMapScene[] {
   const db = getDb();
+  if (mode) {
+    const rows = db
+      .select()
+      .from(mindMapScenes)
+      .where(eq(mindMapScenes.mode, mode))
+      .all();
+    return rows.map(parseSceneRow);
+  }
   const rows = db.select().from(mindMapScenes).all();
   return rows.map(parseSceneRow);
 }
@@ -173,6 +182,7 @@ export function createScene(
     elements: input.elements ?? "[]",
     appState: input.appState ?? "{}",
     files: input.files ?? "{}",
+    mode: input.mode ?? "mind",
     createdAt: now,
     updatedAt: now,
   };
