@@ -27,8 +27,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, MapPin, Target } from "lucide-react";
-import { placeEntityOnCanvas } from "./place-on-canvas";
+import { Plus, Pencil, Trash2, MapPin, Target, GripVertical } from "lucide-react";
+import { placeEntityOnCanvas, DRAG_DATA_TYPE, type DragEntityData } from "./place-on-canvas";
 
 interface DemandPanelProps {
   excalidrawAPI: RefObject<ExcalidrawImperativeAPI | null>;
@@ -167,6 +167,16 @@ export function DemandPanel({ excalidrawAPI }: DemandPanelProps) {
     );
   };
 
+  const handleDragStart = (e: React.DragEvent, demand: PmDemand) => {
+    const data: DragEntityData = {
+      entityType: "demand",
+      label: demand.title,
+      subtitle: `${typeLabel(demand.type)} · ${statusLabel(demand.status)}`,
+    };
+    e.dataTransfer.setData(DRAG_DATA_TYPE, JSON.stringify(data));
+    e.dataTransfer.effectAllowed = "copy";
+  };
+
   return (
     <div className="p-3 space-y-2">
       <Button size="sm" className="w-full" onClick={openCreate}>
@@ -183,10 +193,13 @@ export function DemandPanel({ excalidrawAPI }: DemandPanelProps) {
       {demands.map((demand) => (
         <div
           key={demand.id}
-          className="group rounded-lg border p-3 space-y-1.5 hover:border-orange-500/40 transition-colors"
+          draggable
+          onDragStart={(e) => handleDragStart(e, demand)}
+          className="group rounded-lg border p-3 space-y-1.5 hover:border-orange-500/40 transition-colors cursor-grab active:cursor-grabbing"
         >
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
+              <GripVertical className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
               <Target className="w-4 h-4 text-orange-400 shrink-0" />
               <span className="text-sm font-medium truncate">
                 {demand.title}

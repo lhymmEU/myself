@@ -3,11 +3,10 @@ import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 export const pmUserProfiles = sqliteTable("pm_user_profiles", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  email: text("email").notNull().default(""),
-  company: text("company").notNull().default(""),
-  role: text("role").notNull().default(""),
+  type: text("type").notNull().default(""),
+  typeColor: text("type_color").notNull().default("#3b82f6"),
+  contact: text("contact").notNull().default(""),
   notes: text("notes").notNull().default(""),
-  tags: text("tags").notNull().default("[]"),
   createdAt: integer("created_at", { mode: "number" }).notNull(),
   updatedAt: integer("updated_at", { mode: "number" }).notNull(),
 });

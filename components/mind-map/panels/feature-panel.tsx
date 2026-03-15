@@ -27,8 +27,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, MapPin, Blocks } from "lucide-react";
-import { placeEntityOnCanvas } from "./place-on-canvas";
+import { Plus, Pencil, Trash2, MapPin, Blocks, GripVertical } from "lucide-react";
+import { placeEntityOnCanvas, DRAG_DATA_TYPE, type DragEntityData } from "./place-on-canvas";
 
 interface FeaturePanelProps {
   excalidrawAPI: RefObject<ExcalidrawImperativeAPI | null>;
@@ -174,6 +174,16 @@ export function FeaturePanel({ excalidrawAPI }: FeaturePanelProps) {
     );
   };
 
+  const handleDragStart = (e: React.DragEvent, feature: PmFeature) => {
+    const data: DragEntityData = {
+      entityType: "feature",
+      label: feature.name,
+      subtitle: `${statusLabel(feature.status)} · ${priorityLabel(feature.priority)}`,
+    };
+    e.dataTransfer.setData(DRAG_DATA_TYPE, JSON.stringify(data));
+    e.dataTransfer.effectAllowed = "copy";
+  };
+
   return (
     <div className="p-3 space-y-2">
       <Button size="sm" className="w-full" onClick={openCreate}>
@@ -190,10 +200,13 @@ export function FeaturePanel({ excalidrawAPI }: FeaturePanelProps) {
       {features.map((feature) => (
         <div
           key={feature.id}
-          className="group rounded-lg border p-3 space-y-1.5 hover:border-green-500/40 transition-colors"
+          draggable
+          onDragStart={(e) => handleDragStart(e, feature)}
+          className="group rounded-lg border p-3 space-y-1.5 hover:border-green-500/40 transition-colors cursor-grab active:cursor-grabbing"
         >
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
+              <GripVertical className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
               <Blocks className="w-4 h-4 text-green-400 shrink-0" />
               <span className="text-sm font-medium truncate">
                 {feature.name}

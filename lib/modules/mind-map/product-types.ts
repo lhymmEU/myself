@@ -5,32 +5,29 @@ export type SceneMode = "mind" | "product";
 export interface PmUserProfile {
   id: string;
   name: string;
-  email: string;
-  company: string;
-  role: string;
+  type: string;
+  typeColor: string;
+  contact: string;
   notes: string;
-  tags: string[];
   createdAt: number;
   updatedAt: number;
 }
 
 export interface CreateUserProfileInput {
   name: string;
-  email?: string;
-  company?: string;
-  role?: string;
+  type?: string;
+  typeColor?: string;
+  contact?: string;
   notes?: string;
-  tags?: string[];
 }
 
 export interface UpdateUserProfileInput {
   id: string;
   name?: string;
-  email?: string;
-  company?: string;
-  role?: string;
+  type?: string;
+  typeColor?: string;
+  contact?: string;
   notes?: string;
-  tags?: string[];
 }
 
 // --- Features ---

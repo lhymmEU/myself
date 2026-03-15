@@ -19,13 +19,7 @@ import type {
 function parseUserRow(
   row: typeof pmUserProfiles.$inferSelect
 ): PmUserProfile {
-  let tags: string[] = [];
-  try {
-    tags = JSON.parse(row.tags) as string[];
-  } catch {
-    tags = [];
-  }
-  return { ...row, tags };
+  return { ...row };
 }
 
 export function getAllUserProfiles(): PmUserProfile[] {
@@ -49,11 +43,10 @@ export function createUserProfile(input: CreateUserProfileInput): PmUserProfile 
   const row = {
     id: nanoid(),
     name: input.name,
-    email: input.email ?? "",
-    company: input.company ?? "",
-    role: input.role ?? "",
+    type: input.type ?? "",
+    typeColor: input.typeColor ?? "#3b82f6",
+    contact: input.contact ?? "",
     notes: input.notes ?? "",
-    tags: JSON.stringify(input.tags ?? []),
     createdAt: now,
     updatedAt: now,
   };
@@ -74,11 +67,10 @@ export function updateUserProfile(input: UpdateUserProfileInput): PmUserProfile 
     updatedAt: Date.now(),
   };
   if (input.name !== undefined) updates.name = input.name;
-  if (input.email !== undefined) updates.email = input.email;
-  if (input.company !== undefined) updates.company = input.company;
-  if (input.role !== undefined) updates.role = input.role;
+  if (input.type !== undefined) updates.type = input.type;
+  if (input.typeColor !== undefined) updates.typeColor = input.typeColor;
+  if (input.contact !== undefined) updates.contact = input.contact;
   if (input.notes !== undefined) updates.notes = input.notes;
-  if (input.tags !== undefined) updates.tags = JSON.stringify(input.tags);
 
   db.update(pmUserProfiles)
     .set(updates)

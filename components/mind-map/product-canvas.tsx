@@ -14,6 +14,11 @@ import { useT } from "@/lib/i18n/context";
 import { ArrowLeft, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductSidebar } from "./product-sidebar";
+import {
+  DRAG_DATA_TYPE,
+  placeEntityAtPosition,
+  type DragEntityData,
+} from "./panels/place-on-canvas";
 
 const SAVE_DEBOUNCE_MS = 1500;
 
@@ -56,6 +61,7 @@ export function ProductCanvas({ sceneId, onBack }: ProductCanvasProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const apiRef = useRef<ExcalidrawImperativeAPI | null>(null);
+  const canvasContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -121,6 +127,34 @@ export function ProductCanvas({ sceneId, onBack }: ProductCanvasProps) {
     [saveScene]
   );
 
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes(DRAG_DATA_TYPE)) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    const raw = e.dataTransfer.getData(DRAG_DATA_TYPE);
+    if (!raw || !apiRef.current || !canvasContainerRef.current) return;
+    e.preventDefault();
+    try {
+      const data: DragEntityData = JSON.parse(raw);
+      placeEntityAtPosition(
+        apiRef.current,
+        data.entityType,
+        data.label,
+        data.subtitle,
+        e.clientX,
+        e.clientY,
+        canvasContainerRef.current,
+        data.customColor
+      );
+    } catch {
+      // invalid drag data
+    }
+  }, []);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full bg-background text-muted-foreground">
@@ -157,7 +191,12 @@ export function ProductCanvas({ sceneId, onBack }: ProductCanvasProps) {
       </div>
 
       <div className="flex-1 min-h-0 flex">
-        <div className="flex-1 min-w-0">
+        <div
+          ref={canvasContainerRef}
+          className="flex-1 min-w-0"
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
           <Excalidraw
             excalidrawAPI={(api) => {
               apiRef.current = api;

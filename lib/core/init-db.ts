@@ -88,11 +88,10 @@ CREATE TABLE IF NOT EXISTS mind_map_scenes (
 CREATE TABLE IF NOT EXISTS pm_user_profiles (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  email TEXT NOT NULL DEFAULT '',
-  company TEXT NOT NULL DEFAULT '',
-  role TEXT NOT NULL DEFAULT '',
+  type TEXT NOT NULL DEFAULT '',
+  type_color TEXT NOT NULL DEFAULT '#3b82f6',
+  contact TEXT NOT NULL DEFAULT '',
   notes TEXT NOT NULL DEFAULT '',
-  tags TEXT NOT NULL DEFAULT '[]',
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -192,6 +191,15 @@ export function initDatabase() {
     sqlite.exec(`ALTER TABLE mind_map_scenes ADD COLUMN mode TEXT NOT NULL DEFAULT 'mind'`);
   } catch {
     // column already exists
+  }
+
+  // Migrate pm_user_profiles from v1 (email/company/role/tags) to v2 (type/typeColor/contact)
+  try {
+    sqlite.exec(`ALTER TABLE pm_user_profiles ADD COLUMN type TEXT NOT NULL DEFAULT ''`);
+    sqlite.exec(`ALTER TABLE pm_user_profiles ADD COLUMN type_color TEXT NOT NULL DEFAULT '#3b82f6'`);
+    sqlite.exec(`ALTER TABLE pm_user_profiles ADD COLUMN contact TEXT NOT NULL DEFAULT ''`);
+  } catch {
+    // columns already exist
   }
 
   initialized = true;

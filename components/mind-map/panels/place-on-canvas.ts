@@ -1,21 +1,45 @@
 import { nanoid } from "nanoid";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
+export const DRAG_DATA_TYPE = "application/x-pm-entity";
+
+export type EntityType = "user" | "feature" | "demand";
+
+export interface DragEntityData {
+  entityType: EntityType;
+  label: string;
+  subtitle: string;
+  customColor?: string;
+}
+
 const ENTITY_COLORS = {
   user: { stroke: "#3b82f6", bg: "#1e3a5f" },
   feature: { stroke: "#22c55e", bg: "#14532d" },
   demand: { stroke: "#f97316", bg: "#431407" },
 } as const;
 
-type EntityType = keyof typeof ENTITY_COLORS;
+function hexToDarkBg(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `#${Math.round(r * 0.3).toString(16).padStart(2, "0")}${Math.round(g * 0.3).toString(16).padStart(2, "0")}${Math.round(b * 0.3).toString(16).padStart(2, "0")}`;
+}
 
-export function placeEntityOnCanvas(
-  api: ExcalidrawImperativeAPI,
+function resolveColors(entityType: EntityType, customColor?: string) {
+  const stroke = customColor ?? ENTITY_COLORS[entityType].stroke;
+  const bg = customColor ? hexToDarkBg(customColor) : ENTITY_COLORS[entityType].bg;
+  return { stroke, bg };
+}
+
+function buildElements(
   entityType: EntityType,
   label: string,
-  subtitle: string
+  subtitle: string,
+  canvasX: number,
+  canvasY: number,
+  customColor?: string
 ) {
-  const { stroke, bg } = ENTITY_COLORS[entityType];
+  const { stroke, bg } = resolveColors(entityType, customColor);
   const badgeMap: Record<EntityType, string> = {
     user: "USER",
     feature: "FEATURE",
@@ -23,13 +47,6 @@ export function placeEntityOnCanvas(
   };
 
   const displayText = `[${badgeMap[entityType]}]\n${label}${subtitle ? `\n${subtitle}` : ""}`;
-
-  const appState = api.getAppState();
-  const { scrollX, scrollY, zoom } = appState;
-  const zoomValue = typeof zoom === "object" ? zoom.value : zoom;
-
-  const centerX = (window.innerWidth / 2 - scrollX) / zoomValue;
-  const centerY = (window.innerHeight / 2 - scrollY) / zoomValue;
 
   const rectId = nanoid();
   const textId = nanoid();
@@ -39,8 +56,8 @@ export function placeEntityOnCanvas(
   const rect = {
     id: rectId,
     type: "rectangle" as const,
-    x: centerX - width / 2,
-    y: centerY - height / 2,
+    x: canvasX - width / 2,
+    y: canvasY - height / 2,
     width,
     height,
     strokeColor: stroke,
@@ -67,8 +84,8 @@ export function placeEntityOnCanvas(
   const text = {
     id: textId,
     type: "text" as const,
-    x: centerX - width / 2,
-    y: centerY - height / 2,
+    x: canvasX - width / 2,
+    y: canvasY - height / 2,
     width,
     height,
     text: displayText,
@@ -101,6 +118,69 @@ export function placeEntityOnCanvas(
     lineHeight: 1.25,
   };
 
+  return { rect, text };
+}
+
+function screenToCanvas(
+  api: ExcalidrawImperativeAPI,
+  screenX: number,
+  screenY: number
+) {
+  const appState = api.getAppState();
+  const { scrollX, scrollY, zoom } = appState;
+  const zoomValue = typeof zoom === "object" ? zoom.value : zoom;
+  const canvasX = (screenX - scrollX) / zoomValue;
+  const canvasY = (screenY - scrollY) / zoomValue;
+  return { canvasX, canvasY };
+}
+
+export function placeEntityOnCanvas(
+  api: ExcalidrawImperativeAPI,
+  entityType: EntityType,
+  label: string,
+  subtitle: string,
+  customColor?: string
+) {
+  const { canvasX, canvasY } = screenToCanvas(
+    api,
+    window.innerWidth / 2,
+    window.innerHeight / 2
+  );
+  const { rect, text } = buildElements(
+    entityType,
+    label,
+    subtitle,
+    canvasX,
+    canvasY,
+    customColor
+  );
+  const currentElements = api.getSceneElements();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  api.updateScene({ elements: [...currentElements, rect as any, text as any] });
+}
+
+export function placeEntityAtPosition(
+  api: ExcalidrawImperativeAPI,
+  entityType: EntityType,
+  label: string,
+  subtitle: string,
+  screenX: number,
+  screenY: number,
+  canvasContainerEl: HTMLElement,
+  customColor?: string
+) {
+  const containerRect = canvasContainerEl.getBoundingClientRect();
+  const relX = screenX - containerRect.left;
+  const relY = screenY - containerRect.top;
+  const { canvasX, canvasY } = screenToCanvas(api, relX, relY);
+  const { rect, text } = buildElements(
+    entityType,
+    label,
+    subtitle,
+    canvasX,
+    canvasY,
+    customColor
+  );
   const currentElements = api.getSceneElements();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   api.updateScene({ elements: [...currentElements, rect as any, text as any] });

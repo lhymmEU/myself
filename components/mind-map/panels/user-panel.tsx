@@ -15,8 +15,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, MapPin, User } from "lucide-react";
-import { placeEntityOnCanvas } from "./place-on-canvas";
+import { Plus, Pencil, Trash2, MapPin, User, GripVertical } from "lucide-react";
+import { placeEntityOnCanvas, DRAG_DATA_TYPE, type DragEntityData } from "./place-on-canvas";
 
 interface UserPanelProps {
   excalidrawAPI: RefObject<ExcalidrawImperativeAPI | null>;
@@ -24,17 +24,28 @@ interface UserPanelProps {
 
 interface FormData {
   name: string;
-  email: string;
-  company: string;
-  role: string;
+  type: string;
+  typeColor: string;
+  contact: string;
   notes: string;
 }
 
+const TYPE_COLOR_PRESETS = [
+  "#3b82f6",
+  "#22c55e",
+  "#f97316",
+  "#ef4444",
+  "#a855f7",
+  "#ec4899",
+  "#14b8a6",
+  "#eab308",
+];
+
 const emptyForm: FormData = {
   name: "",
-  email: "",
-  company: "",
-  role: "",
+  type: "",
+  typeColor: "#3b82f6",
+  contact: "",
   notes: "",
 };
 
@@ -111,9 +122,9 @@ export function UserPanel({ excalidrawAPI }: UserPanelProps) {
     setEditingId(user.id);
     setForm({
       name: user.name,
-      email: user.email,
-      company: user.company,
-      role: user.role,
+      type: user.type,
+      typeColor: user.typeColor,
+      contact: user.contact,
       notes: user.notes,
     });
     setDialogOpen(true);
@@ -122,7 +133,18 @@ export function UserPanel({ excalidrawAPI }: UserPanelProps) {
   const handlePlace = (user: PmUserProfile) => {
     const api = excalidrawAPI.current;
     if (!api) return;
-    placeEntityOnCanvas(api, "user", user.name, user.role || user.company);
+    placeEntityOnCanvas(api, "user", user.name, user.type, user.typeColor);
+  };
+
+  const handleDragStart = (e: React.DragEvent, user: PmUserProfile) => {
+    const data: DragEntityData = {
+      entityType: "user",
+      label: user.name,
+      subtitle: user.type,
+      customColor: user.typeColor,
+    };
+    e.dataTransfer.setData(DRAG_DATA_TYPE, JSON.stringify(data));
+    e.dataTransfer.effectAllowed = "copy";
   };
 
   return (
@@ -141,11 +163,24 @@ export function UserPanel({ excalidrawAPI }: UserPanelProps) {
       {users.map((user) => (
         <div
           key={user.id}
-          className="group rounded-lg border p-3 space-y-1 hover:border-blue-500/40 transition-colors"
+          draggable
+          onDragStart={(e) => handleDragStart(e, user)}
+          className="group rounded-lg border p-3 space-y-1 transition-colors cursor-grab active:cursor-grabbing"
+          style={{ borderColor: `${user.typeColor}33` }}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.borderColor = `${user.typeColor}66`)
+          }
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.borderColor = `${user.typeColor}33`)
+          }
         >
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
-              <User className="w-4 h-4 text-blue-400 shrink-0" />
+              <GripVertical className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
+              <User
+                className="w-4 h-4 shrink-0"
+                style={{ color: user.typeColor }}
+              />
               <span className="text-sm font-medium truncate">{user.name}</span>
             </div>
             <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -176,14 +211,21 @@ export function UserPanel({ excalidrawAPI }: UserPanelProps) {
               </Button>
             </div>
           </div>
-          {(user.role || user.company) && (
-            <p className="text-xs text-muted-foreground truncate">
-              {[user.role, user.company].filter(Boolean).join(" · ")}
-            </p>
+          {user.type && (
+            <span
+              className="inline-block text-[10px] font-medium px-1.5 py-0 rounded-full"
+              style={{
+                backgroundColor: `${user.typeColor}22`,
+                color: user.typeColor,
+                border: `1px solid ${user.typeColor}44`,
+              }}
+            >
+              {user.type}
+            </span>
           )}
-          {user.email && (
+          {user.contact && (
             <p className="text-xs text-muted-foreground truncate">
-              {user.email}
+              {user.contact}
             </p>
           )}
         </div>
@@ -210,34 +252,54 @@ export function UserPanel({ excalidrawAPI }: UserPanelProps) {
               />
             </div>
             <div>
-              <Label>{t("mindMap.product.email")}</Label>
-              <Input
-                type="email"
-                value={form.email}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, email: e.target.value }))
-                }
-              />
+              <Label>{t("mindMap.product.userType")}</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={form.type}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, type: e.target.value }))
+                  }
+                  placeholder={t("mindMap.product.userTypePlaceholder")}
+                  className="flex-1"
+                />
+              </div>
+              <div className="flex items-center gap-1.5 mt-2">
+                {TYPE_COLOR_PRESETS.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, typeColor: color }))}
+                    className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 shrink-0"
+                    style={{
+                      backgroundColor: color,
+                      borderColor:
+                        form.typeColor === color
+                          ? "#ffffff"
+                          : "transparent",
+                    }}
+                  />
+                ))}
+                <input
+                  type="color"
+                  value={form.typeColor}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, typeColor: e.target.value }))
+                  }
+                  className="w-6 h-6 rounded-full cursor-pointer border-0 p-0 bg-transparent"
+                  title={t("mindMap.product.customColor")}
+                />
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>{t("mindMap.product.company")}</Label>
-                <Input
-                  value={form.company}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, company: e.target.value }))
-                  }
-                />
-              </div>
-              <div>
-                <Label>{t("mindMap.product.role")}</Label>
-                <Input
-                  value={form.role}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, role: e.target.value }))
-                  }
-                />
-              </div>
+            <div>
+              <Label>{t("mindMap.product.contact")}</Label>
+              <Textarea
+                value={form.contact}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, contact: e.target.value }))
+                }
+                placeholder={t("mindMap.product.contactPlaceholder")}
+                rows={2}
+              />
             </div>
             <div>
               <Label>{t("mindMap.product.notes")}</Label>
@@ -268,7 +330,9 @@ export function UserPanel({ excalidrawAPI }: UserPanelProps) {
             {t("mindMap.product.deleteConfirm")}
           </p>
           {targetUser && (
-            <p className="text-sm font-medium">&ldquo;{targetUser.name}&rdquo;</p>
+            <p className="text-sm font-medium">
+              &ldquo;{targetUser.name}&rdquo;
+            </p>
           )}
           <DialogFooter>
             <Button
