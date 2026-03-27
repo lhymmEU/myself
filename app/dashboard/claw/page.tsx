@@ -21,6 +21,8 @@ import { FilesPanel } from "@/components/claw/files-panel";
 import { ExtendPanel } from "@/components/claw/extend-panel";
 import { SkillsMarketplace } from "@/components/claw/skills-marketplace";
 import { SkillEditor } from "@/components/claw/skill-editor";
+import { CliToolsPanel } from "@/components/claw/cli-tools-panel";
+import { PublicApisPanel } from "@/components/claw/public-apis-panel";
 import dynamic from "next/dynamic";
 
 const ClawTerminal = dynamic(
@@ -147,14 +149,33 @@ export default function ClawPage() {
           </Tabs>
         </div>
 
-        {/* Right half: Marketplace + Skill Editor */}
+        {/* Right half: Discovery tabs + Skill Editor */}
         <div className="w-1/2 min-w-0 flex flex-col gap-4">
-          <div>
-            <SkillsMarketplace
-              connectionId={connectState.connectionId}
-              connected={connectState.connected}
-            />
-          </div>
+          <Tabs defaultValue="market">
+            <TabsList className="grid w-full grid-cols-3 h-7 mb-2">
+              <TabsTrigger value="market" className="text-xs h-6">
+                {t("claw.rightTabs.market")}
+              </TabsTrigger>
+              <TabsTrigger value="cli" className="text-xs h-6">
+                {t("claw.rightTabs.cliTools")}
+              </TabsTrigger>
+              <TabsTrigger value="apis" className="text-xs h-6">
+                {t("claw.rightTabs.publicApis")}
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="market">
+              <SkillsMarketplace
+                connectionId={connectState.connectionId}
+                connected={connectState.connected}
+              />
+            </TabsContent>
+            <TabsContent value="cli">
+              <CliToolsPanel />
+            </TabsContent>
+            <TabsContent value="apis">
+              <PublicApisPanel />
+            </TabsContent>
+          </Tabs>
           <div>
             <SkillEditor
               connectionId={connectState.connectionId}
