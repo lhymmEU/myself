@@ -666,6 +666,9 @@ export const zh: Translations = {
       delete: "删除",
       rename: "重命名",
       back: "所有画布",
+      setTodoSource: "设为待办来源",
+      unsetTodoSource: "取消待办来源",
+      todoSourceBadge: "待办来源",
     },
     product: {
       sidebar: "侧边栏",

@@ -41,6 +41,7 @@ export interface MindMapScene {
   appState: string;
   files: string;
   mode: "mind" | "product";
+  isTodoSource: boolean;
   createdAt: number;
   updatedAt: number;
 }

@@ -3,7 +3,14 @@ import { bootApp } from "@/lib/core/init";
 import { getAllSettings, updateSetting } from "@/lib/modules/settings/actions";
 
 export async function GET() {
-  bootApp();
+  try {
+    bootApp();
+  } catch (bootErr) {
+    return NextResponse.json(
+      { error: bootErr instanceof Error ? bootErr.message : "Boot failed" },
+      { status: 500 }
+    );
+  }
   try {
     const settings = await getAllSettings();
     return NextResponse.json(settings);
@@ -16,7 +23,14 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  bootApp();
+  try {
+    bootApp();
+  } catch (bootErr) {
+    return NextResponse.json(
+      { error: bootErr instanceof Error ? bootErr.message : "Boot failed" },
+      { status: 500 }
+    );
+  }
   try {
     const { key, value } = await req.json();
     if (!key || value === undefined) {

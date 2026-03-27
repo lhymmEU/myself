@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS mind_map_scenes (
   app_state TEXT NOT NULL DEFAULT '{}',
   files TEXT NOT NULL DEFAULT '{}',
   mode TEXT NOT NULL DEFAULT 'mind' CHECK(mode IN ('mind','product')),
+  is_todo_source INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -189,6 +190,12 @@ export function initDatabase() {
 
   try {
     sqlite.exec(`ALTER TABLE mind_map_scenes ADD COLUMN mode TEXT NOT NULL DEFAULT 'mind'`);
+  } catch {
+    // column already exists
+  }
+
+  try {
+    sqlite.exec(`ALTER TABLE mind_map_scenes ADD COLUMN is_todo_source INTEGER NOT NULL DEFAULT 0`);
   } catch {
     // column already exists
   }

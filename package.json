@@ -16,9 +16,9 @@
     "db:migrate": "drizzle-kit migrate",
     "electron:compile": "tsc -p tsconfig.electron.json",
     "electron:dev": "npm run electron:compile && concurrently -k \"next dev\" \"wait-on http://localhost:3000 && electron .\"",
-    "electron:build": "next build && bash scripts/prepare-standalone.sh && npm run electron:compile && electron-builder",
-    "electron:build:mac": "next build && bash scripts/prepare-standalone.sh && npm run electron:compile && electron-builder --mac",
-    "electron:build:win": "next build && bash scripts/prepare-standalone.sh && npm run electron:compile && electron-builder --win"
+    "electron:build": "next build && bash scripts/prepare-standalone.sh && node scripts/fix-native-modules.js && npm run electron:compile && electron-builder",
+    "electron:build:mac": "next build && bash scripts/prepare-standalone.sh && node scripts/fix-native-modules.js && npm run electron:compile && electron-builder --mac",
+    "electron:build:win": "next build && bash scripts/prepare-standalone.sh && node scripts/fix-native-modules.js && npm run electron:compile && electron-builder --win"
   },
   "dependencies": {
     "@blocknote/core": "^0.47.1",
@@ -63,6 +63,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.3",
     "@tailwindcss/postcss": "^4",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",

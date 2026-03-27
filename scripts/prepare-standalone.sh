@@ -27,6 +27,14 @@ if [ -d "$FLAT/node_modules" ]; then
   echo "[OK] Renamed node_modules → _node_modules"
 fi
 
+# Create wrapper that re-initializes NODE_PATH before loading server.js
+# (utilityProcess.fork does not honor NODE_PATH by default)
+cat > "$FLAT/_start.js" << 'WRAPPER'
+require("module")._initPaths();
+require("./server.js");
+WRAPPER
+echo "[OK] Created _start.js wrapper"
+
 # Remove directories that shouldn't be bundled
 rm -rf "$FLAT/dist-electron" "$FLAT/electron" "$FLAT/scripts" "$FLAT/.cursor"
 

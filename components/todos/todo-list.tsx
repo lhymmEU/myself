@@ -19,8 +19,12 @@ export function TodoList() {
 
   const fetchTodos = useCallback(async () => {
     try {
-      const res = await fetch("/api/mind-map");
-      if (!res.ok) throw new Error(t("todos.failedLoadMindMap"));
+      const res = await fetch("/api/mind-map?todoSource=true");
+      if (!res.ok) {
+        setTodos([]);
+        setError(null);
+        return;
+      }
       const scene = await res.json();
 
       let elements: unknown[] = [];

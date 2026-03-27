@@ -664,6 +664,9 @@ export const en = {
       delete: "Delete",
       rename: "Rename",
       back: "All Canvases",
+      setTodoSource: "Set as Todo Source",
+      unsetTodoSource: "Remove as Todo Source",
+      todoSourceBadge: "Todo Source",
     },
     product: {
       sidebar: "Sidebar",

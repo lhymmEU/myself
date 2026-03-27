@@ -1,6 +1,8 @@
 appId: com.lifedashboard.app
 productName: Life Dashboard
 
+npmRebuild: false
+
 directories:
   output: dist-electron
 

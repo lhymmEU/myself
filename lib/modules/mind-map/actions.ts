@@ -134,6 +134,7 @@ function parseSceneRow(
     appState: row.appState,
     files: row.files,
     mode: (row.mode as "mind" | "product") ?? "mind",
+    isTodoSource: row.isTodoSource === 1,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -183,6 +184,7 @@ export function createScene(
     appState: input.appState ?? "{}",
     files: input.files ?? "{}",
     mode: input.mode ?? "mind",
+    isTodoSource: 0,
     createdAt: now,
     updatedAt: now,
   };
@@ -222,4 +224,34 @@ export function updateScene(input: UpdateSceneInput): MindMapScene {
 export function deleteScene(id: string): void {
   const db = getDb();
   db.delete(mindMapScenes).where(eq(mindMapScenes.id, id)).run();
+}
+
+export function getTodoSourceScene(): MindMapScene | null {
+  const db = getDb();
+  const row = db
+    .select()
+    .from(mindMapScenes)
+    .where(eq(mindMapScenes.isTodoSource, 1))
+    .get();
+  return row ? parseSceneRow(row) : null;
+}
+
+export function setTodoSource(id: string, enabled: boolean): MindMapScene {
+  const db = getDb();
+  if (enabled) {
+    db.update(mindMapScenes)
+      .set({ isTodoSource: 0 })
+      .where(eq(mindMapScenes.isTodoSource, 1))
+      .run();
+  }
+  db.update(mindMapScenes)
+    .set({ isTodoSource: enabled ? 1 : 0 })
+    .where(eq(mindMapScenes.id, id))
+    .run();
+  const row = db
+    .select()
+    .from(mindMapScenes)
+    .where(eq(mindMapScenes.id, id))
+    .get();
+  return parseSceneRow(row!);
 }

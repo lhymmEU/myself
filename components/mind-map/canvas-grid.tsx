@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus, MoreVertical, Pencil, Trash2, Clock } from "lucide-react";
+import { Plus, MoreVertical, Pencil, Trash2, Clock, ListTodo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -125,6 +125,22 @@ export function CanvasGrid({ mode = "mind", onOpen }: CanvasGridProps) {
     setDeleteDialogOpen(true);
   };
 
+  const handleToggleTodoSource = async (scene: MindMapScene) => {
+    try {
+      await fetch("/api/mind-map", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: scene.id,
+          isTodoSource: !scene.isTodoSource,
+        }),
+      });
+      fetchScenes();
+    } catch (err) {
+      console.error("Failed to toggle todo source:", err);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full bg-background text-muted-foreground">
@@ -162,8 +178,14 @@ export function CanvasGrid({ mode = "mind", onOpen }: CanvasGridProps) {
             className="group relative flex flex-col rounded-xl border bg-card hover:border-primary/40 transition-all duration-200 aspect-[4/3] cursor-pointer overflow-hidden"
             onClick={() => onOpen(scene.id)}
           >
-            <div className="flex-1 flex items-center justify-center bg-muted/30 p-4">
+            <div className="relative flex-1 flex items-center justify-center bg-muted/30 p-4">
               <CanvasPreview elements={scene.elements} />
+              {scene.isTodoSource && (
+                <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-md bg-primary/90 px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
+                  <ListTodo className="w-3 h-3" />
+                  {t("mindMap.grid.todoSourceBadge")}
+                </span>
+              )}
             </div>
 
             <div className="flex items-center justify-between px-3 py-2.5 border-t bg-card">
@@ -187,6 +209,19 @@ export function CanvasGrid({ mode = "mind", onOpen }: CanvasGridProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  {mode === "mind" && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleTodoSource(scene);
+                      }}
+                    >
+                      <ListTodo className="w-4 h-4" />
+                      {scene.isTodoSource
+                        ? t("mindMap.grid.unsetTodoSource")
+                        : t("mindMap.grid.setTodoSource")}
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();

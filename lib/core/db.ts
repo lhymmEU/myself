@@ -19,11 +19,7 @@ let _sqlite: Database.Database | null = null;
 export function getDb() {
   if (!_db) {
     ensureDbDirectory();
-    try {
-      _sqlite = new Database(DB_PATH);
-    } catch (err: unknown) {
-      throw err;
-    }
+    _sqlite = new Database(DB_PATH);
     _sqlite.pragma("journal_mode = WAL");
     _sqlite.pragma("foreign_keys = ON");
     _db = drizzle(_sqlite);

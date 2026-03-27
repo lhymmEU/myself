@@ -12,7 +12,7 @@ interface ExcalidrawEl {
  */
 export async function completeTodo(todoId: string): Promise<boolean> {
   try {
-    const res = await fetch("/api/mind-map");
+    const res = await fetch("/api/mind-map?todoSource=true");
     if (!res.ok) return false;
     const scene = await res.json();
 

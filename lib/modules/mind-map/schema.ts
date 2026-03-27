@@ -26,6 +26,7 @@ export const mindMapScenes = sqliteTable("mind_map_scenes", {
   appState: text("app_state").notNull().default("{}"),
   files: text("files").notNull().default("{}"),
   mode: text("mode", { enum: ["mind", "product"] }).notNull().default("mind"),
+  isTodoSource: integer("is_todo_source", { mode: "number" }).notNull().default(0),
   createdAt: integer("created_at", { mode: "number" }).notNull(),
   updatedAt: integer("updated_at", { mode: "number" }).notNull(),
 });

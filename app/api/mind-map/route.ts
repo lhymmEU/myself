@@ -7,6 +7,8 @@ import {
   createScene,
   updateScene,
   deleteScene,
+  getTodoSourceScene,
+  setTodoSource,
 } from "@/lib/modules/mind-map/actions";
 
 export async function GET(req: NextRequest) {
@@ -18,6 +20,15 @@ export async function GET(req: NextRequest) {
     const scene = getScene(id);
     if (!scene) {
       return NextResponse.json({ error: "Scene not found" }, { status: 404 });
+    }
+    return NextResponse.json(scene);
+  }
+
+  const todoSource = searchParams.get("todoSource");
+  if (todoSource === "true") {
+    const scene = getTodoSourceScene();
+    if (!scene) {
+      return NextResponse.json({ error: "No todo source set" }, { status: 404 });
     }
     return NextResponse.json(scene);
   }
@@ -51,6 +62,11 @@ export async function PUT(req: NextRequest) {
 
   if (!body.id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  }
+
+  if (body.isTodoSource !== undefined) {
+    const scene = setTodoSource(body.id, body.isTodoSource);
+    return NextResponse.json(scene);
   }
 
   const scene = updateScene({

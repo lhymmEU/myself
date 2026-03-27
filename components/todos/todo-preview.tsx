@@ -14,9 +14,13 @@ export function TodoPreview() {
   const [todos, setTodos] = useState<MindMapTodo[]>([]);
 
   useEffect(() => {
-    fetch("/api/mind-map")
-      .then((r) => r.json())
+    fetch("/api/mind-map?todoSource=true")
+      .then((r) => {
+        if (!r.ok) return null;
+        return r.json();
+      })
       .then((scene) => {
+        if (!scene) return;
         let elements: unknown[] = [];
         try {
           elements = JSON.parse(scene.elements);

@@ -1,10 +1,9 @@
-import { app, BrowserWindow } from "electron";
-import { spawn, ChildProcess } from "child_process";
+import { app, BrowserWindow, utilityProcess } from "electron";
 import path from "path";
 import net from "net";
 
 let mainWindow: BrowserWindow | null = null;
-let serverProcess: ChildProcess | null = null;
+let serverProcess: Electron.UtilityProcess | null = null;
 
 const isDev = !app.isPackaged;
 const DEV_SERVER_URL = "http://localhost:3000";
@@ -28,19 +27,18 @@ function startServer(port: number): Promise<void> {
   const serverScript = path.join(
     process.resourcesPath,
     "standalone",
-    "server.js"
+    "_start.js"
   );
 
   return new Promise((resolve) => {
     const standaloneDir = path.join(process.resourcesPath, "standalone");
     const nodePath = path.join(standaloneDir, "_node_modules");
 
-    serverProcess = spawn(process.execPath, [serverScript], {
+    serverProcess = utilityProcess.fork(serverScript, [], {
       env: {
         ...process.env,
         PORT: String(port),
         HOSTNAME: "localhost",
-        ELECTRON_RUN_AS_NODE: "1",
         NODE_PATH: nodePath,
         DATA_DIR: app.getPath("userData"),
       },
@@ -57,7 +55,8 @@ function startServer(port: number): Promise<void> {
     });
 
     serverProcess.stderr?.on("data", (chunk: Buffer) => {
-      process.stderr.write(`[next] ${chunk.toString()}`);
+      const errMsg = chunk.toString();
+      process.stderr.write(`[next] ${errMsg}`);
     });
 
     setTimeout(resolve, 8000);
