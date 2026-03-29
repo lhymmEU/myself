@@ -10,8 +10,8 @@ Want to influence what gets built next? [Open an issue](https://github.com/lhymm
 
 ### Claw Page
 
-- [ ] CLI tool listing and installation
-- [ ] API endpoint listing and integration
+- [x] CLI tool listing and installation
+- [x] API endpoint listing and integration
 - [ ] Customizable cron jobs
 
 ### Plans Page

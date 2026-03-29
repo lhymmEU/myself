@@ -407,4 +407,44 @@ export function getSFTP(connectionId: string): Promise<SFTPWrapper> {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Agent resolution helper (shared across DM + skill generation routes)
+// ---------------------------------------------------------------------------
+
+export async function resolveAgentId(
+  connectionId: string,
+): Promise<string | null> {
+  const result = await executeOpenClawCommand(
+    connectionId,
+    "sessions --all-agents --json",
+    15000,
+  );
+  if (result.code !== 0) return null;
+
+  try {
+    const data = JSON.parse(result.stdout.trim());
+    const sessions: { agentId?: string }[] = data.sessions ?? [];
+    if (sessions.length > 0 && sessions[0].agentId) {
+      return sessions[0].agentId;
+    }
+    const stores: { agentId?: string }[] = data.stores ?? [];
+    if (stores.length > 0 && stores[0].agentId) {
+      return stores[0].agentId;
+    }
+  } catch {
+    // parse failed
+  }
+
+  const cfgResult = await executeCommand(
+    connectionId,
+    'cat ~/.openclaw/openclaw.json 2>/dev/null | grep -o \'"defaultAgent"[[:space:]]*:[[:space:]]*"[^"]*"\' | head -1 | sed \'s/.*"\\([^"]*\\)"$/\\1/\'',
+    5000,
+  );
+  if (cfgResult.code === 0 && cfgResult.stdout.trim()) {
+    return cfgResult.stdout.trim();
+  }
+
+  return null;
+}
+
 export { loginShell };

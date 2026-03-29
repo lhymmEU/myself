@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
 import {
   executeCommand,
-  executeOpenClawCommand,
   isSSHConnected,
   getDefaultConnection,
+  resolveAgentId,
 } from "@/lib/modules/claw/actions";
 
 const SKILL_PROMPT_PREFIX = `Generate a complete SKILL.md file based on the user's description below.
@@ -31,44 +31,6 @@ function parseFrontmatter(raw: string) {
     description: descMatch?.[1]?.trim() ?? "",
     body,
   };
-}
-
-async function resolveAgentId(
-  connectionId: string
-): Promise<string | null> {
-  // Use sessions list (proven to work in the dashboard) to find agent IDs
-  const result = await executeOpenClawCommand(
-    connectionId,
-    "sessions --all-agents --json",
-    15000
-  );
-  if (result.code !== 0) return null;
-
-  try {
-    const data = JSON.parse(result.stdout.trim());
-    const sessions: { agentId?: string }[] = data.sessions ?? [];
-    if (sessions.length > 0 && sessions[0].agentId) {
-      return sessions[0].agentId;
-    }
-    const stores: { agentId?: string }[] = data.stores ?? [];
-    if (stores.length > 0 && stores[0].agentId) {
-      return stores[0].agentId;
-    }
-  } catch {
-    // parse failed
-  }
-
-  // Fallback: read agent ID from config
-  const cfgResult = await executeCommand(
-    connectionId,
-    'cat ~/.openclaw/openclaw.json 2>/dev/null | grep -o \'"defaultAgent"[[:space:]]*:[[:space:]]*"[^"]*"\' | head -1 | sed \'s/.*"\\([^"]*\\)"$/\\1/\'',
-    5000
-  );
-  if (cfgResult.code === 0 && cfgResult.stdout.trim()) {
-    return cfgResult.stdout.trim();
-  }
-
-  return null;
 }
 
 export async function POST(req: NextRequest) {
