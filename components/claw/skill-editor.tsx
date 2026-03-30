@@ -14,6 +14,8 @@ import {
   Server,
   RefreshCw,
   Pencil,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { CodeEditor } from "@/components/claw/code-editor";
 import { JsonFormEditor } from "@/components/claw/json-form-editor";
@@ -68,6 +70,8 @@ export function SkillEditor({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const PAGE_SIZE = 5;
 
   const [skillName, setSkillName] = useState("");
   const [skillDescription, setSkillDescription] = useState("");
@@ -199,21 +203,50 @@ export function SkillEditor({
                 {t("claw.skillEditor.noSkills")}
               </p>
             ) : (
-              skills.map((skill) => (
-                <button
-                  key={skill.path}
-                  className="w-full text-left px-2 py-1.5 rounded-md hover:bg-muted/50 transition-colors flex items-center gap-2 text-xs"
-                  onClick={() => loadSkillContent(skill.path)}
-                >
-                  <Pencil className="h-3 w-3 text-muted-foreground shrink-0" />
-                  <div className="min-w-0">
-                    <div className="font-medium truncate">{skill.name || skill.path}</div>
-                    {skill.description && (
-                      <div className="text-muted-foreground truncate">{skill.description}</div>
-                    )}
+              <>
+                {skills.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE).map((skill) => (
+                  <button
+                    key={skill.path}
+                    className="w-full text-left px-2 py-1.5 rounded-md hover:bg-muted/50 transition-colors flex items-center gap-2 text-xs"
+                    onClick={() => loadSkillContent(skill.path)}
+                  >
+                    <Pencil className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">{skill.name || skill.path}</div>
+                      {skill.description && (
+                        <div className="text-muted-foreground truncate">{skill.description}</div>
+                      )}
+                    </div>
+                  </button>
+                ))}
+                {skills.length > PAGE_SIZE && (
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+                      disabled={currentPage === 0}
+                      className="h-6 px-2 text-xs"
+                    >
+                      <ChevronLeft className="h-3 w-3 mr-0.5" />
+                      {t("claw.skillEditor.pagination.prev")}
+                    </Button>
+                    <span className="text-[10px] text-muted-foreground">
+                      {t("claw.skillEditor.pagination.page")} {currentPage + 1} / {Math.ceil(skills.length / PAGE_SIZE)}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setCurrentPage((p) => Math.min(Math.ceil(skills.length / PAGE_SIZE) - 1, p + 1))}
+                      disabled={currentPage >= Math.ceil(skills.length / PAGE_SIZE) - 1}
+                      className="h-6 px-2 text-xs"
+                    >
+                      {t("claw.skillEditor.pagination.next")}
+                      <ChevronRight className="h-3 w-3 ml-0.5" />
+                    </Button>
                   </div>
-                </button>
-              ))
+                )}
+              </>
             )}
           </div>
         )}

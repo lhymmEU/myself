@@ -39,7 +39,7 @@ export function MessageThread({
   }
 
   return (
-    <ScrollArea className="h-[400px] rounded-lg border border-border p-4">
+    <ScrollArea className="h-full rounded-lg border border-border p-4">
       <div className="space-y-4">
         {messages.map((msg) => (
           <MessageBubble key={msg.id} message={msg} />

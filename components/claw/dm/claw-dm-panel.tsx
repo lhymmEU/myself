@@ -11,12 +11,12 @@ import type {
   Message,
   ResponseType,
 } from "./types";
-import { SessionSelector } from "./session-selector";
+import { SessionListPanel } from "./session-list-panel";
 import { AgentStatusBar } from "./agent-status-bar";
 import { MessageThread } from "./message-thread";
 import { ActionShelf } from "./action-shelf";
 import { SmartInput } from "./smart-input";
-import { OnboardingOverlay } from "./onboarding-overlay";
+import { CronPanel } from "./cron-panel";
 
 const initialState: DMState = {
   conversationState: "idle",
@@ -154,43 +154,58 @@ export function ClawDMPanel({ connectionId, connected }: ClawDMPanelProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4 max-w-3xl mx-auto">
-      <OnboardingOverlay />
+    <div className="flex h-[calc(100vh-200px)] min-h-[500px] rounded-lg border overflow-hidden">
+      {/* Left: Session List */}
+      <div className="w-[260px] shrink-0">
+        <SessionListPanel
+          connectionId={connectionId}
+          connected={connected}
+          activeSessionId={state.sessionTarget?.sessionId ?? null}
+          onSessionChange={handleSessionChange}
+        />
+      </div>
 
-      <SessionSelector
-        connectionId={connectionId}
-        connected={connected}
-        onSessionChange={handleSessionChange}
-      />
+      {/* Center: Chat Interface */}
+      <div className="flex-1 flex flex-col min-w-0 border-x">
+        <div className="p-3 border-b">
+          <AgentStatusBar
+            connectionId={connectionId}
+            connected={connected}
+            sessionTarget={state.sessionTarget}
+          />
+        </div>
 
-      <AgentStatusBar
-        connectionId={connectionId}
-        connected={connected}
-        sessionTarget={state.sessionTarget}
-      />
+        <div className="flex-1 min-h-0">
+          <MessageThread
+            messages={state.messages}
+            conversationState={state.conversationState}
+            error={state.error}
+            onDismissError={() => dispatch({ type: "CLEAR_ERROR" })}
+          />
+        </div>
 
-      <MessageThread
-        messages={state.messages}
-        conversationState={state.conversationState}
-        error={state.error}
-        onDismissError={() => dispatch({ type: "CLEAR_ERROR" })}
-      />
+        <div className="p-3 border-t space-y-2">
+          <ActionShelf
+            conversationState={state.conversationState}
+            onInsert={handlePillInsert}
+            disabled={!state.sessionTarget}
+          />
+          <SmartInput
+            onSend={handleSend}
+            disabled={
+              !state.sessionTarget ||
+              state.conversationState === "sending" ||
+              state.conversationState === "agent-typing"
+            }
+            conversationState={state.conversationState}
+          />
+        </div>
+      </div>
 
-      <ActionShelf
-        conversationState={state.conversationState}
-        onInsert={handlePillInsert}
-        disabled={!state.sessionTarget}
-      />
-
-      <SmartInput
-        onSend={handleSend}
-        disabled={
-          !state.sessionTarget ||
-          state.conversationState === "sending" ||
-          state.conversationState === "agent-typing"
-        }
-        conversationState={state.conversationState}
-      />
+      {/* Right: Cron Panel */}
+      <div className="w-[400px] shrink-0 min-w-0 max-w-full overflow-hidden">
+        <CronPanel connectionId={connectionId} />
+      </div>
     </div>
   );
 }

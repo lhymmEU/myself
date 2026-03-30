@@ -32,7 +32,7 @@ Want to influence what gets built next? [Open an issue](https://github.com/lhymm
 
 ### New Features
 
-- [ ] **Claw DM** — direct messaging within Claw
+- [x] **Claw DM** — direct messaging within Claw
 - [ ] **Landing page** — public-facing intro page for the project
 - [x] **Invoice** - create and send invoice to your clients
 
