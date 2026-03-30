@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { connectionId, name, expression, command, sessionTarget, enabled } = body;
+    const { connectionId, name, expression, command, sessionTarget, enabled, timezone } = body;
 
     if (!connectionId || !isSSHConnected(connectionId)) {
       return NextResponse.json({ error: "Not connected via SSH" }, { status: 400 });
@@ -120,9 +120,20 @@ export async function POST(req: NextRequest) {
 
     const b64Msg = Buffer.from(command).toString("base64");
     const session = sessionTarget || "isolated";
+    const escapedName = name.replace(/"/g, '\\"');
 
-    let cmd = `MSG=$(echo ${b64Msg} | base64 -d) && openclaw cron add --name "${name.replace(/"/g, '\\"')}" --cron "${expression}" --session ${session} --message "$MSG"`;
+    let scheduleFlag: string;
+    if (expression.startsWith("at ")) {
+      scheduleFlag = `--at "${expression.slice(3)}"`;
+    } else {
+      scheduleFlag = `--cron "${expression}"`;
+    }
 
+    let cmd = `MSG=$(echo ${b64Msg} | base64 -d) && openclaw cron add --name "${escapedName}" ${scheduleFlag} --session ${session} --message "$MSG"`;
+
+    if (timezone) {
+      cmd += ` --tz "${timezone}"`;
+    }
     if (enabled === false) {
       cmd += " --disabled";
     }

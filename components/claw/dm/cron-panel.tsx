@@ -22,6 +22,9 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
+import { TimePicker } from "@/components/ui/time-picker";
+import { TimezonePicker } from "@/components/ui/timezone-picker";
 
 interface CronJob {
   id: string;
@@ -51,7 +54,16 @@ interface FormState {
   hour: string;
   minute: string;
   weekday: string;
-  datetime: string;
+  datetime: Date | undefined;
+  timezone: string;
+}
+
+function getLocalTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return "UTC";
+  }
 }
 
 const EMPTY_FORM: FormState = {
@@ -63,7 +75,8 @@ const EMPTY_FORM: FormState = {
   hour: "09",
   minute: "00",
   weekday: "1",
-  datetime: "",
+  datetime: undefined,
+  timezone: getLocalTimezone(),
 };
 
 function buildExpression(form: FormState): string {
@@ -73,37 +86,39 @@ function buildExpression(form: FormState): string {
     case "weekly":
       return `${form.minute} ${form.hour} * * ${form.weekday}`;
     case "once":
-      return form.datetime ? `at ${new Date(form.datetime).toISOString()}` : "";
+      return form.datetime ? `at ${form.datetime.toISOString()}` : "";
     case "custom":
       return form.expression;
   }
 }
 
-function parseExpressionToForm(expr: string): Partial<FormState> {
+function parseExpressionToForm(expr: string, tz?: string | null): Partial<FormState> {
+  const result: Partial<FormState> = {};
+  if (tz) result.timezone = tz;
+
   if (expr.startsWith("at ")) {
     try {
       const d = new Date(expr.slice(3));
-      const pad = (n: number) => n.toString().padStart(2, "0");
-      const local = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-      return { scheduleType: "once", datetime: local };
+      if (isNaN(d.getTime())) return { ...result, scheduleType: "custom", expression: expr };
+      return { ...result, scheduleType: "once", datetime: d };
     } catch {
-      return { scheduleType: "custom", expression: expr };
+      return { ...result, scheduleType: "custom", expression: expr };
     }
   }
 
   const parts = expr.trim().split(/\s+/);
-  if (parts.length !== 5) return { scheduleType: "custom", expression: expr };
+  if (parts.length !== 5) return { ...result, scheduleType: "custom", expression: expr };
 
   const [min, hour, dom, , dow] = parts;
 
   if (dom === "*" && dow === "*" && /^\d+$/.test(min) && /^\d+$/.test(hour)) {
-    return { scheduleType: "daily", hour: hour.padStart(2, "0"), minute: min.padStart(2, "0") };
+    return { ...result, scheduleType: "daily", hour: hour.padStart(2, "0"), minute: min.padStart(2, "0") };
   }
   if (dom === "*" && /^\d+$/.test(dow) && /^\d+$/.test(min) && /^\d+$/.test(hour)) {
-    return { scheduleType: "weekly", hour: hour.padStart(2, "0"), minute: min.padStart(2, "0"), weekday: dow };
+    return { ...result, scheduleType: "weekly", hour: hour.padStart(2, "0"), minute: min.padStart(2, "0"), weekday: dow };
   }
 
-  return { scheduleType: "custom", expression: expr };
+  return { ...result, scheduleType: "custom", expression: expr };
 }
 
 function describeCron(expr: string): string {
@@ -165,18 +180,24 @@ export function CronPanel({ connectionId }: CronPanelProps) {
     setSaving(true);
     setError(null);
     try {
+      let res: Response;
       if (editingId) {
-        await fetch(`/api/claw/cron/${editingId}`, {
+        res = await fetch(`/api/claw/cron/${editingId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: form.name, expression: finalExpression, command: form.command, enabled: form.enabled, connectionId }),
+          body: JSON.stringify({ name: form.name, expression: finalExpression, command: form.command, enabled: form.enabled, timezone: form.timezone, connectionId }),
         });
       } else {
-        await fetch("/api/claw/cron", {
+        res = await fetch("/api/claw/cron", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: form.name, expression: finalExpression, command: form.command, enabled: form.enabled, connectionId }),
+          body: JSON.stringify({ name: form.name, expression: finalExpression, command: form.command, enabled: form.enabled, timezone: form.timezone, connectionId }),
         });
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || `Failed (${res.status})`);
+        return;
       }
       setForm(EMPTY_FORM);
       setEditingId(null);
@@ -191,7 +212,7 @@ export function CronPanel({ connectionId }: CronPanelProps) {
 
   const handleEdit = (job: CronJob) => {
     setEditingId(job.id);
-    const parsed = parseExpressionToForm(job.expression);
+    const parsed = parseExpressionToForm(job.expression, job.timezone);
     setForm({
       ...EMPTY_FORM,
       name: job.name,
@@ -339,6 +360,11 @@ export function CronPanel({ connectionId }: CronPanelProps) {
                           {job.command}
                         </div>
                       )}
+                      {job.timezone && (
+                        <div className="text-[10px] text-muted-foreground truncate">
+                          🌐 {job.timezone}
+                        </div>
+                      )}
                       {job.sessionTarget && (
                         <div className="text-[10px] text-muted-foreground truncate">
                           Session: {job.sessionTarget}
@@ -399,13 +425,10 @@ export function CronPanel({ connectionId }: CronPanelProps) {
             {form.scheduleType === "once" ? (
               <div className="space-y-1.5">
                 <Label className="text-xs">{t("claw.dm.cronPanel.scheduleDatetime")}</Label>
-                <Input
-                  type="datetime-local"
+                <DateTimePicker
                   value={form.datetime}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, datetime: e.target.value }))
-                  }
-                  className="h-7 text-xs"
+                  onChange={(d) => setForm((f) => ({ ...f, datetime: d }))}
+                  placeholder={t("claw.dm.cronPanel.pickDateTime")}
                 />
               </div>
             ) : form.scheduleType === "custom" ? (
@@ -448,19 +471,25 @@ export function CronPanel({ connectionId }: CronPanelProps) {
                   </div>
                 )}
                 <div className="space-y-1.5">
-                  <Label className="text-xs">{t("claw.dm.cronPanel.scheduleTime")}</Label>
-                  <Input
-                    type="time"
-                    value={`${form.hour}:${form.minute}`}
-                    onChange={(e) => {
-                      const [h, m] = e.target.value.split(":");
-                      setForm((f) => ({ ...f, hour: h || "00", minute: m || "00" }));
-                    }}
-                    className="h-7 text-xs"
+                  <Label className="text-xs">{t("claw.dm.cronPanel.pickTime")}</Label>
+                  <TimePicker
+                    hour={form.hour}
+                    minute={form.minute}
+                    onChange={(h, m) =>
+                      setForm((f) => ({ ...f, hour: h, minute: m }))
+                    }
                   />
                 </div>
               </>
             )}
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t("claw.dm.cronPanel.timezone")}</Label>
+              <TimezonePicker
+                value={form.timezone}
+                onChange={(tz) => setForm((f) => ({ ...f, timezone: tz }))}
+              />
+            </div>
 
             {buildExpression(form) && (
               <p className="text-[10px] text-muted-foreground font-mono bg-muted/50 rounded px-1.5 py-1">

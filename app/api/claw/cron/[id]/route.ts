@@ -12,7 +12,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await req.json();
-    const { connectionId, name, expression, command, enabled } = body;
+    const { connectionId, name, expression, command, enabled, timezone } = body;
 
     if (!connectionId || !isSSHConnected(connectionId)) {
       return NextResponse.json({ error: "Not connected via SSH" }, { status: 400 });
@@ -20,7 +20,14 @@ export async function PUT(
 
     const flags: string[] = [];
     if (name) flags.push(`--name "${name.replace(/"/g, '\\"')}"`);
-    if (expression) flags.push(`--cron "${expression}"`);
+    if (expression) {
+      if (expression.startsWith("at ")) {
+        flags.push(`--at "${expression.slice(3)}"`);
+      } else {
+        flags.push(`--cron "${expression}"`);
+      }
+    }
+    if (timezone) flags.push(`--tz "${timezone}"`);
 
     if (command) {
       const b64Msg = Buffer.from(command).toString("base64");
