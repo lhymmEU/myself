@@ -113,17 +113,61 @@ export async function DELETE(req: NextRequest) {
 
     const results: { key: string; ok: boolean; error?: string }[] = [];
 
-    for (const key of keys) {
-      const safeKey = String(key).replace(/['"\\$`!]/g, "");
+    // Step 1: Get store paths from openclaw sessions listing
+    const listRes = await executeOpenClawCommand(
+      connectionId,
+      "sessions --all-agents --json",
+      30000,
+    );
+    let stores: { agentId: string; path: string }[] = [];
+    try {
+      const parsed = JSON.parse(listRes.stdout || "{}");
+      stores = (parsed.stores as { agentId: string; path: string }[]) ?? [];
+    } catch { /* keep empty */ }
+
+    // Step 2: Remove matching keys from the store file (top-level keys)
+    for (const store of stores) {
+      const safePath = store.path.replace(/['"\\$`!]/g, "");
+      const keysJson = JSON.stringify(keys);
+      const b64Keys = Buffer.from(keysJson).toString("base64");
+
+      const script = [
+        `const fs=require("fs");`,
+        `const keys=JSON.parse(Buffer.from("${b64Keys}","base64").toString());`,
+        `const p="${safePath}";`,
+        `let d;try{d=JSON.parse(fs.readFileSync(p,"utf8"))}catch{process.exit(0)}`,
+        `let removed=0;`,
+        `for(const k of keys){if(k in d){delete d[k];removed++}}`,
+        `if(removed>0){fs.writeFileSync(p,JSON.stringify(d,null,2))}`,
+        `console.log(JSON.stringify({ok:true,removed}))`,
+      ].join("");
+
       try {
-        const res = await executeOpenClawCommand(
+        const res = await executeCommand(
           connectionId,
-          `sessions delete --key "${safeKey}" --json`,
-          15000
+          `node -e '${script.replace(/'/g, "'\\''")}'`,
+          30000,
         );
-        results.push({ key, ok: res.code === 0, error: res.code !== 0 ? res.stderr || res.stdout : undefined });
-      } catch (err) {
-        results.push({ key, ok: false, error: err instanceof Error ? err.message : "Unknown error" });
+        if (res.code === 0 && res.stdout.trim()) {
+          try {
+            const out = JSON.parse(res.stdout.trim());
+            if (out.removed > 0) {
+              for (const k of keys) {
+                results.push({ key: k, ok: true });
+              }
+            }
+          } catch { /* ignore parse errors */ }
+        }
+      } catch {
+        // store file edit failed — skip
+      }
+    }
+
+    // Mark any keys not yet in results as failed
+    const doneKeys = new Set(results.map((r) => r.key));
+    for (const k of keys) {
+      if (!doneKeys.has(k)) {
+        results.push({ key: k, ok: false, error: "Key not found in any store" });
       }
     }
 
