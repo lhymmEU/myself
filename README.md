@@ -6,7 +6,7 @@ A modular, agent-ready personal life management dashboard. Manage every aspect o
 
 - **Mind Map** — Interactive visual map of your life. Add categories (Health, Career, Finance, etc.) and items. Drag, connect, and organize freely.
 - **Smart Todos** — Automaticly created from your mind map, no manual work needed.
-- **Finance Tracker** — Track income, expenses, and investments. Bar and pie charts. Budget tracking with progress bars.
+- **Finance Terminal** — Market data powered by [OpenBB](https://github.com/OpenBB-finance/OpenBB). Stocks, crypto, economic indicators, and financial news.
 - **Plans** — Rich text editor for jotting down ideas, plans, and notes.
 - **Invoice** - Bill your clients with ease.
 - **Vault** - Manage your secrets on your local device.
@@ -16,9 +16,8 @@ A modular, agent-ready personal life management dashboard. Manage every aspect o
 
 ### Prerequisites
 
-You need **Node.js v18 or later** installed on your computer.
-
-- **Don't have Node.js?** Download it from [nodejs.org](https://nodejs.org/) — choose the **LTS** version and follow the installer.
+- **Node.js v18+** — Download from [nodejs.org](https://nodejs.org/) (choose the LTS version).
+- **Python 3.9–3.12** *(optional, for finance data)* — Needed to run the OpenBB market data sidecar.
 
 ### Option A: One-click setup (recommended)
 
@@ -56,13 +55,35 @@ npm run dev
 
 Then open [http://localhost:3000](http://localhost:3000) in your browser. The database is created automatically on first launch — no configuration required.
 
+### Setting up finance data (optional)
+
+The finance feature uses [OpenBB](https://github.com/OpenBB-finance/OpenBB) as a Python sidecar for market data. You only need to install it once:
+
+```bash
+pip3 install "openbb[all]"
+```
+
+Then start the OpenBB API server in a separate terminal whenever you want finance data:
+
+```bash
+openbb-api --host 127.0.0.1 --port 6900
+```
+
+| Process | Command | Port | Purpose |
+|---------|---------|------|---------|
+| Next.js | `npm run dev` | 3000 | Dashboard |
+| OpenBB | `openbb-api --host 127.0.0.1 --port 6900` | 6900 | Market data API |
+
+The OpenBB sidecar is **optional** — the rest of the dashboard works without it. If it's not running, the finance page shows setup instructions.
+
 ## Configuration
 
 All configuration is managed through the in-app Settings page:
 
 - **OpenRouter API Key** — Required for AI-powered todo generation. Get one at [openrouter.ai](https://openrouter.ai).
 - **LLM Model** — Choose from Claude, GPT-4o, Gemini, Llama, etc.
-- **Currency, theme, accent color** — All configurable from the UI.
+- **OpenBB API URL** — Defaults to `http://localhost:6900`. Use the "Test Connection" button to verify.
+- **Theme, accent color** — All configurable from the UI.
 
 ## Agent API
 
@@ -78,7 +99,7 @@ curl -X POST http://localhost:3000/api/agent \
   -d '{"name": "createTodo", "arguments": {"title": "Buy groceries"}}'
 ```
 
-25 tools available across all modules (mind-map, todos, finance, plans, habits, goals, settings).
+Tools available across all modules (mind-map, todos, finance, plans, settings).
 
 ## Architecture
 
@@ -107,6 +128,7 @@ Core infrastructure (`lib/core/`):
 - **SQLite** via better-sqlite3 + Drizzle ORM (local, zero-config)
 - **OpenRouter** for LLM integration (OpenAI SDK)
 - **Recharts** for financial visualizations
+- **[OpenBB](https://github.com/OpenBB-finance/OpenBB)** for market data (Python sidecar)
 
 ## Roadmap
 

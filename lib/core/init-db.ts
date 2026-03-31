@@ -29,27 +29,6 @@ CREATE TABLE IF NOT EXISTS todos (
   updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS transactions (
-  id TEXT PRIMARY KEY,
-  type TEXT NOT NULL CHECK(type IN ('income','expense','investment')),
-  amount REAL NOT NULL,
-  category TEXT NOT NULL,
-  description TEXT,
-  date TEXT NOT NULL,
-  recurring INTEGER NOT NULL DEFAULT 0,
-  linked_node_id TEXT,
-  tags TEXT NOT NULL DEFAULT '[]',
-  created_at INTEGER NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS budgets (
-  id TEXT PRIMARY KEY,
-  category TEXT NOT NULL UNIQUE,
-  amount REAL NOT NULL,
-  period TEXT NOT NULL DEFAULT 'monthly' CHECK(period IN ('weekly','monthly')),
-  created_at INTEGER NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS plan_pages (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,

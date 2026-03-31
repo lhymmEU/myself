@@ -3,7 +3,7 @@ import { bootApp } from "@/lib/core/init";
 import { getSetting } from "@/lib/modules/settings/actions";
 import { listWishlist, listUserSkills } from "@/lib/modules/dashboard/actions";
 import { getAllPlans } from "@/lib/modules/plans/actions";
-import { getFinancialSummary } from "@/lib/modules/finance/actions";
+import { fetchOpenBB } from "@/lib/modules/finance/openbb-client";
 import { getTodoSourceScene, getAllScenes } from "@/lib/modules/mind-map/actions";
 import { parseMindMapTodos } from "@/lib/modules/todos/parse-mind-map";
 import { toolRegistry } from "@/lib/core/tool-registry";
@@ -49,10 +49,19 @@ async function gatherModuleContext(): Promise<Record<string, unknown>> {
       }
       case "finance": {
         try {
-          const summary = await getFinancialSummary();
-          ctx.finance = summary;
+          const news = await fetchOpenBB<{ results: Array<{ title: string; date: string; url: string }> }>(
+            "news/world",
+            { limit: "5" },
+          );
+          ctx.finance = {
+            source: "OpenBB",
+            recentNews: news.results?.slice(0, 5).map((a) => ({
+              title: a.title,
+              date: a.date,
+            })) ?? [],
+          };
         } catch {
-          ctx.finance = null;
+          ctx.finance = { source: "OpenBB", status: "unavailable" };
         }
         break;
       }

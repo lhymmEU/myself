@@ -100,9 +100,9 @@ export function Sidebar() {
           collapsed ? "w-16" : "w-56"
         )}
       >
-        <div className="titlebar-drag flex items-center h-14 pt-5 px-4 border-b border-border">
+        <div className="flex items-center h-14 pt-5 px-4 border-b border-border">
           {!collapsed && (
-            <Link href="/dashboard" className="titlebar-no-drag flex items-center gap-2 py-4">
+            <Link href="/dashboard" className="flex items-center gap-2 py-4">
               <Activity className="h-6 w-6 text-primary" />
               <span className="font-semibold text-lg">{t("sidebar.title")}</span>
             </Link>
@@ -110,7 +110,7 @@ export function Sidebar() {
           <Button
             variant="ghost"
             size="icon"
-            className={cn("titlebar-no-drag h-8 w-8 shrink-0", collapsed ? "mx-auto" : "ml-auto")}
+            className={cn("h-8 w-8 shrink-0", collapsed ? "mx-auto" : "ml-auto")}
             onClick={() => setCollapsed(!collapsed)}
           >
             {collapsed ? (

@@ -108,27 +108,18 @@ export function usePlanFolders() {
   return useSWR("/api/plans/folders", swrFetcher);
 }
 
-// --- Finance hooks ---
+// --- Finance / OpenBB hooks ---
 
-export function useFinanceLive(source: string) {
-  return useSWR(
-    `/api/finance/live?source=${encodeURIComponent(source)}`,
+export function useOpenBB<T = unknown>(
+  endpoint: string | null,
+  params?: Record<string, string>,
+) {
+  const qs = new URLSearchParams({ endpoint: endpoint ?? "", ...params });
+  return useSWR<T>(
+    endpoint ? `/api/finance/openbb?${qs}` : null,
     swrFetcher,
-    { refreshInterval: 60_000 },
+    { dedupingInterval: 30_000 },
   );
-}
-
-export function useFinanceMarkets() {
-  return useSWR("/api/finance/market?action=list&limit=20", swrFetcher, {
-    refreshInterval: 60_000,
-  });
-}
-
-export function useFinanceNews(category: string) {
-  const params = new URLSearchParams({ action: "news", category });
-  return useSWR(`/api/finance/market?${params}`, swrFetcher, {
-    refreshInterval: 300_000,
-  });
 }
 
 // --- Mind Map hooks ---

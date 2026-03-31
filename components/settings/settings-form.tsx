@@ -4,8 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { LlmConfig } from "./llm-config";
-import { CryptoConfig } from "./crypto-config";
-import { FinanceDefaults } from "./finance-defaults";
+import { OpenBBConfig } from "./openbb-config";
 import { AppearanceConfig } from "./appearance-config";
 import { InvoiceConfig } from "./invoice-config";
 import { ClawAccessConfig } from "./claw-access-config";
@@ -74,9 +73,7 @@ export function SettingsForm() {
     <div className="space-y-6">
       <LlmConfig settings={settings} onUpdate={handleUpdate} />
       <Separator />
-      <CryptoConfig settings={settings} onUpdate={handleUpdate} />
-      <Separator />
-      <FinanceDefaults settings={settings} onUpdate={handleUpdate} />
+      <OpenBBConfig settings={settings} onUpdate={handleUpdate} />
       <Separator />
       <InvoiceConfig settings={settings} onUpdate={handleUpdateSilent} />
       <Separator />

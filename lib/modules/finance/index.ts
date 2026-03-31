@@ -3,7 +3,8 @@ import { financeTools } from "./tools";
 
 export const financeModule: FeatureModule = {
   name: "finance",
-  description: "Personal finance tracking with transactions and budgets",
+  description:
+    "Financial market data powered by OpenBB — stocks, crypto, economy indicators, and news",
   tools: financeTools,
   eventHandlers: {},
 };
