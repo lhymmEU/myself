@@ -251,14 +251,43 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
       const res = await fetch("/api/claw/connections");
       const data = await res.json();
       if (Array.isArray(data)) setConnections(data);
+      return Array.isArray(data) ? data as ConnectionInfo[] : [];
     } catch {
-      // silent
+      return [];
     }
   }, []);
 
+  const checkActiveConnection = useCallback(async (conns: ConnectionInfo[]) => {
+    for (const conn of conns) {
+      try {
+        const res = await fetch("/api/claw/connect", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ connectionId: conn.id, action: "status" }),
+        });
+        const data = await res.json();
+        if (data.connected) {
+          const state: ConnectState = {
+            connected: true,
+            connectionId: conn.id,
+            host: data.host,
+            username: data.username,
+          };
+          setConnectState(state);
+          onConnectionChange(state);
+          return;
+        }
+      } catch {
+        // skip this connection
+      }
+    }
+  }, [onConnectionChange]);
+
   useEffect(() => {
-    loadConnections();
-  }, [loadConnections]);
+    loadConnections().then((conns) => {
+      if (conns.length > 0) checkActiveConnection(conns);
+    });
+  }, [loadConnections, checkActiveConnection]);
 
   const handleConnect = async (id: string) => {
     setConnecting(true);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useCallback } from "react";
+import { useReducer, useCallback, useEffect, useRef } from "react";
 import { nanoid } from "nanoid";
 import { Server, Loader2 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
@@ -10,6 +10,7 @@ import type {
   SessionTarget,
   Message,
   ResponseType,
+  PendingToolCall,
 } from "./types";
 import { SessionListPanel } from "./session-list-panel";
 import { AgentStatusBar } from "./agent-status-bar";
@@ -71,6 +72,15 @@ function dmReducer(state: DMState, action: DMAction): DMState {
       };
     case "SET_LOADING_HISTORY":
       return { ...state, loadingHistory: action.loading };
+    case "UPDATE_TOOL_CALL": {
+      const messages = state.messages.map((msg) => {
+        if (msg.id !== action.messageId || !msg.toolCalls) return msg;
+        const updated = [...msg.toolCalls];
+        updated[action.toolIndex] = { ...updated[action.toolIndex], ...action.update };
+        return { ...msg, toolCalls: updated };
+      });
+      return { ...state, messages };
+    }
     default:
       return state;
   }
@@ -79,9 +89,10 @@ function dmReducer(state: DMState, action: DMAction): DMState {
 interface ClawDMPanelProps {
   connectionId: string | null;
   connected: boolean;
+  initialPrompt?: string;
 }
 
-export function ClawDMPanel({ connectionId, connected }: ClawDMPanelProps) {
+export function ClawDMPanel({ connectionId, connected, initialPrompt }: ClawDMPanelProps) {
   const t = useT();
   const [state, dispatch] = useReducer(dmReducer, initialState);
 
@@ -159,12 +170,24 @@ export function ClawDMPanel({ connectionId, connected }: ClawDMPanelProps) {
           return;
         }
 
+        let toolCalls: PendingToolCall[] | undefined;
+        if (data.responseType === "tool_request" && Array.isArray(data.toolCalls)) {
+          toolCalls = data.toolCalls.map(
+            (tc: { name: string; arguments: Record<string, unknown> }) => ({
+              name: tc.name,
+              arguments: tc.arguments,
+              status: "pending" as const,
+            }),
+          );
+        }
+
         const agentMessage: Message = {
           id: nanoid(),
           role: "agent",
-          content: data.content,
+          content: data.content ?? "",
           timestamp: Date.now(),
           responseType: data.responseType as ResponseType,
+          toolCalls,
         };
 
         dispatch({
@@ -189,6 +212,88 @@ export function ClawDMPanel({ connectionId, connected }: ClawDMPanelProps) {
     [handleSend],
   );
 
+  const handleApproveToolCall = useCallback(
+    async (messageId: string, toolIndex: number) => {
+      const msg = state.messages.find((m) => m.id === messageId);
+      const tc = msg?.toolCalls?.[toolIndex];
+      if (!tc) return;
+
+      dispatch({
+        type: "UPDATE_TOOL_CALL",
+        messageId,
+        toolIndex,
+        update: { status: "executing" },
+      });
+
+      try {
+        const res = await fetch("/api/agent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: tc.name, arguments: tc.arguments }),
+        });
+        const result = await res.json();
+
+        if (result.success) {
+          dispatch({
+            type: "UPDATE_TOOL_CALL",
+            messageId,
+            toolIndex,
+            update: { status: "succeeded", result: result.data },
+          });
+
+          if (connectionId && state.sessionTarget) {
+            const summary = `[Tool "${tc.name}" executed successfully. Result: ${JSON.stringify(result.data)}]`;
+            handleSend(summary);
+          }
+        } else {
+          dispatch({
+            type: "UPDATE_TOOL_CALL",
+            messageId,
+            toolIndex,
+            update: { status: "failed", error: result.error ?? "Unknown error" },
+          });
+        }
+      } catch (err) {
+        dispatch({
+          type: "UPDATE_TOOL_CALL",
+          messageId,
+          toolIndex,
+          update: {
+            status: "failed",
+            error: err instanceof Error ? err.message : "Network error",
+          },
+        });
+      }
+    },
+    [state.messages, connectionId, state.sessionTarget, handleSend],
+  );
+
+  const handleRejectToolCall = useCallback(
+    (messageId: string, toolIndex: number) => {
+      dispatch({
+        type: "UPDATE_TOOL_CALL",
+        messageId,
+        toolIndex,
+        update: { status: "rejected" },
+      });
+    },
+    [],
+  );
+
+  const initialPromptSent = useRef(false);
+  useEffect(() => {
+    if (
+      initialPrompt &&
+      !initialPromptSent.current &&
+      connected &&
+      state.sessionTarget &&
+      state.conversationState === "idle"
+    ) {
+      initialPromptSent.current = true;
+      handleSend(initialPrompt);
+    }
+  }, [initialPrompt, connected, state.sessionTarget, state.conversationState, handleSend]);
+
   if (!connected) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
@@ -201,7 +306,7 @@ export function ClawDMPanel({ connectionId, connected }: ClawDMPanelProps) {
   return (
     <div className="flex h-[calc(100vh-200px)] min-h-[500px] rounded-lg border overflow-hidden">
       {/* Left: Session List */}
-      <div className="w-[260px] shrink-0">
+      <div className="w-[260px] shrink-0 overflow-hidden">
         <SessionListPanel
           connectionId={connectionId}
           connected={connected}
@@ -231,6 +336,8 @@ export function ClawDMPanel({ connectionId, connected }: ClawDMPanelProps) {
               conversationState={state.conversationState}
               error={state.error}
               onDismissError={() => dispatch({ type: "CLEAR_ERROR" })}
+              onApproveToolCall={handleApproveToolCall}
+              onRejectToolCall={handleRejectToolCall}
             />
           )}
         </div>

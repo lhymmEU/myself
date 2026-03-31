@@ -13,6 +13,8 @@ interface MessageThreadProps {
   conversationState: ConversationState;
   error: string | null;
   onDismissError: () => void;
+  onApproveToolCall?: (messageId: string, toolIndex: number) => void;
+  onRejectToolCall?: (messageId: string, toolIndex: number) => void;
 }
 
 export function MessageThread({
@@ -20,6 +22,8 @@ export function MessageThread({
   conversationState,
   error,
   onDismissError,
+  onApproveToolCall,
+  onRejectToolCall,
 }: MessageThreadProps) {
   const t = useT();
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -30,7 +34,7 @@ export function MessageThread({
 
   if (messages.length === 0 && conversationState === "idle") {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
         <MessageSquare className="h-10 w-10 mb-3 opacity-30" />
         <p className="text-sm">{t("claw.dm.thread.empty")}</p>
         <p className="text-xs mt-1">{t("claw.dm.thread.emptyHint")}</p>
@@ -39,10 +43,15 @@ export function MessageThread({
   }
 
   return (
-    <ScrollArea className="h-full rounded-lg border border-border p-4">
-      <div className="space-y-4">
+    <ScrollArea className="h-full">
+      <div className="space-y-4 p-4">
         {messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} />
+          <MessageBubble
+            key={msg.id}
+            message={msg}
+            onApproveToolCall={onApproveToolCall}
+            onRejectToolCall={onRejectToolCall}
+          />
         ))}
 
         {conversationState === "agent-typing" && (

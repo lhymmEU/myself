@@ -198,7 +198,7 @@ export function SessionListPanel({
         </Button>
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="p-2 space-y-0.5">
           {sortedSessions.length === 0 && !loading && (
             <p className="text-xs text-muted-foreground text-center py-6">

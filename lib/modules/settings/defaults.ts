@@ -10,7 +10,24 @@ export const SETTING_DEFAULTS: Record<string, string> = {
   binance_api_key: "",
   binance_api_secret: "",
   polkadot_wallets: "",
+  claw_access_todos: "false",
+  claw_access_finance: "false",
+  claw_access_plans: "false",
+  claw_access_wishlist: "false",
+  claw_access_mindmap: "false",
+  claw_access_skills: "false",
 };
+
+export const CLAW_ACCESS_MODULES = [
+  "todos",
+  "finance",
+  "plans",
+  "wishlist",
+  "mindmap",
+  "skills",
+] as const;
+
+export type ClawAccessModule = (typeof CLAW_ACCESS_MODULES)[number];
 
 export const LLM_MODELS = [
   { id: "anthropic/claude-sonnet-4", label: "Claude Sonnet 4" },

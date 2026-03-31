@@ -8,6 +8,7 @@ import { CryptoConfig } from "./crypto-config";
 import { FinanceDefaults } from "./finance-defaults";
 import { AppearanceConfig } from "./appearance-config";
 import { InvoiceConfig } from "./invoice-config";
+import { ClawAccessConfig } from "./claw-access-config";
 import { DataManagement } from "./data-management";
 import { Loader2 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
@@ -80,6 +81,8 @@ export function SettingsForm() {
       <InvoiceConfig settings={settings} onUpdate={handleUpdateSilent} />
       <Separator />
       <AppearanceConfig settings={settings} onUpdate={handleUpdate} />
+      <Separator />
+      <ClawAccessConfig settings={settings} onUpdate={handleUpdate} />
       <Separator />
       <DataManagement />
     </div>

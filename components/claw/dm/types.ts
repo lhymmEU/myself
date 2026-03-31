@@ -20,6 +20,7 @@ export interface Message {
   timestamp: number;
   responseType?: ResponseType;
   metadata?: Record<string, unknown>;
+  toolCalls?: PendingToolCall[];
 }
 
 export type ResponseType =
@@ -28,7 +29,16 @@ export type ResponseType =
   | "memory"
   | "skills"
   | "error"
-  | "text";
+  | "text"
+  | "tool_request";
+
+export interface PendingToolCall {
+  name: string;
+  arguments: Record<string, unknown>;
+  status: "pending" | "approved" | "rejected" | "executing" | "succeeded" | "failed";
+  result?: unknown;
+  error?: string;
+}
 
 export interface AgentStatus {
   online: boolean;
@@ -84,7 +94,8 @@ export type DMAction =
   | { type: "SET_SESSION"; target: SessionTarget }
   | { type: "CLEAR_THREAD" }
   | { type: "LOAD_HISTORY"; messages: Message[] }
-  | { type: "SET_LOADING_HISTORY"; loading: boolean };
+  | { type: "SET_LOADING_HISTORY"; loading: boolean }
+  | { type: "UPDATE_TOOL_CALL"; messageId: string; toolIndex: number; update: Partial<PendingToolCall> };
 
 export interface DMState {
   conversationState: ConversationState;

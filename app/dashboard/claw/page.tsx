@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { MessageCircle, Settings2 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
 import { ConnectionForm } from "@/components/claw/connection-form";
@@ -18,6 +19,9 @@ type ClawMode = "dm" | "advanced";
 
 export default function ClawPage() {
   const t = useT();
+  const searchParams = useSearchParams();
+  const initialPrompt = searchParams.get("askClaw") ?? undefined;
+
   const [connectState, setConnectState] = useState<ConnectState>({
     connected: false,
     connectionId: null,
@@ -63,6 +67,7 @@ export default function ClawPage() {
         <ClawDMPanel
           connectionId={connectState.connectionId}
           connected={connectState.connected}
+          initialPrompt={initialPrompt}
         />
       ) : (
         <ClawAdvancedView

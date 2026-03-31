@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import {
   X,
   Star,
   Loader2,
+  Shell,
 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
 
@@ -27,6 +29,7 @@ interface Wish {
 
 export function WishlistSection() {
   const t = useT();
+  const router = useRouter();
   const [wishes, setWishes] = useState<Wish[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -108,6 +111,16 @@ export function WishlistSection() {
     setAdding(false);
     setForm({ name: "", targetLevel: 5, priority: "medium", notes: "" });
   };
+
+  const handleAskClaw = useCallback(
+    (wish: Wish) => {
+      const prompt = encodeURIComponent(
+        `I want to learn "${wish.name}" (target level: ${wish.targetLevel}, priority: ${wish.priority}). ${wish.notes ? `Context: ${wish.notes}. ` : ""}Please create a structured learning plan with actionable steps, recommended resources, and milestones. Use the createPlanPage tool to save it as a plan page.`,
+      );
+      router.push(`/dashboard/claw?askClaw=${prompt}`);
+    },
+    [router],
+  );
 
   const priorityColor = (p: string) => {
     switch (p) {
@@ -235,6 +248,15 @@ export function WishlistSection() {
                     {wish.name}
                   </span>
                   <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleAskClaw(wish)}
+                      className="h-5 w-5 p-0"
+                      title={t("dashboard.game.wishlist.askClawTooltip")}
+                    >
+                      <Shell className="h-2.5 w-2.5" />
+                    </Button>
                     <Button
                       size="sm"
                       variant="ghost"

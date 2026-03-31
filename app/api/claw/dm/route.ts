@@ -5,6 +5,15 @@ import {
   isSSHConnected,
   getDefaultConnection,
 } from "@/lib/modules/claw/actions";
+import {
+  buildClawContext,
+  formatContextForPrompt,
+} from "@/app/api/claw/context/route";
+
+export interface ToolCallRequest {
+  name: string;
+  arguments: Record<string, unknown>;
+}
 
 function classifyResponse(text: string): string {
   const lower = text.toLowerCase();
@@ -44,6 +53,32 @@ function extractAgentText(raw: string): { text: string; sessionId?: string } {
   return { text: agentText.trim(), sessionId };
 }
 
+const TOOL_CALL_REGEX = /\[TOOL_CALL\]\s*([\s\S]*?)\s*\[\/TOOL_CALL\]/g;
+
+function extractToolCalls(text: string): {
+  cleanText: string;
+  toolCalls: ToolCallRequest[];
+} {
+  const toolCalls: ToolCallRequest[] = [];
+  const cleanText = text.replace(TOOL_CALL_REGEX, (_, json: string) => {
+    try {
+      const parsed = JSON.parse(json.trim());
+      if (parsed.name && typeof parsed.name === "string") {
+        toolCalls.push({
+          name: parsed.name,
+          arguments: parsed.arguments ?? {},
+        });
+      }
+    } catch {
+      // Malformed tool call block — leave it in the text
+      return _;
+    }
+    return "";
+  }).trim();
+
+  return { cleanText, toolCalls };
+}
+
 export async function POST(req: NextRequest) {
   bootApp();
   try {
@@ -78,7 +113,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const b64 = Buffer.from(message).toString("base64");
+    let enrichedMessage = message;
+    try {
+      const ctx = await buildClawContext();
+      const hasContext = Object.keys(ctx.modules).length > 0;
+      if (hasContext || ctx.availableTools.length > 0) {
+        const contextBlock = formatContextForPrompt(ctx);
+        enrichedMessage = `${contextBlock}\n\n${message}`;
+      }
+    } catch {
+      // Context injection is best-effort; proceed with the original message
+    }
+
+    const b64 = Buffer.from(enrichedMessage).toString("base64");
 
     let cmd = `MSG=$(echo ${b64} | base64 -d) && openclaw agent --message "$MSG" --json --timeout 120 --agent ${agentId}`;
     if (sessionId) {
@@ -106,10 +153,21 @@ export async function POST(req: NextRequest) {
     }
 
     const extracted = extractAgentText(raw);
-    const responseType = classifyResponse(extracted.text);
+    const { cleanText, toolCalls } = extractToolCalls(extracted.text);
+
+    if (toolCalls.length > 0) {
+      return NextResponse.json({
+        content: cleanText || null,
+        responseType: "tool_request",
+        toolCalls,
+        sessionId: extracted.sessionId ?? sessionId ?? null,
+      });
+    }
+
+    const responseType = classifyResponse(cleanText);
 
     return NextResponse.json({
-      content: extracted.text,
+      content: cleanText,
       responseType,
       sessionId: extracted.sessionId ?? sessionId ?? null,
     });
