@@ -3,8 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import {
   Popover,
@@ -14,17 +12,13 @@ import {
 import {
   Shell,
   Wand2,
-  Briefcase,
-  Plus,
-  Pencil,
-  Trash2,
-  Check,
-  X,
   Palette,
   Unplug,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
-import { useAssignedJobs, useCharacterAppearance } from "@/lib/swr/hooks";
+import { useCharacterAppearance } from "@/lib/swr/hooks";
 import dynamic from "next/dynamic";
 import type { LobsterColors } from "./vrm-viewer";
 
@@ -45,14 +39,7 @@ interface InstalledSkill {
   path: string;
 }
 
-interface AssignedJob {
-  id: string;
-  name: string;
-  description: string | null;
-  status: string;
-  cronJobId: string | null;
-  createdAt: number;
-}
+const SKILLS_PER_PAGE = 5;
 
 const DEFAULT_LOBSTER_COLORS: Required<LobsterColors> = {
   shell: "#c0392b",
@@ -70,14 +57,10 @@ const COLOR_LABELS: Record<keyof LobsterColors, string> = {
 
 export function ClawPanel() {
   const t = useT();
-  const { data: jobsData, mutate: mutateJobs } = useAssignedJobs();
   const { data: appearanceData } = useCharacterAppearance("lobster");
-  const jobs: AssignedJob[] = jobsData?.jobs ?? [];
   const [clawSkills, setClawSkills] = useState<InstalledSkill[]>([]);
-  const [addingJob, setAddingJob] = useState(false);
-  const [editingJobId, setEditingJobId] = useState<string | null>(null);
-  const [jobForm, setJobForm] = useState({ name: "", description: "" });
   const [clawConnected, setClawConnected] = useState(false);
+  const [skillsPage, setSkillsPage] = useState(0);
 
   const lobsterColorsFromApi: Required<LobsterColors> = appearanceData?.appearance
     ? {
@@ -168,62 +151,11 @@ export function ClawPanel() {
     saveAppearance(updated);
   };
 
-  const handleSaveJob = async () => {
-    if (!jobForm.name.trim()) return;
-    try {
-      if (editingJobId) {
-        await fetch("/api/dashboard/jobs", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "update",
-            id: editingJobId,
-            data: jobForm,
-          }),
-        });
-      } else {
-        await fetch("/api/dashboard/jobs", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "create", ...jobForm }),
-        });
-      }
-      setEditingJobId(null);
-      setAddingJob(false);
-      setJobForm({ name: "", description: "" });
-      await mutateJobs();
-    } catch {
-      // silently fail
-    }
-  };
-
-  const handleDeleteJob = async (id: string) => {
-    try {
-      await fetch("/api/dashboard/jobs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "delete", id }),
-      });
-      await mutateJobs();
-    } catch {
-      // silently fail
-    }
-  };
-
-  const startEditJob = (job: AssignedJob) => {
-    setEditingJobId(job.id);
-    setAddingJob(true);
-    setJobForm({
-      name: job.name,
-      description: job.description ?? "",
-    });
-  };
-
-  const cancelEditJob = () => {
-    setEditingJobId(null);
-    setAddingJob(false);
-    setJobForm({ name: "", description: "" });
-  };
+  const totalSkillPages = Math.max(1, Math.ceil(clawSkills.length / SKILLS_PER_PAGE));
+  const pagedSkills = clawSkills.slice(
+    skillsPage * SKILLS_PER_PAGE,
+    (skillsPage + 1) * SKILLS_PER_PAGE,
+  );
 
   return (
     <Card className="flex flex-col h-full">
@@ -274,147 +206,70 @@ export function ClawPanel() {
         />
 
         <div>
-          <h3 className="text-xs font-semibold flex items-center gap-1.5 mb-1.5">
-            <Wand2 className="h-3.5 w-3.5" />
-            {t("dashboard.game.clawPanel.skills")}
-          </h3>
-          <ScrollArea className="max-h-[120px]">
-            <div className="space-y-0.5">
-              {clawSkills.length === 0 ? (
-                <p className="text-[10px] text-muted-foreground text-center py-2">
-                  {clawConnected
-                    ? t("dashboard.game.clawPanel.noSkills")
-                    : t("claw.dm.notConnected")}
-                </p>
-              ) : (
-                clawSkills.map((skill) => (
-                  <div
-                    key={skill.path}
-                    className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-muted/50"
-                  >
-                    <Wand2 className="h-2.5 w-2.5 text-muted-foreground shrink-0" />
-                    <div className="min-w-0">
-                      <span className="text-xs font-medium truncate block">
-                        {skill.name || skill.path}
-                      </span>
-                      {skill.description && (
-                        <span className="text-[10px] text-muted-foreground truncate block">
-                          {skill.description}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </div>
-
-        <div className="flex-1 flex flex-col min-h-0">
           <div className="flex items-center justify-between mb-1.5">
             <h3 className="text-xs font-semibold flex items-center gap-1.5">
-              <Briefcase className="h-3.5 w-3.5" />
-              {t("dashboard.game.clawPanel.assignedJobs")}
+              <Wand2 className="h-3.5 w-3.5" />
+              {t("dashboard.game.clawPanel.skills")}
+              {clawSkills.length > 0 && (
+                <span className="text-[10px] text-muted-foreground font-normal">
+                  ({clawSkills.length})
+                </span>
+              )}
             </h3>
-            {!addingJob && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setAddingJob(true)}
-                className="h-6 text-xs"
-              >
-                <Plus className="h-3 w-3 mr-0.5" />
-                {t("dashboard.game.clawPanel.addJob")}
-              </Button>
-            )}
-          </div>
-
-          {addingJob && (
-            <div className="space-y-1.5 p-2 rounded-md border bg-muted/30 mb-1.5">
-              <Input
-                value={jobForm.name}
-                onChange={(e) =>
-                  setJobForm((f) => ({ ...f, name: e.target.value }))
-                }
-                placeholder={t("dashboard.game.clawPanel.jobNamePlaceholder")}
-                className="h-6 text-xs"
-                autoFocus
-              />
-              <Input
-                value={jobForm.description}
-                onChange={(e) =>
-                  setJobForm((f) => ({ ...f, description: e.target.value }))
-                }
-                placeholder={t("dashboard.game.clawPanel.jobDescriptionPlaceholder")}
-                className="h-6 text-xs"
-              />
-              <div className="flex gap-1 justify-end">
+            {totalSkillPages > 1 && (
+              <div className="flex items-center gap-0.5">
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={cancelEditJob}
-                  className="h-5 px-1.5 text-[10px]"
+                  onClick={() => setSkillsPage((p) => Math.max(0, p - 1))}
+                  disabled={skillsPage === 0}
+                  className="h-5 w-5 p-0"
                 >
-                  <X className="h-2.5 w-2.5" />
+                  <ChevronLeft className="h-3 w-3" />
                 </Button>
+                <span className="text-[10px] text-muted-foreground tabular-nums min-w-[2rem] text-center">
+                  {skillsPage + 1}/{totalSkillPages}
+                </span>
                 <Button
                   size="sm"
-                  onClick={handleSaveJob}
-                  disabled={!jobForm.name.trim()}
-                  className="h-5 px-1.5 text-[10px]"
+                  variant="ghost"
+                  onClick={() => setSkillsPage((p) => Math.min(totalSkillPages - 1, p + 1))}
+                  disabled={skillsPage >= totalSkillPages - 1}
+                  className="h-5 w-5 p-0"
                 >
-                  <Check className="h-2.5 w-2.5" />
+                  <ChevronRight className="h-3 w-3" />
                 </Button>
               </div>
-            </div>
-          )}
-
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="space-y-0.5">
-              {jobs.length === 0 ? (
-                <p className="text-[10px] text-muted-foreground text-center py-3">
-                  {t("dashboard.game.clawPanel.noJobs")}
-                </p>
-              ) : (
-                jobs.map((job) => (
-                  <div
-                    key={job.id}
-                    className="group flex items-center gap-2 px-2 py-1 rounded-md hover:bg-muted/50"
-                  >
-                    <Briefcase className="h-2.5 w-2.5 text-muted-foreground shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-medium truncate block">
-                        {job.name}
+            )}
+          </div>
+          <div className="space-y-0.5">
+            {clawSkills.length === 0 ? (
+              <p className="text-[10px] text-muted-foreground text-center py-2">
+                {clawConnected
+                  ? t("dashboard.game.clawPanel.noSkills")
+                  : t("claw.dm.notConnected")}
+              </p>
+            ) : (
+              pagedSkills.map((skill) => (
+                <div
+                  key={skill.path}
+                  className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-muted/50"
+                >
+                  <Wand2 className="h-2.5 w-2.5 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <span className="text-xs font-medium truncate block">
+                      {skill.name || skill.path}
+                    </span>
+                    {skill.description && (
+                      <span className="text-[10px] text-muted-foreground truncate block">
+                        {skill.description}
                       </span>
-                      {job.description && (
-                        <span className="text-[10px] text-muted-foreground truncate block">
-                          {job.description}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => startEditJob(job)}
-                        className="h-5 w-5 p-0"
-                      >
-                        <Pencil className="h-2.5 w-2.5" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleDeleteJob(job.id)}
-                        className="h-5 w-5 p-0 text-destructive"
-                      >
-                        <Trash2 className="h-2.5 w-2.5" />
-                      </Button>
-                    </div>
+                    )}
                   </div>
-                ))
-              )}
-            </div>
-          </ScrollArea>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
