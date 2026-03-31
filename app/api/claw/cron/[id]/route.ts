@@ -12,7 +12,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await req.json();
-    const { connectionId, name, expression, command, enabled, timezone } = body;
+    const { connectionId, name, expression, command, enabled, timezone, channel, deliveryTo } = body;
 
     if (!connectionId || !isSSHConnected(connectionId)) {
       return NextResponse.json({ error: "Not connected via SSH" }, { status: 400 });
@@ -36,6 +36,9 @@ export async function PUT(
 
     if (enabled === true) flags.push("--enable");
     if (enabled === false) flags.push("--disable");
+    if (channel) flags.push(`--channel "${channel.replace(/"/g, '\\"')}"`);
+    if (deliveryTo) flags.push(`--delivery-to "${deliveryTo.replace(/"/g, '\\"')}"`);
+
 
     if (flags.length === 0) {
       return NextResponse.json({ error: "No fields to update" }, { status: 400 });

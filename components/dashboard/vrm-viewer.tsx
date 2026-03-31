@@ -5,40 +5,45 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 
-// ---------------------------------------------------------------------------
-// Procedural anime-style user character
-// ---------------------------------------------------------------------------
+export interface UserColors {
+  skin?: string;
+  hair?: string;
+  shirt?: string;
+  pants?: string;
+  shoe?: string;
+}
 
-function UserCharacter() {
-  const groupRef = useRef<THREE.Group>(null);
+export interface LobsterColors {
+  shell?: string;
+  shellDark?: string;
+  belly?: string;
+  eye?: string;
+}
 
-  useFrame((_, delta) => {
-    if (groupRef.current) {
-      groupRef.current.rotation.y += delta * 0.3;
-      groupRef.current.position.y =
-        Math.sin(Date.now() * 0.001) * 0.03;
-    }
-  });
+const GRAY_LOBSTER: Required<LobsterColors> = {
+  shell: "#888",
+  shellDark: "#666",
+  belly: "#aaa",
+  eye: "#555",
+};
 
-  const skin = "#ffe0bd";
-  const hair = "#3b2f2f";
-  const shirt = "#4f8ef7";
-  const pants = "#2d3748";
-  const shoe = "#1a1a2e";
+function UserCharacter({ colors }: { colors?: UserColors }) {
+  const skin = colors?.skin ?? "#ffe0bd";
+  const hair = colors?.hair ?? "#3b2f2f";
+  const shirt = colors?.shirt ?? "#4f8ef7";
+  const pants = colors?.pants ?? "#2d3748";
+  const shoe = colors?.shoe ?? "#1a1a2e";
 
   return (
-    <group ref={groupRef}>
-      {/* Head */}
+    <group>
       <mesh position={[0, 1.62, 0]}>
         <sphereGeometry args={[0.14, 16, 16]} />
         <meshStandardMaterial color={skin} />
       </mesh>
-      {/* Hair */}
       <mesh position={[0, 1.7, -0.02]}>
         <sphereGeometry args={[0.15, 16, 16]} />
         <meshStandardMaterial color={hair} />
       </mesh>
-      {/* Eyes */}
       <mesh position={[-0.045, 1.63, 0.12]}>
         <sphereGeometry args={[0.02, 8, 8]} />
         <meshStandardMaterial color="#222" />
@@ -47,7 +52,6 @@ function UserCharacter() {
         <sphereGeometry args={[0.02, 8, 8]} />
         <meshStandardMaterial color="#222" />
       </mesh>
-      {/* Eye highlights */}
       <mesh position={[-0.04, 1.64, 0.135]}>
         <sphereGeometry args={[0.007, 6, 6]} />
         <meshStandardMaterial color="#fff" emissive="#fff" emissiveIntensity={0.5} />
@@ -56,22 +60,18 @@ function UserCharacter() {
         <sphereGeometry args={[0.007, 6, 6]} />
         <meshStandardMaterial color="#fff" emissive="#fff" emissiveIntensity={0.5} />
       </mesh>
-      {/* Mouth */}
       <mesh position={[0, 1.585, 0.12]} rotation={[0.2, 0, 0]}>
         <boxGeometry args={[0.04, 0.008, 0.01]} />
         <meshStandardMaterial color="#c97878" />
       </mesh>
-      {/* Neck */}
       <mesh position={[0, 1.46, 0]}>
         <cylinderGeometry args={[0.04, 0.04, 0.05, 8]} />
         <meshStandardMaterial color={skin} />
       </mesh>
-      {/* Torso */}
       <mesh position={[0, 1.28, 0]}>
         <boxGeometry args={[0.28, 0.32, 0.16]} />
         <meshStandardMaterial color={shirt} />
       </mesh>
-      {/* Left arm */}
       <mesh position={[-0.2, 1.28, 0]} rotation={[0, 0, 0.15]}>
         <boxGeometry args={[0.08, 0.3, 0.08]} />
         <meshStandardMaterial color={shirt} />
@@ -80,7 +80,6 @@ function UserCharacter() {
         <sphereGeometry args={[0.035, 8, 8]} />
         <meshStandardMaterial color={skin} />
       </mesh>
-      {/* Right arm */}
       <mesh position={[0.2, 1.28, 0]} rotation={[0, 0, -0.15]}>
         <boxGeometry args={[0.08, 0.3, 0.08]} />
         <meshStandardMaterial color={shirt} />
@@ -89,7 +88,6 @@ function UserCharacter() {
         <sphereGeometry args={[0.035, 8, 8]} />
         <meshStandardMaterial color={skin} />
       </mesh>
-      {/* Left leg */}
       <mesh position={[-0.08, 0.92, 0]}>
         <boxGeometry args={[0.1, 0.38, 0.1]} />
         <meshStandardMaterial color={pants} />
@@ -98,7 +96,6 @@ function UserCharacter() {
         <boxGeometry args={[0.1, 0.06, 0.14]} />
         <meshStandardMaterial color={shoe} />
       </mesh>
-      {/* Right leg */}
       <mesh position={[0.08, 0.92, 0]}>
         <boxGeometry args={[0.1, 0.38, 0.1]} />
         <meshStandardMaterial color={pants} />
@@ -111,20 +108,11 @@ function UserCharacter() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Procedural lobster character
-// ---------------------------------------------------------------------------
-
-function LobsterCharacter() {
-  const groupRef = useRef<THREE.Group>(null);
+function LobsterCharacter({ colors, grayscale }: { colors?: LobsterColors; grayscale?: boolean }) {
   const leftClawRef = useRef<THREE.Group>(null);
   const rightClawRef = useRef<THREE.Group>(null);
 
-  useFrame((_, delta) => {
-    if (groupRef.current) {
-      groupRef.current.rotation.y += delta * 0.25;
-      groupRef.current.position.y = Math.sin(Date.now() * 0.0015) * 0.04;
-    }
+  useFrame(() => {
     if (leftClawRef.current) {
       leftClawRef.current.rotation.z =
         -0.3 + Math.sin(Date.now() * 0.003) * 0.15;
@@ -135,30 +123,27 @@ function LobsterCharacter() {
     }
   });
 
-  const shell = "#c0392b";
-  const shellDark = "#922b21";
-  const belly = "#e8a87c";
-  const eye = "#222";
-  const eyeWhite = "#f5f5dc";
+  const src = grayscale ? GRAY_LOBSTER : colors;
+  const shell = src?.shell ?? "#c0392b";
+  const shellDark = src?.shellDark ?? "#922b21";
+  const belly = src?.belly ?? "#e8a87c";
+  const eye = src?.eye ?? "#222";
+  const eyeWhite = grayscale ? "#ccc" : "#f5f5dc";
 
   return (
-    <group ref={groupRef} position={[0, 0.9, 0]}>
-      {/* Main body */}
+    <group position={[0, 0.9, 0]}>
       <mesh position={[0, 0, 0]}>
         <capsuleGeometry args={[0.14, 0.22, 8, 16]} />
         <meshStandardMaterial color={shell} />
       </mesh>
-      {/* Belly */}
       <mesh position={[0, -0.02, 0.08]}>
         <capsuleGeometry args={[0.1, 0.16, 8, 16]} />
         <meshStandardMaterial color={belly} />
       </mesh>
-      {/* Head */}
       <mesh position={[0, 0.22, 0.04]}>
         <sphereGeometry args={[0.12, 12, 12]} />
         <meshStandardMaterial color={shell} />
       </mesh>
-      {/* Eye stalks */}
       <mesh position={[-0.07, 0.34, 0.06]} rotation={[0, 0, -0.3]}>
         <cylinderGeometry args={[0.015, 0.015, 0.06, 6]} />
         <meshStandardMaterial color={shellDark} />
@@ -167,7 +152,6 @@ function LobsterCharacter() {
         <cylinderGeometry args={[0.015, 0.015, 0.06, 6]} />
         <meshStandardMaterial color={shellDark} />
       </mesh>
-      {/* Eyes */}
       <mesh position={[-0.085, 0.37, 0.06]}>
         <sphereGeometry args={[0.025, 8, 8]} />
         <meshStandardMaterial color={eyeWhite} />
@@ -184,7 +168,6 @@ function LobsterCharacter() {
         <sphereGeometry args={[0.012, 6, 6]} />
         <meshStandardMaterial color={eye} />
       </mesh>
-      {/* Antennae */}
       <mesh position={[-0.04, 0.35, 0.12]} rotation={[0.8, -0.3, 0]}>
         <cylinderGeometry args={[0.005, 0.002, 0.2, 4]} />
         <meshStandardMaterial color={shellDark} />
@@ -194,13 +177,11 @@ function LobsterCharacter() {
         <meshStandardMaterial color={shellDark} />
       </mesh>
 
-      {/* Left claw arm */}
       <group ref={leftClawRef} position={[-0.16, 0.12, 0.04]}>
         <mesh rotation={[0, 0, -0.5]}>
           <cylinderGeometry args={[0.03, 0.025, 0.18, 6]} />
           <meshStandardMaterial color={shell} />
         </mesh>
-        {/* Claw */}
         <group position={[-0.08, -0.1, 0]}>
           <mesh position={[0, 0, 0.015]} rotation={[0, 0, 0.2]}>
             <boxGeometry args={[0.08, 0.04, 0.025]} />
@@ -213,7 +194,6 @@ function LobsterCharacter() {
         </group>
       </group>
 
-      {/* Right claw arm */}
       <group ref={rightClawRef} position={[0.16, 0.12, 0.04]}>
         <mesh rotation={[0, 0, 0.5]}>
           <cylinderGeometry args={[0.03, 0.025, 0.18, 6]} />
@@ -231,7 +211,6 @@ function LobsterCharacter() {
         </group>
       </group>
 
-      {/* Tail segments */}
       {[0, 1, 2, 3].map((i) => (
         <mesh
           key={i}
@@ -242,13 +221,11 @@ function LobsterCharacter() {
           <meshStandardMaterial color={i % 2 === 0 ? shell : shellDark} />
         </mesh>
       ))}
-      {/* Tail fan */}
       <mesh position={[0, -0.42, -0.18]} rotation={[1.2, 0, 0]}>
         <coneGeometry args={[0.06, 0.08, 6]} />
         <meshStandardMaterial color={shellDark} />
       </mesh>
 
-      {/* Legs (3 pairs) */}
       {[-1, 1].map((side) =>
         [0, 1, 2].map((i) => (
           <mesh
@@ -265,10 +242,6 @@ function LobsterCharacter() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Scene wrapper
-// ---------------------------------------------------------------------------
-
 function SceneLighting() {
   return (
     <>
@@ -279,12 +252,21 @@ function SceneLighting() {
   );
 }
 
-interface CharacterViewerProps {
+export interface CharacterViewerProps {
   type: "user" | "lobster";
   className?: string;
+  userColors?: UserColors;
+  lobsterColors?: LobsterColors;
+  grayscale?: boolean;
 }
 
-export function CharacterViewer({ type, className = "" }: CharacterViewerProps) {
+export function CharacterViewer({
+  type,
+  className = "",
+  userColors,
+  lobsterColors,
+  grayscale,
+}: CharacterViewerProps) {
   const cameraPos: [number, number, number] =
     type === "user" ? [0, 1.3, 2.2] : [0, 1.1, 2];
   const target: [number, number, number] =
@@ -297,7 +279,11 @@ export function CharacterViewer({ type, className = "" }: CharacterViewerProps) 
         style={{ width: "100%", height: "100%" }}
       >
         <SceneLighting />
-        {type === "user" ? <UserCharacter /> : <LobsterCharacter />}
+        {type === "user" ? (
+          <UserCharacter colors={userColors} />
+        ) : (
+          <LobsterCharacter colors={lobsterColors} grayscale={grayscale} />
+        )}
         <OrbitControls
           target={target}
           enablePan={false}

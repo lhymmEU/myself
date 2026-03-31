@@ -5,6 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Shell,
   Wand2,
@@ -14,9 +20,12 @@ import {
   Trash2,
   Check,
   X,
+  Palette,
+  Unplug,
 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
 import dynamic from "next/dynamic";
+import type { LobsterColors } from "./vrm-viewer";
 
 const CharacterViewer = dynamic(
   () =>
@@ -24,7 +33,7 @@ const CharacterViewer = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[300px] rounded-md bg-muted/30 animate-pulse" />
+      <div className="flex-1 min-h-[200px] rounded-md bg-muted/30 animate-pulse" />
     ),
   }
 );
@@ -44,6 +53,20 @@ interface AssignedJob {
   createdAt: number;
 }
 
+const DEFAULT_LOBSTER_COLORS: Required<LobsterColors> = {
+  shell: "#c0392b",
+  shellDark: "#922b21",
+  belly: "#e8a87c",
+  eye: "#222",
+};
+
+const COLOR_LABELS: Record<keyof LobsterColors, string> = {
+  shell: "Shell",
+  shellDark: "Shell Dark",
+  belly: "Belly",
+  eye: "Eyes",
+};
+
 export function ClawPanel() {
   const t = useT();
   const [clawSkills, setClawSkills] = useState<InstalledSkill[]>([]);
@@ -51,17 +74,45 @@ export function ClawPanel() {
   const [addingJob, setAddingJob] = useState(false);
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [jobForm, setJobForm] = useState({ name: "", description: "" });
+  const [lobsterColors, setLobsterColors] = useState<Required<LobsterColors>>(DEFAULT_LOBSTER_COLORS);
+  const [clawConnected, setClawConnected] = useState(false);
+
+  const checkConnection = useCallback(async () => {
+    try {
+      const connRes = await fetch("/api/claw/connections");
+      const connData = await connRes.json();
+      const connections = connData.connections ?? [];
+      if (connections.length === 0) {
+        setClawConnected(false);
+        return null;
+      }
+      const connId = connections[0]?.id;
+      if (!connId) {
+        setClawConnected(false);
+        return null;
+      }
+      const statusRes = await fetch("/api/claw/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionId: connId, action: "status" }),
+      });
+      const statusData = await statusRes.json();
+      const connected = statusData.connected === true;
+      setClawConnected(connected);
+      return connected ? connId : null;
+    } catch {
+      setClawConnected(false);
+      return null;
+    }
+  }, []);
 
   const fetchClawSkills = useCallback(async () => {
     try {
-      const connectRes = await fetch("/api/claw/connections");
-      const connectData = await connectRes.json();
-      const connections = connectData.connections ?? [];
-      if (connections.length === 0) return;
-
-      const connId = connections[0]?.id;
-      if (!connId) return;
-
+      const connId = await checkConnection();
+      if (!connId) {
+        setClawSkills([]);
+        return;
+      }
       const res = await fetch(
         `/api/claw/skills/installed?connectionId=${encodeURIComponent(connId)}`
       );
@@ -70,7 +121,7 @@ export function ClawPanel() {
     } catch {
       // silently fail
     }
-  }, []);
+  }, [checkConnection]);
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -82,10 +133,52 @@ export function ClawPanel() {
     }
   }, []);
 
+  const fetchAppearance = useCallback(async () => {
+    try {
+      const res = await fetch("/api/dashboard/appearance?type=lobster");
+      const data = await res.json();
+      if (data.appearance) {
+        setLobsterColors({
+          shell: data.appearance.shellColor ?? DEFAULT_LOBSTER_COLORS.shell,
+          shellDark: data.appearance.shellDarkColor ?? DEFAULT_LOBSTER_COLORS.shellDark,
+          belly: data.appearance.bellyColor ?? DEFAULT_LOBSTER_COLORS.belly,
+          eye: data.appearance.eyeColor ?? DEFAULT_LOBSTER_COLORS.eye,
+        });
+      }
+    } catch {
+      // silently fail
+    }
+  }, []);
+
   useEffect(() => {
     fetchClawSkills();
     fetchJobs();
-  }, [fetchClawSkills, fetchJobs]);
+    fetchAppearance();
+  }, [fetchClawSkills, fetchJobs, fetchAppearance]);
+
+  const saveAppearance = useCallback(async (colors: Required<LobsterColors>) => {
+    try {
+      await fetch("/api/dashboard/appearance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          characterType: "lobster",
+          shellColor: colors.shell,
+          shellDarkColor: colors.shellDark,
+          bellyColor: colors.belly,
+          eyeColor: colors.eye,
+        }),
+      });
+    } catch {
+      // silently fail
+    }
+  }, []);
+
+  const handleColorChange = (key: keyof LobsterColors, value: string) => {
+    const updated = { ...lobsterColors, [key]: value };
+    setLobsterColors(updated);
+    saveAppearance(updated);
+  };
 
   const handleSaveJob = async () => {
     if (!jobForm.name.trim()) return;
@@ -150,15 +243,48 @@ export function ClawPanel() {
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <Shell className="h-4 w-4" />
           {t("dashboard.game.clawPanel.title")}
+          {!clawConnected && (
+            <Badge variant="secondary" className="text-[10px] gap-1 ml-1">
+              <Unplug className="h-2.5 w-2.5" />
+              {t("claw.dm.notConnected")}
+            </Badge>
+          )}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-auto">
+                <Palette className="h-3.5 w-3.5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48 p-3" align="end">
+              <div className="space-y-2">
+                {(Object.keys(COLOR_LABELS) as (keyof LobsterColors)[]).map((key) => (
+                  <label key={key} className="flex items-center gap-2 text-xs">
+                    <input
+                      type="color"
+                      value={lobsterColors[key]}
+                      onChange={(e) => handleColorChange(key, e.target.value)}
+                      className="h-5 w-5 rounded border cursor-pointer"
+                    />
+                    <span>{COLOR_LABELS[key]}</span>
+                  </label>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col gap-3 min-h-0">
         <CharacterViewer
           type="lobster"
-          className="h-[300px] rounded-lg bg-gradient-to-b from-red-950/10 to-red-950/30 overflow-hidden"
+          lobsterColors={lobsterColors}
+          grayscale={!clawConnected}
+          className={`flex-1 min-h-[200px] rounded-lg overflow-hidden ${
+            clawConnected
+              ? "bg-gradient-to-b from-red-950/10 to-red-950/30"
+              : "bg-gradient-to-b from-muted/20 to-muted/50"
+          }`}
         />
 
-        {/* Lobster Skills (from installed claw skills) */}
         <div>
           <h3 className="text-xs font-semibold flex items-center gap-1.5 mb-1.5">
             <Wand2 className="h-3.5 w-3.5" />
@@ -168,7 +294,9 @@ export function ClawPanel() {
             <div className="space-y-0.5">
               {clawSkills.length === 0 ? (
                 <p className="text-[10px] text-muted-foreground text-center py-2">
-                  {t("dashboard.game.clawPanel.noSkills")}
+                  {clawConnected
+                    ? t("dashboard.game.clawPanel.noSkills")
+                    : t("claw.dm.notConnected")}
                 </p>
               ) : (
                 clawSkills.map((skill) => (
@@ -194,7 +322,6 @@ export function ClawPanel() {
           </ScrollArea>
         </div>
 
-        {/* Assigned Jobs */}
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex items-center justify-between mb-1.5">
             <h3 className="text-xs font-semibold flex items-center gap-1.5">

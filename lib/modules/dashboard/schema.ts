@@ -1,5 +1,19 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 
+export const characterAppearance = sqliteTable("character_appearance", {
+  id: text("id").primaryKey(),
+  characterType: text("character_type").notNull(),
+  skinColor: text("skin_color"),
+  hairColor: text("hair_color"),
+  shirtColor: text("shirt_color"),
+  pantsColor: text("pants_color"),
+  shoeColor: text("shoe_color"),
+  shellColor: text("shell_color"),
+  shellDarkColor: text("shell_dark_color"),
+  bellyColor: text("belly_color"),
+  eyeColor: text("eye_color"),
+});
+
 export const userSkills = sqliteTable("user_skills", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),

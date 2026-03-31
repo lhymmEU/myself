@@ -39,6 +39,8 @@ interface CronJob {
   nextRun: string | null;
 }
 
+const CHANNELS_WITH_DELIVERY_TO = ["qqbot", "telegram", "discord", "slack"];
+
 interface CronPanelProps {
   connectionId: string | null;
 }
@@ -56,6 +58,8 @@ interface FormState {
   weekday: string;
   datetime: Date | undefined;
   timezone: string;
+  channel: string;
+  deliveryTo: string;
 }
 
 function getLocalTimezone(): string {
@@ -77,6 +81,8 @@ const EMPTY_FORM: FormState = {
   weekday: "1",
   datetime: undefined,
   timezone: getLocalTimezone(),
+  channel: "",
+  deliveryTo: "",
 };
 
 function buildExpression(form: FormState): string {
@@ -144,6 +150,7 @@ export function CronPanel({ connectionId }: CronPanelProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("current");
+  const [availableChannels, setAvailableChannels] = useState<string[]>([]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -170,9 +177,38 @@ export function CronPanel({ connectionId }: CronPanelProps) {
     }
   }, [connectionId, t]);
 
+  const fetchChannels = useCallback(async () => {
+    if (!connectionId) return;
+    try {
+      const res = await fetch("/api/claw/command", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionId, command: "channels-list" }),
+      });
+      const data = await res.json();
+      const output = data.stdout || "";
+      const lines = output.split("\n").map((l: string) => l.trim()).filter(Boolean);
+      const channels: string[] = [];
+      for (const line of lines) {
+        const match = line.match(/^[-•*]?\s*(\S+)/);
+        if (match) channels.push(match[1].toLowerCase());
+      }
+      if (channels.length > 0) {
+        setAvailableChannels(channels);
+      } else {
+        setAvailableChannels(["whatsapp", "telegram", "discord", "imessage", "slack", "qqbot"]);
+      }
+    } catch {
+      setAvailableChannels(["whatsapp", "telegram", "discord", "imessage", "slack", "qqbot"]);
+    }
+  }, [connectionId]);
+
   useEffect(() => {
-    if (connectionId) fetchJobs();
-  }, [connectionId, fetchJobs]);
+    if (connectionId) {
+      fetchJobs();
+      fetchChannels();
+    }
+  }, [connectionId, fetchJobs, fetchChannels]);
 
   const handleSave = useCallback(async () => {
     const finalExpression = buildExpression(form);
@@ -181,17 +217,28 @@ export function CronPanel({ connectionId }: CronPanelProps) {
     setError(null);
     try {
       let res: Response;
+      const payload: Record<string, unknown> = {
+        name: form.name,
+        expression: finalExpression,
+        command: form.command,
+        enabled: form.enabled,
+        timezone: form.timezone,
+        connectionId,
+      };
+      if (form.channel) payload.channel = form.channel;
+      if (form.deliveryTo) payload.deliveryTo = form.deliveryTo;
+
       if (editingId) {
         res = await fetch(`/api/claw/cron/${editingId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: form.name, expression: finalExpression, command: form.command, enabled: form.enabled, timezone: form.timezone, connectionId }),
+          body: JSON.stringify(payload),
         });
       } else {
         res = await fetch("/api/claw/cron", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: form.name, expression: finalExpression, command: form.command, enabled: form.enabled, timezone: form.timezone, connectionId }),
+          body: JSON.stringify(payload),
         });
       }
       if (!res.ok) {
@@ -508,6 +555,38 @@ export function CronPanel({ connectionId }: CronPanelProps) {
                 className="w-full rounded-md border bg-transparent px-2 py-1.5 text-xs min-h-[60px] resize-y focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t("claw.dm.cronPanel.channel")}</Label>
+              <select
+                value={form.channel}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, channel: e.target.value, deliveryTo: "" }))
+                }
+                className="w-full h-7 rounded-md border bg-transparent px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="">{t("claw.dm.cronPanel.channelNone")}</option>
+                {availableChannels.map((ch) => (
+                  <option key={ch} value={ch}>
+                    {ch}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {form.channel && CHANNELS_WITH_DELIVERY_TO.includes(form.channel) && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">{t("claw.dm.cronPanel.deliveryTo")}</Label>
+                <Input
+                  value={form.deliveryTo}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, deliveryTo: e.target.value }))
+                  }
+                  placeholder={t("claw.dm.cronPanel.deliveryToPlaceholder")}
+                  className="h-7 text-xs"
+                />
+              </div>
+            )}
 
             <div className="flex items-center gap-2">
               <Switch

@@ -12,10 +12,12 @@ import {
   LayoutDashboard,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Shell,
   Receipt,
   Blend,
   MapPlus,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,18 +30,22 @@ import { useState } from "react";
 import { useT } from "@/lib/i18n/context";
 import type { TranslationKey } from "@/lib/i18n/types";
 
-const NAV_ITEMS: { href: string; labelKey: TranslationKey; icon: typeof LayoutDashboard }[] = [
-  { href: "/dashboard", labelKey: "sidebar.dashboard", icon: LayoutDashboard },
+interface NavItem {
+  href: string;
+  labelKey: TranslationKey;
+  icon: typeof LayoutDashboard;
+}
+
+const MYSELF_CHILDREN: NavItem[] = [
   { href: "/dashboard/mind-map", labelKey: "sidebar.mindMap", icon: MapPlus },
   { href: "/dashboard/todos", labelKey: "sidebar.todos", icon: CheckSquare },
   { href: "/dashboard/finance", labelKey: "sidebar.finance", icon: DollarSign },
   { href: "/dashboard/plans", labelKey: "sidebar.plans", icon: Blend },
   { href: "/dashboard/invoice", labelKey: "sidebar.invoice", icon: Receipt },
   { href: "/dashboard/vault", labelKey: "sidebar.vault", icon: Lock },
-  { href: "/dashboard/claw", labelKey: "sidebar.myClaw", icon: Shell },
 ];
 
-const BOTTOM_ITEMS: { href: string; labelKey: TranslationKey; icon: typeof Settings }[] = [
+const BOTTOM_ITEMS: NavItem[] = [
   { href: "/dashboard/settings", labelKey: "sidebar.settings", icon: Settings },
 ];
 
@@ -47,6 +53,44 @@ export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const t = useT();
+
+  const isMyselfChildActive = MYSELF_CHILDREN.some((item) =>
+    pathname.startsWith(item.href)
+  );
+  const [myselfOpen, setMyselfOpen] = useState(isMyselfChildActive);
+
+  const effectiveOpen = isMyselfChildActive || myselfOpen;
+
+  const renderLink = (item: NavItem, isActive: boolean) => {
+    const label = t(item.labelKey);
+    const link = (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={cn(
+          "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+          isActive
+            ? "bg-accent text-accent-foreground"
+            : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+          collapsed && "justify-center px-2"
+        )}
+      >
+        <item.icon className="h-4 w-4 shrink-0" />
+        {!collapsed && <span>{label}</span>}
+      </Link>
+    );
+
+    if (collapsed) {
+      return (
+        <Tooltip key={item.href}>
+          <TooltipTrigger asChild>{link}</TooltipTrigger>
+          <TooltipContent side="right">{label}</TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return link;
+  };
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -77,75 +121,75 @@ export function Sidebar() {
           </Button>
         </div>
 
-        <nav className="flex-1 flex flex-col gap-1 p-2">
-          {NAV_ITEMS.map((item) => {
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/dashboard" && pathname.startsWith(item.href));
-            const label = t(item.labelKey);
-            const link = (
-              <Link
-                key={item.href}
-                href={item.href}
+        <nav className="flex-1 flex flex-col justify-center gap-1 p-2">
+          {/* Dashboard */}
+          {renderLink(
+            { href: "/dashboard", labelKey: "sidebar.dashboard", icon: LayoutDashboard },
+            pathname === "/dashboard"
+          )}
+
+          {/* Myself group */}
+          {collapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setMyselfOpen(!effectiveOpen)}
+                  className={cn(
+                    "flex items-center justify-center rounded-md px-2 py-2 text-sm font-medium transition-colors",
+                    isMyselfChildActive
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                  )}
+                >
+                  <User className="h-4 w-4 shrink-0" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">{t("sidebar.myself")}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <div>
+              <button
+                onClick={() => setMyselfOpen(!effectiveOpen)}
                 className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
+                  "w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  isMyselfChildActive
                     ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-                  collapsed && "justify-center px-2"
+                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                 )}
               >
-                <item.icon className="h-4 w-4 shrink-0" />
-                {!collapsed && <span>{label}</span>}
-              </Link>
-            );
+                <User className="h-4 w-4 shrink-0" />
+                <span className="flex-1 text-left">{t("sidebar.myself")}</span>
+                <ChevronDown
+                  className={cn(
+                    "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
+                    !effectiveOpen && "-rotate-90"
+                  )}
+                />
+              </button>
 
-            if (collapsed) {
-              return (
-                <Tooltip key={item.href}>
-                  <TooltipTrigger asChild>{link}</TooltipTrigger>
-                  <TooltipContent side="right">{label}</TooltipContent>
-                </Tooltip>
-              );
-            }
+              {effectiveOpen && (
+                <div className="ml-4 mt-0.5 space-y-0.5 border-l border-border pl-2">
+                  {MYSELF_CHILDREN.map((item) => {
+                    const isActive = pathname.startsWith(item.href);
+                    return renderLink(item, isActive);
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
-            return link;
-          })}
+          {/* My Claw */}
+          {renderLink(
+            { href: "/dashboard/claw", labelKey: "sidebar.myClaw", icon: Shell },
+            pathname.startsWith("/dashboard/claw")
+          )}
         </nav>
 
         <div className="border-t border-border p-2">
           {BOTTOM_ITEMS.map((item) => {
             const isActive = pathname.startsWith(item.href);
-            const label = t(item.labelKey);
-            const link = (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-                  collapsed && "justify-center px-2"
-                )}
-              >
-                <item.icon className="h-4 w-4 shrink-0" />
-                {!collapsed && <span>{label}</span>}
-              </Link>
-            );
-
-            if (collapsed) {
-              return (
-                <Tooltip key={item.href}>
-                  <TooltipTrigger asChild>{link}</TooltipTrigger>
-                  <TooltipContent side="right">{label}</TooltipContent>
-                </Tooltip>
-              );
-            }
-
-            return link;
+            return renderLink(item, isActive);
           })}
-
         </div>
       </aside>
     </TooltipProvider>

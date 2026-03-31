@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { connectionId, name, expression, command, sessionTarget, enabled, timezone } = body;
+    const { connectionId, name, expression, command, sessionTarget, enabled, timezone, channel, deliveryTo } = body;
 
     if (!connectionId || !isSSHConnected(connectionId)) {
       return NextResponse.json({ error: "Not connected via SSH" }, { status: 400 });
@@ -136,6 +136,12 @@ export async function POST(req: NextRequest) {
     }
     if (enabled === false) {
       cmd += " --disabled";
+    }
+    if (channel) {
+      cmd += ` --channel "${channel.replace(/"/g, '\\"')}"`;
+    }
+    if (deliveryTo) {
+      cmd += ` --delivery-to "${deliveryTo.replace(/"/g, '\\"')}"`;
     }
 
     const result = await executeCommand(connectionId, cmd, 15000);

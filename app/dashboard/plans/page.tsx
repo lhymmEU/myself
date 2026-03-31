@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { PageList } from "@/components/plans/page-list";
+import type { PlanFolder } from "@/components/plans/page-list";
 import { Editor } from "@/components/plans/editor";
 import { FileText, PenLine, PanelLeft, PanelLeftClose } from "lucide-react";
 import type { Block } from "@blocknote/core";
@@ -12,6 +13,7 @@ interface Plan {
   id: string;
   title: string;
   content: Block[];
+  folderId?: string | null;
   sortOrder: number;
   createdAt: number;
   updatedAt: number;
@@ -20,6 +22,7 @@ interface Plan {
 export default function PlansPage() {
   const t = useT();
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [folders, setFolders] = useState<PlanFolder[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activePlan, setActivePlan] = useState<Plan | null>(null);
   const [title, setTitle] = useState("");
@@ -38,10 +41,22 @@ export default function PlansPage() {
     }
   }, []);
 
+  const fetchFolders = useCallback(async () => {
+    try {
+      const res = await fetch("/api/plans/folders");
+      if (res.ok) {
+        const data = await res.json();
+        setFolders(data.folders ?? []);
+      }
+    } catch {
+      // network error
+    }
+  }, []);
+
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch on mount
     fetchPlans();
-  }, [fetchPlans]);
+    fetchFolders();
+  }, [fetchPlans, fetchFolders]);
 
   const loadPlan = useCallback(async (id: string) => {
     try {
@@ -64,12 +79,12 @@ export default function PlansPage() {
     [loadPlan]
   );
 
-  const handleCreate = useCallback(async () => {
+  const handleCreate = useCallback(async (folderId?: string | null) => {
     try {
       const res = await fetch("/api/plans", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: "Untitled" }),
+        body: JSON.stringify({ title: "Untitled", folderId: folderId ?? null }),
       });
       if (res.ok) {
         const plan = await res.json();
@@ -155,6 +170,81 @@ export default function PlansPage() {
     [plans, fetchPlans]
   );
 
+  const handleMovePlan = useCallback(
+    async (planId: string, folderId: string | null) => {
+      try {
+        await fetch("/api/plans", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: planId, folderId }),
+        });
+        await fetchPlans();
+      } catch {
+        // network error
+      }
+    },
+    [fetchPlans]
+  );
+
+  const handleCreateFolder = useCallback(async () => {
+    try {
+      await fetch("/api/plans/folders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "New Folder" }),
+      });
+      await fetchFolders();
+    } catch {
+      // network error
+    }
+  }, [fetchFolders]);
+
+  const handleRenameFolder = useCallback(
+    async (id: string, name: string) => {
+      try {
+        await fetch("/api/plans/folders", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, name }),
+        });
+        await fetchFolders();
+      } catch {
+        // network error
+      }
+    },
+    [fetchFolders]
+  );
+
+  const handleReorderFolders = useCallback(
+    async (ids: string[]) => {
+      const reordered = ids.map((id) => folders.find((f) => f.id === id)!).filter(Boolean);
+      setFolders(reordered);
+      try {
+        await fetch("/api/plans/folders", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "reorder", ids }),
+        });
+      } catch {
+        fetchFolders();
+      }
+    },
+    [folders, fetchFolders]
+  );
+
+  const handleDeleteFolder = useCallback(
+    async (id: string) => {
+      try {
+        await fetch(`/api/plans/folders?id=${id}`, { method: "DELETE" });
+        await fetchFolders();
+        await fetchPlans();
+      } catch {
+        // network error
+      }
+    },
+    [fetchFolders, fetchPlans]
+  );
+
   useEffect(() => {
     return () => {
       if (titleDebounceRef.current) clearTimeout(titleDebounceRef.current);
@@ -171,11 +261,17 @@ export default function PlansPage() {
         <div className="w-[260px] h-full">
           <PageList
             plans={plans}
+            folders={folders}
             activeId={activeId}
             onSelect={handleSelect}
             onDelete={handleDelete}
             onCreate={handleCreate}
             onReorder={handleReorder}
+            onMovePlan={handleMovePlan}
+            onCreateFolder={handleCreateFolder}
+            onRenameFolder={handleRenameFolder}
+            onDeleteFolder={handleDeleteFolder}
+            onReorderFolders={handleReorderFolders}
           />
         </div>
       </div>
@@ -233,7 +329,7 @@ export default function PlansPage() {
                 </p>
               </div>
               <button
-                onClick={handleCreate}
+                onClick={() => handleCreate()}
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 <PenLine className="h-4 w-4" />

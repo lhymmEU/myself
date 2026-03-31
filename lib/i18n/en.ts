@@ -36,6 +36,7 @@ export const en = {
   sidebar: {
     title: "Life",
     dashboard: "Dashboard",
+    myself: "Myself",
     mindMap: "Mind Map",
     todos: "Todos",
     finance: "Finance",
@@ -547,6 +548,10 @@ export const en = {
         failedDelete: "Failed to delete cron job",
         active: "Active",
         paused: "Paused",
+        channel: "Channel",
+        channelNone: "None (default)",
+        deliveryTo: "Deliver To",
+        deliveryToPlaceholder: "e.g. group ID or user ID",
       },
       onboarding: {
         skip: "Skip",

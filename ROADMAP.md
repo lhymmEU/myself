@@ -12,7 +12,7 @@ Want to influence what gets built next? [Open an issue](https://github.com/lhymm
 
 - [x] CLI tool listing and installation
 - [x] API endpoint listing and integration
-- [ ] Customizable cron jobs
+- [x] Customizable cron jobs
 
 ### Plans Page
 

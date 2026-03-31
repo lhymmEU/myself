@@ -6,6 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   User,
   Plus,
   Pencil,
@@ -13,9 +18,11 @@ import {
   Check,
   X,
   Swords,
+  Palette,
 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
 import dynamic from "next/dynamic";
+import type { UserColors } from "./vrm-viewer";
 
 const CharacterViewer = dynamic(
   () =>
@@ -23,7 +30,7 @@ const CharacterViewer = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[300px] rounded-md bg-muted/30 animate-pulse" />
+      <div className="flex-1 min-h-[200px] rounded-md bg-muted/30 animate-pulse" />
     ),
   }
 );
@@ -36,12 +43,29 @@ interface UserSkill {
   createdAt: number;
 }
 
+const DEFAULT_USER_COLORS: Required<UserColors> = {
+  skin: "#ffe0bd",
+  hair: "#3b2f2f",
+  shirt: "#4f8ef7",
+  pants: "#2d3748",
+  shoe: "#1a1a2e",
+};
+
+const COLOR_LABELS: Record<keyof UserColors, string> = {
+  skin: "Skin",
+  hair: "Hair",
+  shirt: "Shirt",
+  pants: "Pants",
+  shoe: "Shoes",
+};
+
 export function UserPanel() {
   const t = useT();
   const [skills, setSkills] = useState<UserSkill[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ name: "", level: 1, category: "" });
+  const [userColors, setUserColors] = useState<Required<UserColors>>(DEFAULT_USER_COLORS);
 
   const fetchSkills = useCallback(async () => {
     try {
@@ -53,9 +77,53 @@ export function UserPanel() {
     }
   }, []);
 
+  const fetchAppearance = useCallback(async () => {
+    try {
+      const res = await fetch("/api/dashboard/appearance?type=user");
+      const data = await res.json();
+      if (data.appearance) {
+        setUserColors({
+          skin: data.appearance.skinColor ?? DEFAULT_USER_COLORS.skin,
+          hair: data.appearance.hairColor ?? DEFAULT_USER_COLORS.hair,
+          shirt: data.appearance.shirtColor ?? DEFAULT_USER_COLORS.shirt,
+          pants: data.appearance.pantsColor ?? DEFAULT_USER_COLORS.pants,
+          shoe: data.appearance.shoeColor ?? DEFAULT_USER_COLORS.shoe,
+        });
+      }
+    } catch {
+      // silently fail
+    }
+  }, []);
+
   useEffect(() => {
     fetchSkills();
-  }, [fetchSkills]);
+    fetchAppearance();
+  }, [fetchSkills, fetchAppearance]);
+
+  const saveAppearance = useCallback(async (colors: Required<UserColors>) => {
+    try {
+      await fetch("/api/dashboard/appearance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          characterType: "user",
+          skinColor: colors.skin,
+          hairColor: colors.hair,
+          shirtColor: colors.shirt,
+          pantsColor: colors.pants,
+          shoeColor: colors.shoe,
+        }),
+      });
+    } catch {
+      // silently fail
+    }
+  }, []);
+
+  const handleColorChange = (key: keyof UserColors, value: string) => {
+    const updated = { ...userColors, [key]: value };
+    setUserColors(updated);
+    saveAppearance(updated);
+  };
 
   const handleSave = async () => {
     if (!form.name.trim()) return;
@@ -117,12 +185,35 @@ export function UserPanel() {
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <User className="h-4 w-4" />
           {t("dashboard.game.userPanel.title")}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-auto">
+                <Palette className="h-3.5 w-3.5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48 p-3" align="end">
+              <div className="space-y-2">
+                {(Object.keys(COLOR_LABELS) as (keyof UserColors)[]).map((key) => (
+                  <label key={key} className="flex items-center gap-2 text-xs">
+                    <input
+                      type="color"
+                      value={userColors[key]}
+                      onChange={(e) => handleColorChange(key, e.target.value)}
+                      className="h-5 w-5 rounded border cursor-pointer"
+                    />
+                    <span>{COLOR_LABELS[key]}</span>
+                  </label>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col gap-3 min-h-0">
         <CharacterViewer
           type="user"
-          className="h-[300px] rounded-lg bg-gradient-to-b from-muted/20 to-muted/50 overflow-hidden"
+          userColors={userColors}
+          className="flex-1 min-h-[200px] rounded-lg bg-gradient-to-b from-muted/20 to-muted/50 overflow-hidden"
         />
 
         <div className="flex items-center justify-between">

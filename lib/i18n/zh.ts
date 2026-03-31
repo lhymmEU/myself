@@ -38,6 +38,7 @@ export const zh: Translations = {
   sidebar: {
     title: "生活仪表盘",
     dashboard: "仪表盘",
+    myself: "我自己",
     mindMap: "思维导图",
     todos: "待办事项",
     finance: "财务",
@@ -549,6 +550,10 @@ export const zh: Translations = {
         failedDelete: "删除定时任务失败",
         active: "活跃",
         paused: "已暂停",
+        channel: "频道",
+        channelNone: "无 (默认)",
+        deliveryTo: "发送至",
+        deliveryToPlaceholder: "例如 群组 ID 或用户 ID",
       },
       onboarding: {
         skip: "跳过",

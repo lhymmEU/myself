@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
       title: body.title,
       content: body.content,
       linkedNodeId: body.linkedNodeId,
+      folderId: body.folderId,
     });
     return NextResponse.json(plan);
   } catch (err) {
@@ -67,6 +68,7 @@ export async function PUT(req: NextRequest) {
       title: body.title,
       content: body.content,
       linkedNodeId: body.linkedNodeId,
+      folderId: body.folderId,
     });
     return NextResponse.json(plan);
   } catch (err) {

@@ -2,7 +2,7 @@
 
 import { useReducer, useCallback } from "react";
 import { nanoid } from "nanoid";
-import { Server } from "lucide-react";
+import { Server, Loader2 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
 import type {
   DMState,
@@ -23,6 +23,7 @@ const initialState: DMState = {
   messages: [],
   sessionTarget: null,
   error: null,
+  loadingHistory: false,
 };
 
 function dmReducer(state: DMState, action: DMAction): DMState {
@@ -58,9 +59,18 @@ function dmReducer(state: DMState, action: DMAction): DMState {
         messages: [],
         conversationState: "idle",
         error: null,
+        loadingHistory: false,
       };
     case "CLEAR_THREAD":
       return { ...state, messages: [], error: null };
+    case "LOAD_HISTORY":
+      return {
+        ...state,
+        messages: action.messages,
+        loadingHistory: false,
+      };
+    case "SET_LOADING_HISTORY":
+      return { ...state, loadingHistory: action.loading };
     default:
       return state;
   }
@@ -75,9 +85,44 @@ export function ClawDMPanel({ connectionId, connected }: ClawDMPanelProps) {
   const t = useT();
   const [state, dispatch] = useReducer(dmReducer, initialState);
 
-  const handleSessionChange = useCallback((target: SessionTarget) => {
-    dispatch({ type: "SET_SESSION", target });
-  }, []);
+  const fetchSessionHistory = useCallback(
+    async (sessionKey: string, agentId: string) => {
+      if (!connectionId) return;
+      dispatch({ type: "SET_LOADING_HISTORY", loading: true });
+      try {
+        const qs = new URLSearchParams({
+          connectionId,
+          agentId,
+        });
+        const res = await fetch(
+          `/api/claw/sessions/${encodeURIComponent(sessionKey)}/history?${qs}`
+        );
+        const data = await res.json();
+        const messages: Message[] = (data.messages ?? []).map(
+          (msg: { role: string; content: string; timestamp: number }) => ({
+            id: nanoid(),
+            role: msg.role as "user" | "agent",
+            content: msg.content,
+            timestamp: msg.timestamp,
+          })
+        );
+        dispatch({ type: "LOAD_HISTORY", messages });
+      } catch {
+        dispatch({ type: "SET_LOADING_HISTORY", loading: false });
+      }
+    },
+    [connectionId]
+  );
+
+  const handleSessionChange = useCallback(
+    (target: SessionTarget) => {
+      dispatch({ type: "SET_SESSION", target });
+      if (target.sessionId) {
+        fetchSessionHistory(target.sessionId, target.agentId);
+      }
+    },
+    [fetchSessionHistory]
+  );
 
   const handleSend = useCallback(
     async (text: string) => {
@@ -176,12 +221,18 @@ export function ClawDMPanel({ connectionId, connected }: ClawDMPanelProps) {
         </div>
 
         <div className="flex-1 min-h-0">
-          <MessageThread
-            messages={state.messages}
-            conversationState={state.conversationState}
-            error={state.error}
-            onDismissError={() => dispatch({ type: "CLEAR_ERROR" })}
-          />
+          {state.loadingHistory ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <MessageThread
+              messages={state.messages}
+              conversationState={state.conversationState}
+              error={state.error}
+              onDismissError={() => dispatch({ type: "CLEAR_ERROR" })}
+            />
+          )}
         </div>
 
         <div className="p-3 border-t space-y-2">

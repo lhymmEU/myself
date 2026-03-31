@@ -82,11 +82,14 @@ export type DMAction =
   | { type: "CLEAR_ERROR" }
   | { type: "SET_SENDING" }
   | { type: "SET_SESSION"; target: SessionTarget }
-  | { type: "CLEAR_THREAD" };
+  | { type: "CLEAR_THREAD" }
+  | { type: "LOAD_HISTORY"; messages: Message[] }
+  | { type: "SET_LOADING_HISTORY"; loading: boolean };
 
 export interface DMState {
   conversationState: ConversationState;
   messages: Message[];
   sessionTarget: SessionTarget | null;
   error: string | null;
+  loadingHistory: boolean;
 }

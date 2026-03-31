@@ -3,6 +3,15 @@ export interface PlanPage {
   title: string;
   content: unknown;
   linkedNodeId?: string | null;
+  folderId?: string | null;
+  sortOrder: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface PlanFolder {
+  id: string;
+  name: string;
   sortOrder: number;
   createdAt: number;
   updatedAt: number;
@@ -12,6 +21,7 @@ export interface CreatePlanInput {
   title: string;
   content?: unknown;
   linkedNodeId?: string | null;
+  folderId?: string | null;
 }
 
 export interface UpdatePlanInput {
@@ -19,4 +29,5 @@ export interface UpdatePlanInput {
   title?: string;
   content?: unknown;
   linkedNodeId?: string | null;
+  folderId?: string | null;
 }

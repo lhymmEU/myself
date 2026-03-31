@@ -209,5 +209,73 @@ export function initDatabase() {
     // columns already exist
   }
 
+  // Add folder support for plans
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS plan_folders (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+  `);
+  try {
+    sqlite.exec(`ALTER TABLE plan_pages ADD COLUMN folder_id TEXT`);
+  } catch {
+    // column already exists
+  }
+
+  // Character appearance table
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS character_appearance (
+      id TEXT PRIMARY KEY,
+      character_type TEXT NOT NULL,
+      skin_color TEXT,
+      hair_color TEXT,
+      shirt_color TEXT,
+      pants_color TEXT,
+      shoe_color TEXT,
+      shell_color TEXT,
+      shell_dark_color TEXT,
+      belly_color TEXT,
+      eye_color TEXT
+    );
+  `);
+
+  // User skills table
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS user_skills (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      level INTEGER NOT NULL DEFAULT 1,
+      category TEXT DEFAULT '',
+      created_at INTEGER NOT NULL
+    );
+  `);
+
+  // Skill wishlist table
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS skill_wishlist (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      target_level INTEGER NOT NULL DEFAULT 5,
+      priority TEXT NOT NULL DEFAULT 'medium',
+      notes TEXT DEFAULT '',
+      created_at INTEGER NOT NULL
+    );
+  `);
+
+  // Claw assigned jobs table
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS claw_assigned_jobs (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'active',
+      cron_job_id TEXT,
+      created_at INTEGER NOT NULL
+    );
+  `);
+
   initialized = true;
 }

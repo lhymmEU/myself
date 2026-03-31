@@ -1,7 +1,46 @@
 import { getDb } from "@/lib/core/db";
-import { userSkills, skillWishlist, clawAssignedJobs } from "./schema";
+import { userSkills, skillWishlist, clawAssignedJobs, characterAppearance } from "./schema";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
+
+// --- Character Appearance ---
+
+export interface CharacterColors {
+  skinColor?: string | null;
+  hairColor?: string | null;
+  shirtColor?: string | null;
+  pantsColor?: string | null;
+  shoeColor?: string | null;
+  shellColor?: string | null;
+  shellDarkColor?: string | null;
+  bellyColor?: string | null;
+  eyeColor?: string | null;
+}
+
+export function getCharacterAppearance(characterType: string): CharacterColors | null {
+  const rows = getDb()
+    .select()
+    .from(characterAppearance)
+    .where(eq(characterAppearance.characterType, characterType))
+    .all();
+  return rows[0] ?? null;
+}
+
+export function upsertCharacterAppearance(characterType: string, colors: CharacterColors) {
+  const existing = getCharacterAppearance(characterType);
+  if (existing) {
+    getDb()
+      .update(characterAppearance)
+      .set(colors)
+      .where(eq(characterAppearance.characterType, characterType))
+      .run();
+  } else {
+    getDb()
+      .insert(characterAppearance)
+      .values({ id: nanoid(), characterType, ...colors })
+      .run();
+  }
+}
 
 // --- User Skills ---
 
