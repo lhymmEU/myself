@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState, useMemo } from "react";
 import { Plus, MoreVertical, Pencil, Trash2, Clock, ListTodo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useT } from "@/lib/i18n/context";
+import { useMindMapScenes } from "@/lib/swr/hooks";
 import type { MindMapScene, SceneMode } from "@/lib/modules/mind-map/types";
 
 interface CanvasGridProps {
@@ -41,30 +42,16 @@ function formatRelativeTime(timestamp: number): string {
 
 export function CanvasGrid({ mode = "mind", onOpen }: CanvasGridProps) {
   const t = useT();
-  const [scenes, setScenes] = useState<MindMapScene[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: rawScenes, isLoading: loading, mutate } = useMindMapScenes(mode);
+  const scenes: MindMapScene[] = useMemo(() => {
+    const arr: MindMapScene[] = Array.isArray(rawScenes) ? rawScenes : [];
+    return [...arr].sort((a, b) => b.updatedAt - a.updatedAt);
+  }, [rawScenes]);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [targetScene, setTargetScene] = useState<MindMapScene | null>(null);
-
-  const fetchScenes = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/mind-map?all=true&mode=${mode}`);
-      const data: MindMapScene[] = await res.json();
-      data.sort((a, b) => b.updatedAt - a.updatedAt);
-      setScenes(data);
-    } catch (err) {
-      console.error("Failed to fetch scenes:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [mode]);
-
-  useEffect(() => {
-    fetchScenes();
-  }, [fetchScenes]);
 
   const handleCreate = async () => {
     const name = nameInput.trim() || t("mindMap.grid.untitled");
@@ -96,7 +83,7 @@ export function CanvasGrid({ mode = "mind", onOpen }: CanvasGridProps) {
       setRenameDialogOpen(false);
       setNameInput("");
       setTargetScene(null);
-      fetchScenes();
+      mutate();
     } catch (err) {
       console.error("Failed to rename scene:", err);
     }
@@ -108,7 +95,7 @@ export function CanvasGrid({ mode = "mind", onOpen }: CanvasGridProps) {
       await fetch(`/api/mind-map?id=${targetScene.id}`, { method: "DELETE" });
       setDeleteDialogOpen(false);
       setTargetScene(null);
-      fetchScenes();
+      mutate();
     } catch (err) {
       console.error("Failed to delete scene:", err);
     }
@@ -135,7 +122,7 @@ export function CanvasGrid({ mode = "mind", onOpen }: CanvasGridProps) {
           isTodoSource: !scene.isTodoSource,
         }),
       });
-      fetchScenes();
+      mutate();
     } catch (err) {
       console.error("Failed to toggle todo source:", err);
     }

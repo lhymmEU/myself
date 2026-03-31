@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useT } from "@/lib/i18n/context";
+import { useClawConnections } from "@/lib/swr/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -84,7 +85,8 @@ interface ConnectionFormProps {
 
 export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
   const t = useT();
-  const [connections, setConnections] = useState<ConnectionInfo[]>([]);
+  const { data: connectionsData, mutate: mutateConnections } = useClawConnections();
+  const connections: ConnectionInfo[] = Array.isArray(connectionsData) ? connectionsData : [];
   const [connectState, setConnectState] = useState<ConnectState>({
     connected: false,
     connectionId: null,
@@ -246,17 +248,6 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
     }
   }, [vaultPickerTarget, t]);
 
-  const loadConnections = useCallback(async () => {
-    try {
-      const res = await fetch("/api/claw/connections");
-      const data = await res.json();
-      if (Array.isArray(data)) setConnections(data);
-      return Array.isArray(data) ? data as ConnectionInfo[] : [];
-    } catch {
-      return [];
-    }
-  }, []);
-
   const checkActiveConnection = useCallback(async (conns: ConnectionInfo[]) => {
     for (const conn of conns) {
       try {
@@ -283,11 +274,13 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
     }
   }, [onConnectionChange]);
 
+  const checkedRef = useRef(false);
   useEffect(() => {
-    loadConnections().then((conns) => {
-      if (conns.length > 0) checkActiveConnection(conns);
-    });
-  }, [loadConnections, checkActiveConnection]);
+    if (connections.length > 0 && !checkedRef.current) {
+      checkedRef.current = true;
+      checkActiveConnection(connections);
+    }
+  }, [connections, checkActiveConnection]);
 
   const handleConnect = async (id: string) => {
     setConnecting(true);
@@ -356,7 +349,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
         passphrase: "",
         gatewayPort: "18789",
       });
-      loadConnections();
+      mutateConnections();
     } catch {
       // silent
     }
@@ -371,7 +364,7 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
     if (connectState.connectionId === id) {
       handleDisconnect();
     }
-    loadConnections();
+    mutateConnections();
   };
 
   return (

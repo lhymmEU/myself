@@ -1,106 +1,48 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/lib/i18n/context";
+import { useFinanceLive } from "@/lib/swr/hooks";
 import { PortfolioSummary } from "./portfolio-summary";
 import { BinanceHoldings } from "./binance-holdings";
 import { PolkadotWallets } from "./polkadot-wallets";
 import type { BinancePortfolio } from "@/lib/modules/finance/binance";
 import type { PolkadotPortfolio } from "@/lib/modules/finance/polkadot";
 
-const REFRESH_INTERVAL = 60_000;
-
 export function LiveView() {
   const t = useT();
-  const [binance, setBinance] = useState<BinancePortfolio | null>(null);
-  const [polkadot, setPolkadot] = useState<PolkadotPortfolio | null>(null);
-  const [binanceError, setBinanceError] = useState<string>();
-  const [polkadotError, setPolkadotError] = useState<string>();
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const {
+    data: binance,
+    error: binanceErr,
+    isLoading: binanceLoading,
+    isValidating: binanceValidating,
+    mutate: mutateBinance,
+  } = useFinanceLive("binance");
+  const {
+    data: polkadot,
+    error: polkadotErr,
+    isLoading: polkadotLoading,
+    isValidating: polkadotValidating,
+    mutate: mutatePolkadot,
+  } = useFinanceLive("polkadot");
 
-  const binanceConfigError = useRef(false);
-  const polkadotConfigError = useRef(false);
-
-  const fetchData = useCallback(async (isManual = false) => {
-    setRefreshing(true);
-
-    const promises: Promise<void>[] = [];
-
-    if (!binanceConfigError.current || isManual) {
-      promises.push(
-        fetch("/api/finance/live?source=binance")
-          .then(async (res) => {
-            const data = await res.json();
-            if (res.ok) {
-              setBinance(data);
-              setBinanceError(undefined);
-              binanceConfigError.current = false;
-            } else {
-              setBinanceError(data.error);
-              binanceConfigError.current = res.status === 400;
-            }
-          })
-          .catch(() => {
-            setBinanceError(t("finance.liveView.failedBinance"));
-          })
-      );
-    }
-
-    if (!polkadotConfigError.current || isManual) {
-      promises.push(
-        fetch("/api/finance/live?source=polkadot")
-          .then(async (res) => {
-            const data = await res.json();
-            if (res.ok) {
-              setPolkadot(data);
-              setPolkadotError(undefined);
-              polkadotConfigError.current = false;
-            } else {
-              setPolkadotError(data.error);
-              polkadotConfigError.current = res.status === 400;
-            }
-          })
-          .catch(() => {
-            setPolkadotError(t("finance.liveView.failedPolkadot"));
-          })
-      );
-    }
-
-    await Promise.allSettled(promises);
-    setRefreshing(false);
-    setInitialLoading(false);
-    setLastUpdated(new Date());
-  }, [t]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch + polling
-    fetchData();
-    const interval = setInterval(() => fetchData(), REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchData]);
+  const binanceData = binance as BinancePortfolio | undefined;
+  const polkadotData = polkadot as PolkadotPortfolio | undefined;
+  const binanceError = binanceErr ? t("finance.liveView.failedBinance") : undefined;
+  const polkadotError = polkadotErr ? t("finance.liveView.failedPolkadot") : undefined;
+  const refreshing = binanceValidating || polkadotValidating;
+  const loading = binanceLoading && polkadotLoading;
 
   const handleManualRefresh = () => {
-    binanceConfigError.current = false;
-    polkadotConfigError.current = false;
-    fetchData(true);
+    mutateBinance();
+    mutatePolkadot();
   };
-
-  const loading = initialLoading;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          {lastUpdated && (
-            <p className="text-xs text-muted-foreground">
-              {t("finance.liveView.lastUpdated")} {lastUpdated.toLocaleTimeString()}
-            </p>
-          )}
-        </div>
+        <div />
         <Button
           variant="outline"
           size="sm"
@@ -113,22 +55,22 @@ export function LiveView() {
       </div>
 
       <PortfolioSummary
-        binanceTotal={binance?.totalUsd ?? 0}
-        polkadotTotal={polkadot?.totalUsd ?? 0}
+        binanceTotal={binanceData?.totalUsd ?? 0}
+        polkadotTotal={polkadotData?.totalUsd ?? 0}
         loading={loading}
       />
 
       <BinanceHoldings
-        spot={binance?.spot ?? []}
-        funding={binance?.funding ?? []}
-        earn={binance?.earn ?? []}
+        spot={binanceData?.spot ?? []}
+        funding={binanceData?.funding ?? []}
+        earn={binanceData?.earn ?? []}
         loading={loading}
         error={binanceError}
       />
 
       <PolkadotWallets
-        wallets={polkadot?.wallets ?? []}
-        dotPrice={polkadot?.dotPrice ?? 0}
+        wallets={polkadotData?.wallets ?? []}
+        dotPrice={polkadotData?.dotPrice ?? 0}
         loading={loading}
         error={polkadotError}
       />

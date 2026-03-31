@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import {
   Palette,
 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
+import { useUserSkills, useCharacterAppearance } from "@/lib/swr/hooks";
 import dynamic from "next/dynamic";
 import type { UserColors } from "./vrm-viewer";
 
@@ -61,44 +62,28 @@ const COLOR_LABELS: Record<keyof UserColors, string> = {
 
 export function UserPanel() {
   const t = useT();
-  const [skills, setSkills] = useState<UserSkill[]>([]);
+  const { data: skillsData, mutate: mutateSkills } = useUserSkills();
+  const { data: appearanceData, mutate: mutateAppearance } = useCharacterAppearance("user");
+  const skills: UserSkill[] = skillsData?.skills ?? [];
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ name: "", level: 1, category: "" });
-  const [userColors, setUserColors] = useState<Required<UserColors>>(DEFAULT_USER_COLORS);
 
-  const fetchSkills = useCallback(async () => {
-    try {
-      const res = await fetch("/api/dashboard/skills");
-      const data = await res.json();
-      setSkills(data.skills ?? []);
-    } catch {
-      // silently fail
-    }
-  }, []);
-
-  const fetchAppearance = useCallback(async () => {
-    try {
-      const res = await fetch("/api/dashboard/appearance?type=user");
-      const data = await res.json();
-      if (data.appearance) {
-        setUserColors({
-          skin: data.appearance.skinColor ?? DEFAULT_USER_COLORS.skin,
-          hair: data.appearance.hairColor ?? DEFAULT_USER_COLORS.hair,
-          shirt: data.appearance.shirtColor ?? DEFAULT_USER_COLORS.shirt,
-          pants: data.appearance.pantsColor ?? DEFAULT_USER_COLORS.pants,
-          shoe: data.appearance.shoeColor ?? DEFAULT_USER_COLORS.shoe,
-        });
+  const userColorsFromApi: Required<UserColors> = appearanceData?.appearance
+    ? {
+        skin: appearanceData.appearance.skinColor ?? DEFAULT_USER_COLORS.skin,
+        hair: appearanceData.appearance.hairColor ?? DEFAULT_USER_COLORS.hair,
+        shirt: appearanceData.appearance.shirtColor ?? DEFAULT_USER_COLORS.shirt,
+        pants: appearanceData.appearance.pantsColor ?? DEFAULT_USER_COLORS.pants,
+        shoe: appearanceData.appearance.shoeColor ?? DEFAULT_USER_COLORS.shoe,
       }
-    } catch {
-      // silently fail
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchSkills();
-    fetchAppearance();
-  }, [fetchSkills, fetchAppearance]);
+    : DEFAULT_USER_COLORS;
+  const [userColors, setUserColors] = useState<Required<UserColors>>(DEFAULT_USER_COLORS);
+  const [colorsInitialized, setColorsInitialized] = useState(false);
+  if (appearanceData && !colorsInitialized) {
+    setUserColors(userColorsFromApi);
+    setColorsInitialized(true);
+  }
 
   const saveAppearance = useCallback(async (colors: Required<UserColors>) => {
     try {
@@ -144,7 +129,7 @@ export function UserPanel() {
       setEditingId(null);
       setAdding(false);
       setForm({ name: "", level: 1, category: "" });
-      await fetchSkills();
+      await mutateSkills();
     } catch {
       // silently fail
     }
@@ -157,7 +142,7 @@ export function UserPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "delete", id }),
       });
-      await fetchSkills();
+      await mutateSkills();
     } catch {
       // silently fail
     }

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
+import { useFinanceNews } from "@/lib/swr/hooks";
 import type { TranslationKey } from "@/lib/i18n/types";
 
 interface NewsArticle {
@@ -17,7 +18,6 @@ interface NewsCategory {
   label: string;
 }
 
-const REFRESH_INTERVAL = 5 * 60_000;
 
 function timeAgo(dateStr: string, t: (key: TranslationKey) => string): string {
   try {
@@ -36,32 +36,9 @@ function timeAgo(dateStr: string, t: (key: TranslationKey) => string): string {
 export function NewsPanel() {
   const t = useT();
   const [category, setCategory] = useState("top");
-  const [articles, setArticles] = useState<NewsArticle[]>([]);
-  const [categories, setCategories] = useState<NewsCategory[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchArticles = useCallback(async (showLoading = true) => {
-    if (showLoading) setLoading(true);
-    try {
-      const params = new URLSearchParams({ action: "news", category });
-      const res = await fetch(`/api/finance/market?${params}`);
-      if (res.ok) {
-        const data = await res.json();
-        setArticles(data.articles ?? []);
-        if (data.categories) setCategories(data.categories);
-      }
-    } catch {
-      // silently fail
-    } finally {
-      setLoading(false);
-    }
-  }, [category]);
-
-  useEffect(() => {
-    fetchArticles();
-    const interval = setInterval(() => fetchArticles(false), REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchArticles]);
+  const { data, isLoading: loading } = useFinanceNews(category);
+  const articles: NewsArticle[] = data?.articles ?? [];
+  const categories: NewsCategory[] = data?.categories ?? [];
 
   return (
     <div className="h-full flex flex-col">

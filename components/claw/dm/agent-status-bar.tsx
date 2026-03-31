@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import { useT } from "@/lib/i18n/context";
+import { useAgentStatus } from "@/lib/swr/hooks";
 import type { AgentStatus, SessionTarget } from "./types";
 
 interface AgentStatusBarProps {
@@ -16,34 +16,8 @@ export function AgentStatusBar({
   sessionTarget,
 }: AgentStatusBarProps) {
   const t = useT();
-  const [status, setStatus] = useState<AgentStatus>({
-    online: false,
-    health: "unknown",
-  });
-
-  const fetchStatus = useCallback(async () => {
-    if (!connectionId || !connected) {
-      setStatus({ online: false, health: "unknown" });
-      return;
-    }
-    try {
-      const res = await fetch(
-        `/api/claw/dm/status?connectionId=${encodeURIComponent(connectionId)}`,
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setStatus(data);
-      }
-    } catch {
-      // keep current state
-    }
-  }, [connectionId, connected]);
-
-  useEffect(() => {
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 30000);
-    return () => clearInterval(interval);
-  }, [fetchStatus]);
+  const { data } = useAgentStatus(connectionId, connected);
+  const status: AgentStatus = data ?? { online: false, health: "unknown" };
 
   const dotColor = !connected
     ? "bg-zinc-400"

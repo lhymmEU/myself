@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
+import { useClawSessions } from "@/lib/swr/hooks";
 import type { SessionTarget } from "./types";
 
 interface SessionEntry {
@@ -68,32 +69,11 @@ export function SessionListPanel({
   onSessionChange,
 }: SessionListPanelProps) {
   const t = useT();
-  const [sessions, setSessions] = useState<SessionEntry[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { data, isLoading: loading, isValidating, mutate } = useClawSessions(connectionId, connected);
+  const sessions: SessionEntry[] = data?.sessions ?? [];
   const [sessionNames, setSessionNames] = useState<Record<string, string>>(loadSessionNames);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
-
-  const fetchSessions = useCallback(async () => {
-    if (!connectionId || !connected) return;
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `/api/claw/sessions?connectionId=${encodeURIComponent(connectionId)}`
-      );
-      const data = await res.json();
-      const list: SessionEntry[] = data.sessions ?? [];
-      setSessions(list);
-    } catch {
-      // keep current state
-    } finally {
-      setLoading(false);
-    }
-  }, [connectionId, connected]);
-
-  useEffect(() => {
-    if (connected) fetchSessions();
-  }, [connected, fetchSessions]);
 
   const sortedSessions = useMemo(() => {
     return [...sessions]
@@ -173,11 +153,11 @@ export function SessionListPanel({
         <Button
           size="sm"
           variant="ghost"
-          onClick={fetchSessions}
+          onClick={() => mutate()}
           disabled={loading}
           className="h-7 w-7 p-0 shrink-0"
         >
-          {loading ? (
+          {loading || isValidating ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
             <RefreshCw className="h-3.5 w-3.5" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
   Shell,
 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
+import { useWishlist } from "@/lib/swr/hooks";
 
 interface Wish {
   id: string;
@@ -30,8 +31,8 @@ interface Wish {
 export function WishlistSection() {
   const t = useT();
   const router = useRouter();
-  const [wishes, setWishes] = useState<Wish[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: wishData, isLoading: loading, mutate } = useWishlist();
+  const wishes: Wish[] = wishData?.wishes ?? [];
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({
@@ -40,22 +41,6 @@ export function WishlistSection() {
     priority: "medium",
     notes: "",
   });
-
-  const fetchWishes = useCallback(async () => {
-    try {
-      const res = await fetch("/api/dashboard/wishlist");
-      const data = await res.json();
-      setWishes(data.wishes ?? []);
-    } catch {
-      // silently fail
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchWishes();
-  }, [fetchWishes]);
 
   const handleSave = async () => {
     if (!form.name.trim()) return;
@@ -76,7 +61,7 @@ export function WishlistSection() {
       setEditingId(null);
       setAdding(false);
       setForm({ name: "", targetLevel: 5, priority: "medium", notes: "" });
-      await fetchWishes();
+      await mutate();
     } catch {
       // silently fail
     }
@@ -89,7 +74,7 @@ export function WishlistSection() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "delete", id }),
       });
-      await fetchWishes();
+      await mutate();
     } catch {
       // silently fail
     }

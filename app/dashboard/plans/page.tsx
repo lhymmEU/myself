@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { PageList } from "@/components/plans/page-list";
 import type { PlanFolder } from "@/components/plans/page-list";
 import { Editor } from "@/components/plans/editor";
 import { FileText, PenLine, PanelLeft, PanelLeftClose } from "lucide-react";
 import type { Block } from "@blocknote/core";
 import { useT } from "@/lib/i18n/context";
+import { usePlanList, usePlanFolders } from "@/lib/swr/hooks";
 import { Button } from "@/components/ui/button";
 
 interface Plan {
@@ -21,42 +22,15 @@ interface Plan {
 
 export default function PlansPage() {
   const t = useT();
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [folders, setFolders] = useState<PlanFolder[]>([]);
+  const { data: plansData, mutate: mutatePlans } = usePlanList();
+  const { data: foldersData, mutate: mutateFolders } = usePlanFolders();
+  const plans: Plan[] = useMemo(() => (Array.isArray(plansData) ? plansData : []), [plansData]);
+  const folders: PlanFolder[] = useMemo(() => foldersData?.folders ?? [], [foldersData]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activePlan, setActivePlan] = useState<Plan | null>(null);
   const [title, setTitle] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const titleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const fetchPlans = useCallback(async () => {
-    try {
-      const res = await fetch("/api/plans?action=list");
-      if (res.ok) {
-        const data = await res.json();
-        setPlans(data);
-      }
-    } catch {
-      // network error
-    }
-  }, []);
-
-  const fetchFolders = useCallback(async () => {
-    try {
-      const res = await fetch("/api/plans/folders");
-      if (res.ok) {
-        const data = await res.json();
-        setFolders(data.folders ?? []);
-      }
-    } catch {
-      // network error
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchPlans();
-    fetchFolders();
-  }, [fetchPlans, fetchFolders]);
 
   const loadPlan = useCallback(async (id: string) => {
     try {
@@ -88,7 +62,7 @@ export default function PlansPage() {
       });
       if (res.ok) {
         const plan = await res.json();
-        await fetchPlans();
+        await mutatePlans();
         setActiveId(plan.id);
         setActivePlan(plan);
         setTitle(plan.title);
@@ -96,7 +70,7 @@ export default function PlansPage() {
     } catch {
       // network error
     }
-  }, [fetchPlans]);
+  }, [mutatePlans]);
 
   const handleDelete = useCallback(
     async (id: string) => {
@@ -107,12 +81,12 @@ export default function PlansPage() {
           setActivePlan(null);
           setTitle("");
         }
-        await fetchPlans();
+        await mutatePlans();
       } catch {
         // network error
       }
     },
-    [activeId, fetchPlans]
+    [activeId, mutatePlans]
   );
 
   const handleContentChange = useCallback(
@@ -124,12 +98,12 @@ export default function PlansPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: activeId, content }),
         });
-        fetchPlans();
+        mutatePlans();
       } catch {
         // network error
       }
     },
-    [activeId, fetchPlans]
+    [activeId, mutatePlans]
   );
 
   const handleTitleChange = useCallback(
@@ -144,19 +118,19 @@ export default function PlansPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ id: activeId, title: newTitle }),
           });
-          fetchPlans();
+          mutatePlans();
         } catch {
           // network error
         }
       }, 1000);
     },
-    [activeId, fetchPlans]
+    [activeId, mutatePlans]
   );
 
   const handleReorder = useCallback(
     async (ids: string[]) => {
       const reordered = ids.map((id) => plans.find((p) => p.id === id)!);
-      setPlans(reordered);
+      mutatePlans(reordered, false);
       try {
         await fetch("/api/plans", {
           method: "PUT",
@@ -164,10 +138,10 @@ export default function PlansPage() {
           body: JSON.stringify({ action: "reorder", ids }),
         });
       } catch {
-        fetchPlans();
+        mutatePlans();
       }
     },
-    [plans, fetchPlans]
+    [plans, mutatePlans]
   );
 
   const handleMovePlan = useCallback(
@@ -178,12 +152,12 @@ export default function PlansPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: planId, folderId }),
         });
-        await fetchPlans();
+        await mutatePlans();
       } catch {
         // network error
       }
     },
-    [fetchPlans]
+    [mutatePlans]
   );
 
   const handleCreateFolder = useCallback(async () => {
@@ -193,11 +167,11 @@ export default function PlansPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: "New Folder" }),
       });
-      await fetchFolders();
+      await mutateFolders();
     } catch {
       // network error
     }
-  }, [fetchFolders]);
+  }, [mutateFolders]);
 
   const handleRenameFolder = useCallback(
     async (id: string, name: string) => {
@@ -207,18 +181,18 @@ export default function PlansPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id, name }),
         });
-        await fetchFolders();
+        await mutateFolders();
       } catch {
         // network error
       }
     },
-    [fetchFolders]
+    [mutateFolders]
   );
 
   const handleReorderFolders = useCallback(
     async (ids: string[]) => {
       const reordered = ids.map((id) => folders.find((f) => f.id === id)!).filter(Boolean);
-      setFolders(reordered);
+      mutateFolders({ folders: reordered }, false);
       try {
         await fetch("/api/plans/folders", {
           method: "PUT",
@@ -226,23 +200,23 @@ export default function PlansPage() {
           body: JSON.stringify({ action: "reorder", ids }),
         });
       } catch {
-        fetchFolders();
+        mutateFolders();
       }
     },
-    [folders, fetchFolders]
+    [folders, mutateFolders]
   );
 
   const handleDeleteFolder = useCallback(
     async (id: string) => {
       try {
         await fetch(`/api/plans/folders?id=${id}`, { method: "DELETE" });
-        await fetchFolders();
-        await fetchPlans();
+        await mutateFolders();
+        await mutatePlans();
       } catch {
         // network error
       }
     },
-    [fetchFolders, fetchPlans]
+    [mutateFolders, mutatePlans]
   );
 
   useEffect(() => {

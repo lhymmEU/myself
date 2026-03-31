@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Check, ChevronRight } from "lucide-react";
 import { parseMindMapTodos } from "@/lib/modules/todos/parse-mind-map";
@@ -8,38 +8,30 @@ import { completeTodo } from "@/lib/modules/todos/complete-todo";
 import type { MindMapTodo } from "@/lib/modules/todos/types";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/context";
+import { useTodoSource } from "@/lib/swr/hooks";
 
 export function TodoPreview() {
   const t = useT();
-  const [todos, setTodos] = useState<MindMapTodo[]>([]);
+  const { data: scene } = useTodoSource();
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    fetch("/api/mind-map?todoSource=true")
-      .then((r) => {
-        if (!r.ok) return null;
-        return r.json();
-      })
-      .then((scene) => {
-        if (!scene) return;
-        let elements: unknown[] = [];
-        try {
-          elements = JSON.parse(scene.elements);
-        } catch {
-          /* empty */
-        }
-        const parsed = parseMindMapTodos(
-          elements as Parameters<typeof parseMindMapTodos>[0]
-        );
-        setTodos(parsed.filter((td) => td.isUrgent));
-      })
-      .catch(() => {});
-  }, []);
+  const todos: MindMapTodo[] = useMemo(() => {
+    if (!scene) return [];
+    let elements: unknown[] = [];
+    try {
+      elements = JSON.parse(scene.elements);
+    } catch {
+      return [];
+    }
+    const parsed = parseMindMapTodos(elements as Parameters<typeof parseMindMapTodos>[0]);
+    return parsed.filter((td) => td.isUrgent && !completedIds.has(td.id));
+  }, [scene, completedIds]);
 
   const handleComplete = useCallback(async (todoId: string) => {
     const success = await completeTodo(todoId);
     if (success) {
       setTimeout(() => {
-        setTodos((prev) => prev.filter((td) => td.id !== todoId));
+        setCompletedIds((prev) => new Set(prev).add(todoId));
       }, 1000);
     }
   }, []);

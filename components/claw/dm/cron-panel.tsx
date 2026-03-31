@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
+import { useClawCronJobs, useClawChannels } from "@/lib/swr/hooks";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { TimePicker } from "@/components/ui/time-picker";
 import { TimezonePicker } from "@/components/ui/timezone-picker";
@@ -146,69 +147,16 @@ function describeCron(expr: string): string {
 
 export function CronPanel({ connectionId }: CronPanelProps) {
   const t = useT();
-  const [jobs, setJobs] = useState<CronJob[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { data: cronData, isLoading: loading, isValidating, error: cronError, mutate: mutateCron } = useClawCronJobs(connectionId);
+  const { data: channelsData } = useClawChannels(connectionId);
+  const jobs: CronJob[] = cronData?.jobs ?? [];
+  const availableChannels: string[] = channelsData ?? ["whatsapp", "telegram", "discord", "imessage", "slack", "qqbot"];
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("current");
-  const [availableChannels, setAvailableChannels] = useState<string[]>([]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
-
-  const fetchJobs = useCallback(async () => {
-    if (!connectionId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(
-        `/api/claw/cron?connectionId=${encodeURIComponent(connectionId)}`
-      );
-      const data = await res.json();
-      if (data.error) {
-        setError(data.error);
-      } else {
-        setJobs(data.jobs ?? []);
-      }
-    } catch {
-      setError(t("claw.dm.cronPanel.failedLoad"));
-    } finally {
-      setLoading(false);
-    }
-  }, [connectionId, t]);
-
-  const fetchChannels = useCallback(async () => {
-    if (!connectionId) return;
-    try {
-      const res = await fetch("/api/claw/command", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ connectionId, command: "channels-list" }),
-      });
-      const data = await res.json();
-      const output = data.stdout || "";
-      const lines = output.split("\n").map((l: string) => l.trim()).filter(Boolean);
-      const channels: string[] = [];
-      for (const line of lines) {
-        const match = line.match(/^[-•*]?\s*(\S+)/);
-        if (match) channels.push(match[1].toLowerCase());
-      }
-      if (channels.length > 0) {
-        setAvailableChannels(channels);
-      } else {
-        setAvailableChannels(["whatsapp", "telegram", "discord", "imessage", "slack", "qqbot"]);
-      }
-    } catch {
-      setAvailableChannels(["whatsapp", "telegram", "discord", "imessage", "slack", "qqbot"]);
-    }
-  }, [connectionId]);
-
-  useEffect(() => {
-    if (connectionId) {
-      fetchJobs();
-      fetchChannels();
-    }
-  }, [connectionId, fetchJobs, fetchChannels]);
 
   const handleSave = useCallback(async () => {
     const finalExpression = buildExpression(form);
@@ -249,13 +197,13 @@ export function CronPanel({ connectionId }: CronPanelProps) {
       setForm(EMPTY_FORM);
       setEditingId(null);
       setActiveTab("current");
-      await fetchJobs();
+      await mutateCron();
     } catch {
       setError(t("claw.dm.cronPanel.failedSave"));
     } finally {
       setSaving(false);
     }
-  }, [form, editingId, connectionId, fetchJobs, t]);
+  }, [form, editingId, connectionId, mutateCron, t]);
 
   const handleEdit = (job: CronJob) => {
     setEditingId(job.id);
@@ -277,7 +225,7 @@ export function CronPanel({ connectionId }: CronPanelProps) {
         `/api/claw/cron/${id}?connectionId=${encodeURIComponent(connectionId)}`,
         { method: "DELETE" }
       );
-      await fetchJobs();
+      await mutateCron();
     } catch {
       setError(t("claw.dm.cronPanel.failedDelete"));
     }
@@ -291,7 +239,7 @@ export function CronPanel({ connectionId }: CronPanelProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enabled: !job.enabled, connectionId }),
       });
-      await fetchJobs();
+      await mutateCron();
     } catch {
       setError(t("claw.dm.cronPanel.failedSave"));
     }
@@ -313,18 +261,18 @@ export function CronPanel({ connectionId }: CronPanelProps) {
         <Button
           size="sm"
           variant="ghost"
-          onClick={fetchJobs}
+          onClick={() => mutateCron()}
           disabled={loading || !connectionId}
           className="h-6 w-6 p-0"
         >
-          <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
+          <RefreshCw className={`h-3 w-3 ${loading || isValidating ? "animate-spin" : ""}`} />
         </Button>
       </div>
 
-      {error && (
+      {(error || cronError) && (
         <div className="mx-2 mt-2 flex items-center gap-2 text-xs text-red-400 bg-red-950/20 rounded-md px-2 py-1.5">
           <AlertTriangle className="h-3 w-3 shrink-0" />
-          <span className="flex-1 break-words">{error}</span>
+          <span className="flex-1 break-words">{error || cronData?.error || t("claw.dm.cronPanel.failedLoad")}</span>
         </div>
       )}
 

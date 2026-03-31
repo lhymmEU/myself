@@ -24,6 +24,7 @@ import {
   Unplug,
 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
+import { useAssignedJobs, useCharacterAppearance } from "@/lib/swr/hooks";
 import dynamic from "next/dynamic";
 import type { LobsterColors } from "./vrm-viewer";
 
@@ -69,19 +70,35 @@ const COLOR_LABELS: Record<keyof LobsterColors, string> = {
 
 export function ClawPanel() {
   const t = useT();
+  const { data: jobsData, mutate: mutateJobs } = useAssignedJobs();
+  const { data: appearanceData } = useCharacterAppearance("lobster");
+  const jobs: AssignedJob[] = jobsData?.jobs ?? [];
   const [clawSkills, setClawSkills] = useState<InstalledSkill[]>([]);
-  const [jobs, setJobs] = useState<AssignedJob[]>([]);
   const [addingJob, setAddingJob] = useState(false);
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [jobForm, setJobForm] = useState({ name: "", description: "" });
-  const [lobsterColors, setLobsterColors] = useState<Required<LobsterColors>>(DEFAULT_LOBSTER_COLORS);
   const [clawConnected, setClawConnected] = useState(false);
+
+  const lobsterColorsFromApi: Required<LobsterColors> = appearanceData?.appearance
+    ? {
+        shell: appearanceData.appearance.shellColor ?? DEFAULT_LOBSTER_COLORS.shell,
+        shellDark: appearanceData.appearance.shellDarkColor ?? DEFAULT_LOBSTER_COLORS.shellDark,
+        belly: appearanceData.appearance.bellyColor ?? DEFAULT_LOBSTER_COLORS.belly,
+        eye: appearanceData.appearance.eyeColor ?? DEFAULT_LOBSTER_COLORS.eye,
+      }
+    : DEFAULT_LOBSTER_COLORS;
+  const [lobsterColors, setLobsterColors] = useState<Required<LobsterColors>>(DEFAULT_LOBSTER_COLORS);
+  const [colorsInitialized, setColorsInitialized] = useState(false);
+  if (appearanceData && !colorsInitialized) {
+    setLobsterColors(lobsterColorsFromApi);
+    setColorsInitialized(true);
+  }
 
   const checkConnection = useCallback(async () => {
     try {
       const connRes = await fetch("/api/claw/connections");
       const connData = await connRes.json();
-      const connections = connData.connections ?? [];
+      const connections = Array.isArray(connData) ? connData : (connData.connections ?? []);
       if (connections.length === 0) {
         setClawConnected(false);
         return null;
@@ -123,38 +140,9 @@ export function ClawPanel() {
     }
   }, [checkConnection]);
 
-  const fetchJobs = useCallback(async () => {
-    try {
-      const res = await fetch("/api/dashboard/jobs");
-      const data = await res.json();
-      setJobs(data.jobs ?? []);
-    } catch {
-      // silently fail
-    }
-  }, []);
-
-  const fetchAppearance = useCallback(async () => {
-    try {
-      const res = await fetch("/api/dashboard/appearance?type=lobster");
-      const data = await res.json();
-      if (data.appearance) {
-        setLobsterColors({
-          shell: data.appearance.shellColor ?? DEFAULT_LOBSTER_COLORS.shell,
-          shellDark: data.appearance.shellDarkColor ?? DEFAULT_LOBSTER_COLORS.shellDark,
-          belly: data.appearance.bellyColor ?? DEFAULT_LOBSTER_COLORS.belly,
-          eye: data.appearance.eyeColor ?? DEFAULT_LOBSTER_COLORS.eye,
-        });
-      }
-    } catch {
-      // silently fail
-    }
-  }, []);
-
   useEffect(() => {
     fetchClawSkills();
-    fetchJobs();
-    fetchAppearance();
-  }, [fetchClawSkills, fetchJobs, fetchAppearance]);
+  }, [fetchClawSkills]);
 
   const saveAppearance = useCallback(async (colors: Required<LobsterColors>) => {
     try {
@@ -203,7 +191,7 @@ export function ClawPanel() {
       setEditingJobId(null);
       setAddingJob(false);
       setJobForm({ name: "", description: "" });
-      await fetchJobs();
+      await mutateJobs();
     } catch {
       // silently fail
     }
@@ -216,7 +204,7 @@ export function ClawPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "delete", id }),
       });
-      await fetchJobs();
+      await mutateJobs();
     } catch {
       // silently fail
     }

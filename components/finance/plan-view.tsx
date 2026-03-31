@@ -1,49 +1,23 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/lib/i18n/context";
+import { useFinanceMarkets } from "@/lib/swr/hooks";
 import { PolymarketFeed } from "./polymarket-feed";
 import { NewsPanel } from "./events-panel";
 import { MarketSearch } from "./market-search";
 import { MarketDetail } from "./market-detail";
 import type { PolymarketMarket } from "@/lib/modules/finance/polymarket";
 
-const REFRESH_INTERVAL = 60_000;
-
 export function PlanView() {
   const t = useT();
-  const [markets, setMarkets] = useState<PolymarketMarket[]>([]);
+  const { data, isLoading, isValidating, mutate } = useFinanceMarkets();
+  const markets: PolymarketMarket[] = data?.markets ?? [];
   const [selectedMarket, setSelectedMarket] = useState<PolymarketMarket | null>(null);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-
-  const fetchData = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      const res = await fetch("/api/finance/market?action=list&limit=20");
-      if (res.ok) {
-        const data = await res.json();
-        setMarkets(data.markets ?? []);
-      }
-    } catch {
-      // silently fail
-    }
-    setRefreshing(false);
-    setInitialLoading(false);
-    setLastUpdated(new Date());
-  }, []);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch + polling
-    fetchData();
-    const interval = setInterval(fetchData, REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchData]);
-
-  const loading = initialLoading;
+  const refreshing = isValidating;
+  const loading = isLoading;
 
   return (
     <div className="space-y-0">
@@ -53,7 +27,7 @@ export function PlanView() {
             {t("finance.planView.header")}
           </span>
           <span className="text-amber-700 font-mono text-[10px]">
-            {lastUpdated ? lastUpdated.toLocaleTimeString() : "--:--:--"}
+            {isValidating ? t("common.loading") : ""}
           </span>
           {refreshing && (
             <RefreshCw className="size-3 text-amber-700 animate-spin" />
@@ -62,7 +36,7 @@ export function PlanView() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={fetchData}
+          onClick={() => mutate()}
           disabled={refreshing}
           className="text-amber-500 hover:text-amber-300 hover:bg-amber-900/30 h-6 px-2"
         >

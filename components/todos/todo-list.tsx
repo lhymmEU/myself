@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -9,58 +9,39 @@ import { parseMindMapTodos } from "@/lib/modules/todos/parse-mind-map";
 import { completeTodo } from "@/lib/modules/todos/complete-todo";
 import type { MindMapTodo } from "@/lib/modules/todos/types";
 import { useT } from "@/lib/i18n/context";
+import { useTodoSource } from "@/lib/swr/hooks";
 
 export function TodoList() {
   const t = useT();
-  const [todos, setTodos] = useState<MindMapTodo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: scene, isLoading: loading, error: fetchError } = useTodoSource();
   const [urgentOnly, setUrgentOnly] = useState(false);
 
-  const fetchTodos = useCallback(async () => {
+  const todos: MindMapTodo[] = useMemo(() => {
+    if (!scene || fetchError) return [];
+    let elements: unknown[] = [];
     try {
-      const res = await fetch("/api/mind-map?todoSource=true");
-      if (!res.ok) {
-        setTodos([]);
-        setError(null);
-        return;
-      }
-      const scene = await res.json();
-
-      let elements: unknown[] = [];
-      try {
-        elements = JSON.parse(scene.elements);
-      } catch {
-        /* empty scene */
-      }
-
-      const parsed = parseMindMapTodos(
-        elements as Parameters<typeof parseMindMapTodos>[0]
-      );
-      setTodos(parsed);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("todos.failedLoadTodos"));
-    } finally {
-      setLoading(false);
+      elements = JSON.parse(scene.elements);
+    } catch {
+      return [];
     }
-  }, [t]);
+    return parseMindMapTodos(elements as Parameters<typeof parseMindMapTodos>[0]);
+  }, [scene, fetchError]);
 
-  useEffect(() => {
-    fetchTodos();
-  }, [fetchTodos]);
+  const error = fetchError ? (fetchError instanceof Error ? fetchError.message : t("todos.failedLoadTodos")) : null;
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
 
   const handleComplete = useCallback(async (todoId: string) => {
     const success = await completeTodo(todoId);
     if (success) {
       setTimeout(() => {
-        setTodos((prev) => prev.filter((td) => td.id !== todoId));
+        setCompletedIds((prev) => new Set(prev).add(todoId));
       }, 1000);
     }
   }, []);
 
-  const filtered = urgentOnly ? todos.filter((td) => td.isUrgent) : todos;
-  const urgentCount = todos.filter((td) => td.isUrgent).length;
+  const visibleTodos = todos.filter((td) => !completedIds.has(td.id));
+  const filtered = urgentOnly ? visibleTodos.filter((td) => td.isUrgent) : visibleTodos;
+  const urgentCount = visibleTodos.filter((td) => td.isUrgent).length;
 
   if (loading) {
     return (
@@ -82,7 +63,7 @@ export function TodoList() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {todos.length} {t("todos.derivedFromMindMap")}
+          {visibleTodos.length} {t("todos.derivedFromMindMap")}
           {urgentCount > 0 && (
             <span className="ml-2 inline-flex items-center gap-1 text-red-500">
               <AlertTriangle className="h-3.5 w-3.5" />
@@ -110,7 +91,7 @@ export function TodoList() {
 
       {filtered.length === 0 ? (
         <div className="text-center py-8 text-sm text-muted-foreground">
-          {todos.length === 0
+          {visibleTodos.length === 0
             ? t("todos.noTodos")
             : t("todos.noUrgentTodos")}
         </div>
