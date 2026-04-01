@@ -642,6 +642,9 @@ export const en = {
       customize: "Customize",
       customizeTitle: "Customize Dashboard",
       requiresKey: "Requires API key",
+      keysRequired: "API Key Required",
+      keysRequiredDesc: "This module needs a provider API key to fetch data. Register for a free key and configure it in Settings.",
+      goToSettings: "Go to Settings to configure API keys",
     },
     personal: {
       tabs: {

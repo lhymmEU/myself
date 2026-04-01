@@ -1,89 +1,126 @@
+[中文版](./README.zh-CN.md)
+
 # Life Dashboard
 
-A modular, agent-ready personal life management dashboard. Manage every aspect of your life from a single interface.
+A modular, agent-ready personal life management dashboard. Manage every aspect of your life from a single interface — completely local, completely yours.
 
 ## Features
 
 - **Mind Map** — Interactive visual map of your life. Add categories (Health, Career, Finance, etc.) and items. Drag, connect, and organize freely.
-- **Smart Todos** — Automaticly created from your mind map, no manual work needed.
-- **Finance Terminal** — Market data powered by [OpenBB](https://github.com/OpenBB-finance/OpenBB). Stocks, crypto, economic indicators, and financial news.
+- **Smart Todos** — Automatically created from your mind map, no manual work needed.
+- **Finance Terminal** — Personal finance tracker + market data powered by [OpenBB](https://github.com/OpenBB-finance/OpenBB). Stocks, crypto, economic indicators, and financial news.
 - **Plans** — Rich text editor for jotting down ideas, plans, and notes.
-- **Invoice** - Bill your clients with ease.
-- **Vault** - Manage your secrets on your local device.
+- **Claw** — Built-in AI assistant that understands your dashboard data.
+- **Invoice** — Bill your clients with ease.
+- **Vault** — Manage your secrets on your local device.
 - **Settings** — Configure API keys, preferences, and appearance from the UI. No `.env` files needed.
 
-## Quick Start
+---
 
-### Prerequisites
+## Setup Guide
 
-- **Node.js v18+** — Download from [nodejs.org](https://nodejs.org/) (choose the LTS version).
-- **Python 3.9–3.12** *(optional, for finance data)* — Needed to run the OpenBB market data sidecar.
+### Step 1 — Install Prerequisites
 
-### Option A: One-click setup (recommended)
+You need two things installed on your machine before you begin:
 
-**macOS / Linux:**
+| Software | Required? | Version | Download |
+|----------|-----------|---------|----------|
+| **Node.js** | Yes | v18 or later | [nodejs.org](https://nodejs.org/) — choose the **LTS** version |
+| **Git** | Yes | any | [git-scm.com](https://git-scm.com/) |
+| **Python** | Optional | 3.9–3.12 | [python.org](https://www.python.org/) — only needed for finance market data |
+
+**How to check if they're installed:**
+
+```bash
+node -v     # should print v18.x.x or higher
+git --version
+```
+
+### Step 2 — Download the Project
+
+Open a terminal (Terminal on Mac, Command Prompt or PowerShell on Windows) and run:
 
 ```bash
 git clone https://github.com/lhymmEU/myself.git
 cd myself
+```
+
+### Step 3 — Install & Build
+
+**Option A: One-click setup (recommended)**
+
+macOS / Linux:
+```bash
 ./setup.sh
 ```
 
-**Windows:**
-
+Windows:
 ```
-git clone https://github.com/lhymmEU/myself.git
-cd myself
 setup.bat
 ```
 
-The setup script checks your Node.js installation, installs all dependencies, and builds the app.
+The script checks your environment, installs all dependencies, and builds the app.
 
-### Option B: Manual setup
+**Option B: Manual**
 
 ```bash
-git clone https://github.com/lhymmEU/myself.git
-cd myself
 npm install
 ```
 
-### Running the dashboard
+### Step 4 — Start the Dashboard
 
 ```bash
 npm run dev
 ```
 
-Then open [http://localhost:3000](http://localhost:3000) in your browser. The database is created automatically on first launch — no configuration required.
+Open [http://localhost:3000](http://localhost:3000) in your browser. That's it — the database is created automatically on first launch.
 
-### Setting up finance data (optional)
+### Step 5 — Finance Market Data (optional)
 
-The finance feature uses [OpenBB](https://github.com/OpenBB-finance/OpenBB) as a Python sidecar for market data. You only need to install it once:
+The finance page has two modes: **Personal Finance** (works immediately, no setup) and **Market Intelligence** (needs OpenBB).
+
+#### 5a. Install OpenBB
 
 ```bash
 pip3 install "openbb[all]"
 ```
 
-Then start the OpenBB API server in a separate terminal whenever you want finance data:
+#### 5b. Start the OpenBB API
+
+In a **separate terminal**, run:
 
 ```bash
 openbb-api --host 127.0.0.1 --port 6900
 ```
 
+Keep this terminal open while you use the finance features.
+
+#### 5c. Configure Provider API Keys
+
+Some market data modules require free API keys from data providers. Without the key, the module shows a message telling you which key is needed.
+
+Go to **Settings → Finance Data Providers** to enter your keys. Each provider has a registration link right in the settings panel.
+
+| Provider | What it unlocks | Free tier? |
+|----------|----------------|------------|
+| [BizToc](https://api.biztoc.com) | World news feed | Yes |
+| [Benzinga](https://www.benzinga.com/apis) | Company news | Yes |
+| [Financial Modeling Prep](https://financialmodelingprep.com) | ETF data, equity screener | Yes |
+| [Tradier](https://developer.tradier.com) | Options chains | Yes (sandbox) |
+| [Polygon.io](https://polygon.io) | Additional market data | Yes |
+| [Alpha Vantage](https://www.alphavantage.co) | Stock & forex data | Yes |
+| [FRED](https://fred.stlouisfed.org/docs/api/api_key.html) | Federal Reserve economic data | Yes |
+
+Modules that use free providers (Yahoo Finance, SEC, Federal Reserve) work without any API keys.
+
+#### Summary: what's running
+
 | Process | Command | Port | Purpose |
 |---------|---------|------|---------|
 | Next.js | `npm run dev` | 3000 | Dashboard |
-| OpenBB | `openbb-api --host 127.0.0.1 --port 6900` | 6900 | Market data API |
+| OpenBB *(optional)* | `openbb-api --host 127.0.0.1 --port 6900` | 6900 | Market data API |
 
-The OpenBB sidecar is **optional** — the rest of the dashboard works without it. If it's not running, the finance page shows setup instructions.
-
-## Configuration
-
-All configuration is managed through the in-app Settings page:
-
-- **OpenRouter API Key** — Required for AI-powered todo generation. Get one at [openrouter.ai](https://openrouter.ai).
-- **LLM Model** — Choose from Claude, GPT-4o, Gemini, Llama, etc.
-- **OpenBB API URL** — Defaults to `http://localhost:6900`. Use the "Test Connection" button to verify.
-- **Theme, accent color** — All configurable from the UI.
+---
 
 ## Agent API
 
@@ -136,4 +173,4 @@ See [ROADMAP.md](./ROADMAP.md) for planned features and upcoming releases.
 
 ## License
 
-MIT
+[AGPL-3.0](./LICENSE)

@@ -221,6 +221,7 @@ export const OPENBB_MODULES: OpenBBModule[] = [
     descriptionKey: "finance.modules.desc.newsWorld",
     defaultEnabled: true,
     endpoints: ["news/world"],
+    requiredProviders: ["biztoc_api_key"],
   },
   {
     id: "news-company",
@@ -229,6 +230,7 @@ export const OPENBB_MODULES: OpenBBModule[] = [
     descriptionKey: "finance.modules.desc.newsCompany",
     defaultEnabled: true,
     endpoints: ["news/company"],
+    requiredProviders: ["benzinga_api_key"],
   },
 
   // Technical

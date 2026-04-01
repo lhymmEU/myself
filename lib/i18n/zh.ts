@@ -643,6 +643,9 @@ export const zh: Translations = {
       customize: "自定义",
       customizeTitle: "自定义仪表盘",
       requiresKey: "需要 API 密钥",
+      keysRequired: "需要 API 密钥",
+      keysRequiredDesc: "此模块需要数据提供商 API 密钥才能获取数据。请注册免费密钥并在设置中配置。",
+      goToSettings: "前往设置配置 API 密钥",
     },
     personal: {
       tabs: {

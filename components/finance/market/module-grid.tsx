@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, lazy, Suspense } from "react";
-import { Loader2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import useSWR from "swr";
+import { swrFetcher } from "@/lib/swr/config";
 import { ModuleCard } from "./module-card";
 import { CategoryNav } from "./category-nav";
 import { OPENBB_MODULES, type OpenBBCategory } from "@/lib/modules/finance/openbb-modules";
@@ -59,6 +60,12 @@ interface ModuleGridProps {
 export function ModuleGrid({ enabledModules, moduleOrder }: ModuleGridProps) {
   const [selectedCategory, setSelectedCategory] = useState<OpenBBCategory | "all">("all");
 
+  const { data: providerStatus } = useSWR<Record<string, boolean>>(
+    "/api/finance/openbb/provider-status",
+    swrFetcher,
+    { dedupingInterval: 60_000 },
+  );
+
   const sortedModules = useMemo(() => {
     const enabledSet = new Set(enabledModules);
     const ordered = moduleOrder.filter((id) => enabledSet.has(id));
@@ -105,13 +112,27 @@ export function ModuleGrid({ enabledModules, moduleOrder }: ModuleGridProps) {
           if (rendered.has(widgetKey)) return null;
           rendered.add(widgetKey);
 
+          let missingProviders: string[] | undefined;
+          if (mod.requiredProviders && mod.requiredProviders.length > 0) {
+            if (!providerStatus) {
+              missingProviders = mod.requiredProviders;
+            } else {
+              missingProviders = mod.requiredProviders.filter(
+                (key) => !providerStatus[key],
+              );
+            }
+          }
+
+          const hasMissingKeys = missingProviders && missingProviders.length > 0;
+
           return (
             <ModuleCard
               key={moduleId}
               moduleId={moduleId}
               labelKey={mod.labelKey}
+              missingProviders={missingProviders}
             >
-              {widgetFn()}
+              {hasMissingKeys ? null : widgetFn()}
             </ModuleCard>
           );
         })}
