@@ -256,5 +256,57 @@ export function initDatabase() {
     );
   `);
 
+  // Personal finance tables
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS finance_accounts (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'checking' CHECK(type IN ('checking','savings','credit','investment','cash')),
+      currency TEXT NOT NULL DEFAULT 'USD',
+      balance REAL NOT NULL DEFAULT 0,
+      color TEXT NOT NULL DEFAULT '#6366f1',
+      icon TEXT NOT NULL DEFAULT 'wallet',
+      created_at INTEGER NOT NULL
+    );
+  `);
+
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS finance_transactions (
+      id TEXT PRIMARY KEY,
+      account_id TEXT NOT NULL REFERENCES finance_accounts(id) ON DELETE CASCADE,
+      type TEXT NOT NULL DEFAULT 'expense' CHECK(type IN ('income','expense','transfer')),
+      category TEXT NOT NULL DEFAULT 'other',
+      amount REAL NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      date TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      recurring INTEGER NOT NULL DEFAULT 0,
+      recurring_interval TEXT,
+      created_at INTEGER NOT NULL
+    );
+  `);
+
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS finance_budgets (
+      id TEXT PRIMARY KEY,
+      category TEXT NOT NULL,
+      monthly_limit REAL NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      created_at INTEGER NOT NULL
+    );
+  `);
+
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS finance_investments (
+      id TEXT PRIMARY KEY,
+      account_id TEXT NOT NULL REFERENCES finance_accounts(id) ON DELETE CASCADE,
+      symbol TEXT NOT NULL,
+      shares REAL NOT NULL DEFAULT 0,
+      avg_cost_basis REAL NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      created_at INTEGER NOT NULL
+    );
+  `);
+
   initialized = true;
 }

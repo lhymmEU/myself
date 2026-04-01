@@ -49,16 +49,33 @@ async function gatherModuleContext(): Promise<Record<string, unknown>> {
       }
       case "finance": {
         try {
-          const news = await fetchOpenBB<{ results: Array<{ title: string; date: string; url: string }> }>(
+          const newsPromise = fetchOpenBB<{ results: Array<{ title: string; date: string; url: string }> }>(
             "news/world",
             { limit: "5" },
-          );
+          ).catch(() => null);
+
+          const ratesPromise = fetchOpenBB<{ results: Array<Record<string, number | string>> }>(
+            "fixedincome/government/treasury_rates",
+            { provider: "federal_reserve" },
+          ).catch(() => null);
+
+          const [news, rates] = await Promise.all([newsPromise, ratesPromise]);
+
+          const latestRate = rates?.results?.length ? rates.results[rates.results.length - 1] : null;
+
           ctx.finance = {
             source: "OpenBB",
-            recentNews: news.results?.slice(0, 5).map((a) => ({
+            recentNews: news?.results?.slice(0, 5).map((a) => ({
               title: a.title,
               date: a.date,
             })) ?? [],
+            treasuryRates: latestRate ? {
+              "1M": latestRate.month_1,
+              "3M": latestRate.month_3,
+              "1Y": latestRate.year_1,
+              "10Y": latestRate.year_10,
+              "30Y": latestRate.year_30,
+            } : null,
           };
         } catch {
           ctx.finance = { source: "OpenBB", status: "unavailable" };

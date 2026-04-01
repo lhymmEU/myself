@@ -11,6 +11,29 @@ export const SETTING_DEFAULTS: Record<string, string> = {
   claw_access_wishlist: "false",
   claw_access_mindmap: "false",
   claw_access_skills: "false",
+
+  fmp_api_key: "",
+  polygon_api_key: "",
+  benzinga_api_key: "",
+  fred_api_key: "",
+  nasdaq_api_key: "",
+  intrinio_api_key: "",
+  alpha_vantage_api_key: "",
+  biztoc_api_key: "",
+  tradier_api_key: "",
+  tradier_account_type: "sandbox",
+  tradingeconomics_api_key: "",
+  tiingo_token: "",
+
+  finance_default_mode: "market",
+  finance_enabled_modules: JSON.stringify([
+    "market-indices", "treasury-rates", "equity", "crypto",
+    "currency-snapshots", "economy-indicators", "news-world", "news-company",
+  ]),
+  finance_module_order: JSON.stringify([
+    "market-indices", "treasury-rates", "equity", "crypto",
+    "currency-snapshots", "economy-indicators", "news-world", "news-company",
+  ]),
 };
 
 export const CLAW_ACCESS_MODULES = [

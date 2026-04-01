@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { LlmConfig } from "./llm-config";
 import { OpenBBConfig } from "./openbb-config";
+import { FinanceProvidersConfig } from "./finance-providers-config";
+import { FinanceDisplayConfig } from "./finance-display-config";
 import { AppearanceConfig } from "./appearance-config";
 import { InvoiceConfig } from "./invoice-config";
 import { ClawAccessConfig } from "./claw-access-config";
@@ -74,6 +76,10 @@ export function SettingsForm() {
       <LlmConfig settings={settings} onUpdate={handleUpdate} />
       <Separator />
       <OpenBBConfig settings={settings} onUpdate={handleUpdate} />
+      <Separator />
+      <FinanceProvidersConfig settings={settings} onUpdate={handleUpdate} />
+      <Separator />
+      <FinanceDisplayConfig settings={settings} onUpdate={handleUpdate} />
       <Separator />
       <InvoiceConfig settings={settings} onUpdate={handleUpdateSilent} />
       <Separator />
