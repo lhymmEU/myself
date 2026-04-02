@@ -2,11 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
-import { Separator } from "@/components/ui/separator";
-import { LlmConfig } from "./llm-config";
 import { OpenBBConfig } from "./openbb-config";
 import { FinanceProvidersConfig } from "./finance-providers-config";
-import { FinanceDisplayConfig } from "./finance-display-config";
 import { AppearanceConfig } from "./appearance-config";
 import { InvoiceConfig } from "./invoice-config";
 import { ClawAccessConfig } from "./claw-access-config";
@@ -72,21 +69,16 @@ export function SettingsForm() {
   }
 
   return (
-    <div className="space-y-6">
-      <LlmConfig settings={settings} onUpdate={handleUpdate} />
-      <Separator />
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="md:col-span-2">
+        <FinanceProvidersConfig settings={settings} onUpdate={handleUpdate} />
+      </div>
       <OpenBBConfig settings={settings} onUpdate={handleUpdate} />
-      <Separator />
-      <FinanceProvidersConfig settings={settings} onUpdate={handleUpdate} />
-      <Separator />
-      <FinanceDisplayConfig settings={settings} onUpdate={handleUpdate} />
-      <Separator />
-      <InvoiceConfig settings={settings} onUpdate={handleUpdateSilent} />
-      <Separator />
       <AppearanceConfig settings={settings} onUpdate={handleUpdate} />
-      <Separator />
+      <div className="md:col-span-2">
+        <InvoiceConfig settings={settings} onUpdate={handleUpdateSilent} />
+      </div>
       <ClawAccessConfig settings={settings} onUpdate={handleUpdate} />
-      <Separator />
       <DataManagement />
     </div>
   );

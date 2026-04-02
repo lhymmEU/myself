@@ -17,12 +17,12 @@ export function ClawAccessConfig({ settings, onUpdate }: ClawAccessConfigProps) 
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="text-left">
         <CardTitle className="flex items-center gap-2">
           <Shell className="size-5" />
           {t("settings.clawAccess.title")}
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground text-left">
           {t("settings.clawAccess.description")}
         </p>
       </CardHeader>
@@ -32,7 +32,7 @@ export function ClawAccessConfig({ settings, onUpdate }: ClawAccessConfigProps) 
           const enabled = settings[key] === "true";
           return (
             <div key={mod} className="flex items-center justify-between">
-              <Label htmlFor={key} className="flex flex-col gap-0.5">
+              <Label htmlFor={key} className="flex flex-col gap-0.5 items-start">
                 <span>{t(`settings.clawAccess.modules.${mod}`)}</span>
                 <span className="text-xs font-normal text-muted-foreground">
                   {t(`settings.clawAccess.hints.${mod}`)}
