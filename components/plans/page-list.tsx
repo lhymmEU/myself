@@ -199,7 +199,7 @@ function FolderSection({
   isSearching: boolean;
   isDragOverThis: boolean;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(folder.name);
 

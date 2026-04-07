@@ -869,6 +869,7 @@ export const zh: Translations = {
     mAgo: "分钟前",
     hAgo: "小时前",
     dAgo: "天前",
+    charsSelected: "个字符已选中",
   },
 
   vault: {

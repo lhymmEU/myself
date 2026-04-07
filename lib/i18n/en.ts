@@ -869,6 +869,7 @@ export const en = {
     mAgo: "m ago",
     hAgo: "h ago",
     dAgo: "d ago",
+    charsSelected: "chars selected",
   },
 
   vault: {
