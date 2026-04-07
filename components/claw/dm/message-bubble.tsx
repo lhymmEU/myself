@@ -31,14 +31,14 @@ export function MessageBubble({
     message.toolCalls?.length
   ) {
     return (
-      <div className="flex gap-2.5 flex-row">
+      <div className="flex gap-2.5 flex-row min-w-0">
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
           <Bot className="h-3.5 w-3.5" />
         </div>
-        <div className="max-w-[80%] space-y-2">
+        <div className="max-w-[80%] space-y-2 min-w-0">
           {message.content && (
-            <div className="rounded-2xl rounded-tl-md bg-muted px-4 py-2.5 text-sm leading-relaxed text-foreground">
-              <p className="whitespace-pre-wrap break-words">
+            <div className="rounded-2xl rounded-tl-md bg-muted px-4 py-2.5 text-sm leading-relaxed text-foreground max-h-[60vh] overflow-y-auto overflow-x-hidden">
+              <p className="whitespace-pre-wrap break-words" style={{ overflowWrap: "anywhere" }}>
                 {message.content}
               </p>
             </div>
@@ -65,7 +65,7 @@ export function MessageBubble({
 
   return (
     <div
-      className={`flex gap-2.5 ${isUser ? "flex-row-reverse" : "flex-row"}`}
+      className={`flex gap-2.5 min-w-0 ${isUser ? "flex-row-reverse" : "flex-row"}`}
     >
       <div
         className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
@@ -81,13 +81,13 @@ export function MessageBubble({
         )}
       </div>
       <div
-        className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+        className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed max-h-[60vh] overflow-y-auto overflow-x-hidden ${
           isUser
             ? "bg-foreground text-background rounded-tr-md"
             : "bg-muted text-foreground rounded-tl-md"
         }`}
       >
-        <p className="whitespace-pre-wrap break-words">{message.content}</p>
+        <p className="whitespace-pre-wrap break-words" style={{ overflowWrap: "anywhere" }}>{message.content}</p>
         <p
           className={`mt-1 text-[10px] ${
             isUser ? "text-background/60" : "text-muted-foreground"

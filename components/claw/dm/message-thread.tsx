@@ -44,7 +44,7 @@ export function MessageThread({
 
   return (
     <ScrollArea className="h-full">
-      <div className="space-y-4 p-4">
+      <div className="space-y-4 p-4 overflow-x-hidden">
         {messages.map((msg) => (
           <MessageBubble
             key={msg.id}

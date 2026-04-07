@@ -5,16 +5,6 @@ import {
   isSSHConnected,
   getDefaultConnection,
 } from "@/lib/modules/claw/actions";
-import { appendFileSync } from "fs";
-
-// #region agent log
-function debugLog(msg: string, data: Record<string, unknown>, hyp: string) {
-  try {
-    appendFileSync('/Users/magicsheep/Portfolio/myself/.cursor/debug-209874.log',
-      JSON.stringify({sessionId:'209874',location:'history/route.ts',message:msg,data,timestamp:Date.now(),hypothesisId:hyp})+'\n');
-  } catch {}
-}
-// #endregion
 
 interface HistoryMessage {
   role: "user" | "agent";
@@ -81,42 +71,31 @@ export async function GET(
     //   ~/.openclaw/agents/<agentId>/sessions/<sessionId>.jsonl
     // Tilde must NOT be quoted so bash expands it inside `bash -lc '...'`.
     const transcriptPath = `~/.openclaw/agents/${safeAgent}/sessions/${fileId}.jsonl`;
-    // #region agent log
-    debugLog('path params',{fileId,transcriptPath,safeKey,safeAgent},'C');
-    // #endregion
     const catRes = await executeCommand(
       connectionId,
       `cat ${transcriptPath} 2>/dev/null || echo ""`,
       60000,
     );
-    // #region agent log
-    debugLog('cat result',{exitCode:catRes.code,stdoutLen:catRes.stdout?.length??0,stderrLen:catRes.stderr?.length??0,stdoutPreview:(catRes.stdout||'').substring(0,500)},'A');
-    // #endregion
 
     const messages: HistoryMessage[] = [];
     const raw = catRes.stdout || "";
 
     if (raw.trim()) {
       const lines = raw.split("\n").filter((l) => l.trim());
-      // #region agent log
-      debugLog('parsing lines',{lineCount:lines.length,firstLinePreview:lines[0]?.substring(0,300)},'D');
-      // #endregion
-      let skippedType = 0, skippedNoMsg = 0, skippedRole = 0, skippedEmpty = 0, parseErrors = 0;
       for (const line of lines) {
         try {
           const entry = JSON.parse(line) as Record<string, unknown>;
 
-          // Skip non-message entries (e.g. type: "session" metadata)
-          if (entry.type !== undefined && entry.type !== "message") { skippedType++; continue; }
+          if (entry.type !== undefined && entry.type !== "message") continue;
 
           const msg = entry.message as Record<string, unknown> | undefined;
-          if (!msg) { skippedNoMsg++; continue; }
+          if (!msg) continue;
 
           const role = msg.role as string;
-          if (role !== "user" && role !== "assistant") { skippedRole++; continue; }
+          if (role !== "user" && role !== "assistant") continue;
 
           const text = extractTextFromContent(msg.content);
-          if (!text.trim()) { skippedEmpty++; continue; }
+          if (!text.trim()) continue;
 
           let timestamp: number;
           if (typeof entry.timestamp === "string") {
@@ -133,16 +112,9 @@ export async function GET(
             timestamp,
           });
         } catch {
-          parseErrors++;
+          // skip malformed lines
         }
       }
-      // #region agent log
-      debugLog('parsing summary',{totalLines:lines.length,parsedMessages:messages.length,skippedType,skippedNoMsg,skippedRole,skippedEmpty,parseErrors},'D');
-      // #endregion
-    } else {
-      // #region agent log
-      debugLog('raw output empty',{rawLength:raw.length},'A');
-      // #endregion
     }
 
     return NextResponse.json({ messages });

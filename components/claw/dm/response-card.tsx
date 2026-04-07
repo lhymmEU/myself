@@ -120,12 +120,12 @@ export function ResponseCard({ message }: ResponseCardProps) {
   };
 
   return (
-    <div className="flex gap-2.5">
+    <div className="flex gap-2.5 min-w-0">
       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
         <Bot className="h-3.5 w-3.5" />
       </div>
       <Card
-        className={`max-w-[80%] border ${style.border} ${style.bg} shadow-none`}
+        className={`max-w-[80%] border ${style.border} ${style.bg} shadow-none max-h-[60vh] overflow-y-auto`}
       >
         <CardContent className="p-3">
           <div className="flex items-center gap-2 mb-2">

@@ -6,16 +6,6 @@ import {
   isSSHConnected,
   getDefaultConnection,
 } from "@/lib/modules/claw/actions";
-import { appendFileSync } from "fs";
-
-// #region agent log
-function debugLog(msg: string, data: Record<string, unknown>, hyp: string) {
-  try {
-    appendFileSync('/Users/magicsheep/Portfolio/myself/.cursor/debug-209874.log',
-      JSON.stringify({sessionId:'209874',location:'sessions/route.ts',message:msg,data,timestamp:Date.now(),hypothesisId:hyp})+'\n');
-  } catch {}
-}
-// #endregion
 
 /**
  * GET — list sessions enriched with token usage from sessions.json store files.
@@ -48,18 +38,10 @@ export async function GET(req: NextRequest) {
     let parsed: Record<string, unknown> = {};
     try { parsed = JSON.parse(raw); } catch { /* keep empty */ }
 
-    // #region agent log
-    debugLog('openclaw sessions raw',{rawPreview:raw.substring(0,2000),parsedKeys:Object.keys(parsed)},'F');
-    // #endregion
-
     const sessions: Record<string, unknown>[] =
       (parsed.sessions as Record<string, unknown>[]) ?? [];
     const stores: { agentId: string; path: string }[] =
       (parsed.stores as { agentId: string; path: string }[]) ?? [];
-
-    // #region agent log
-    debugLog('parsed sessions',{count:sessions.length,firstThree:sessions.slice(0,3).map(s=>JSON.stringify(s)),storeCount:stores.length,stores:stores.map(s=>JSON.stringify(s))},'F');
-    // #endregion
 
     const tokenMap = new Map<string, Record<string, unknown>>();
 
