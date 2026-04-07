@@ -24,8 +24,15 @@ export async function POST(req: NextRequest) {
     const { action } = body;
 
     if (action === "create") {
-      const result = createWish(body);
-      return NextResponse.json(result);
+      try {
+        const result = createWish(body);
+        return NextResponse.json(result);
+      } catch (e) {
+        if (e instanceof Error && e.message === "wishlist_full") {
+          return NextResponse.json({ error: "wishlist_full" }, { status: 409 });
+        }
+        throw e;
+      }
     }
 
     if (action === "update") {

@@ -21,6 +21,7 @@ export default function ClawPage() {
   const t = useT();
   const searchParams = useSearchParams();
   const initialPrompt = searchParams.get("askClaw") ?? undefined;
+  const initialSessionName = searchParams.get("sessionName") ?? undefined;
 
   const [connectState, setConnectState] = useState<ConnectState>({
     connected: false,
@@ -68,6 +69,7 @@ export default function ClawPage() {
           connectionId={connectState.connectionId}
           connected={connectState.connected}
           initialPrompt={initialPrompt}
+          initialSessionName={initialSessionName}
         />
       ) : (
         <ClawAdvancedView

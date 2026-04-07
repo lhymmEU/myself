@@ -226,20 +226,97 @@ export function initDatabase() {
     CREATE TABLE IF NOT EXISTS user_skills (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
-      level INTEGER NOT NULL DEFAULT 1,
+      level TEXT NOT NULL DEFAULT 'familiar' CHECK(level IN ('familiar','fluent','mastering')),
       category TEXT DEFAULT '',
       created_at INTEGER NOT NULL
     );
   `);
+
+  // Migrate user_skills.level from integer to text
+  try {
+    const info = sqlite.prepare(`PRAGMA table_info(user_skills)`).all() as { name: string; type: string }[];
+    const levelCol = info.find((c) => c.name === "level");
+    if (levelCol && levelCol.type === "INTEGER") {
+      sqlite.exec(`ALTER TABLE user_skills RENAME TO user_skills_old`);
+      sqlite.exec(`
+        CREATE TABLE user_skills (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          level TEXT NOT NULL DEFAULT 'familiar' CHECK(level IN ('familiar','fluent','mastering')),
+          category TEXT DEFAULT '',
+          created_at INTEGER NOT NULL
+        );
+      `);
+      sqlite.exec(`
+        INSERT INTO user_skills (id, name, level, category, created_at)
+        SELECT id, name,
+          CASE
+            WHEN level <= 3 THEN 'familiar'
+            WHEN level <= 7 THEN 'fluent'
+            ELSE 'mastering'
+          END,
+          category, created_at
+        FROM user_skills_old
+      `);
+      sqlite.exec(`DROP TABLE user_skills_old`);
+    }
+  } catch {
+    // migration already done or not needed
+  }
 
   // Skill wishlist table
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS skill_wishlist (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
-      target_level INTEGER NOT NULL DEFAULT 5,
+      target_level TEXT NOT NULL DEFAULT 'familiar' CHECK(target_level IN ('familiar','fluent','mastering')),
       priority TEXT NOT NULL DEFAULT 'medium',
       notes TEXT DEFAULT '',
+      created_at INTEGER NOT NULL
+    );
+  `);
+
+  // Migrate skill_wishlist.target_level from integer to text
+  try {
+    const info = sqlite.prepare(`PRAGMA table_info(skill_wishlist)`).all() as { name: string; type: string }[];
+    const levelCol = info.find((c) => c.name === "target_level");
+    if (levelCol && levelCol.type === "INTEGER") {
+      sqlite.exec(`ALTER TABLE skill_wishlist RENAME TO skill_wishlist_old`);
+      sqlite.exec(`
+        CREATE TABLE skill_wishlist (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          target_level TEXT NOT NULL DEFAULT 'familiar' CHECK(target_level IN ('familiar','fluent','mastering')),
+          priority TEXT NOT NULL DEFAULT 'medium',
+          notes TEXT DEFAULT '',
+          created_at INTEGER NOT NULL
+        );
+      `);
+      sqlite.exec(`
+        INSERT INTO skill_wishlist (id, name, target_level, priority, notes, created_at)
+        SELECT id, name,
+          CASE
+            WHEN target_level <= 3 THEN 'familiar'
+            WHEN target_level <= 7 THEN 'fluent'
+            ELSE 'mastering'
+          END,
+          priority, notes, created_at
+        FROM skill_wishlist_old
+      `);
+      sqlite.exec(`DROP TABLE skill_wishlist_old`);
+    }
+  } catch {
+    // migration already done or not needed
+  }
+
+  // Wishlist todos table
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS wishlist_todos (
+      id TEXT PRIMARY KEY,
+      wish_id TEXT NOT NULL,
+      content TEXT NOT NULL,
+      completed INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL
     );
   `);

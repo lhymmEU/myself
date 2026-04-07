@@ -19,7 +19,7 @@ type FinanceMode = "personal" | "market";
 export default function FinancePage() {
   const t = useT();
 
-  const { data: settingsData } = useSWR<Record<string, string>>(
+  const { data: settingsData, mutate: mutateSettings } = useSWR<Record<string, string>>(
     "/api/settings",
     swrFetcher,
   );
@@ -52,26 +52,37 @@ export default function FinancePage() {
 
   const handleToggleModule = useCallback(
     async (moduleId: string, enabled: boolean) => {
-      const next = enabled
+      const nextModules = enabled
         ? [...enabledModules, moduleId]
         : enabledModules.filter((m) => m !== moduleId);
+      const nextOrder = enabled
+        ? [...moduleOrder, moduleId]
+        : moduleOrder;
+
+      mutateSettings(
+        (prev) => ({
+          ...prev,
+          finance_enabled_modules: JSON.stringify(nextModules),
+          finance_module_order: JSON.stringify(nextOrder),
+        }),
+        false,
+      );
 
       await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "finance_enabled_modules", value: JSON.stringify(next) }),
+        body: JSON.stringify({ key: "finance_enabled_modules", value: JSON.stringify(nextModules) }),
       });
 
       if (enabled) {
-        const currentOrder = [...moduleOrder, moduleId];
         await fetch("/api/settings", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key: "finance_module_order", value: JSON.stringify(currentOrder) }),
+          body: JSON.stringify({ key: "finance_module_order", value: JSON.stringify(nextOrder) }),
         });
       }
     },
-    [enabledModules, moduleOrder],
+    [enabledModules, moduleOrder, mutateSettings],
   );
 
   return (

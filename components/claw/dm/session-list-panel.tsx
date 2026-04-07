@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -47,6 +47,14 @@ function saveSessionNames(names: Record<string, string>) {
   localStorage.setItem(SESSION_NAMES_KEY, JSON.stringify(names));
 }
 
+export function saveSessionName(sessionId: string, name: string) {
+  const names = loadSessionNames();
+  if (!names[sessionId]) {
+    names[sessionId] = name;
+    saveSessionNames(names);
+  }
+}
+
 function formatDate(iso?: string): string {
   if (!iso) return "";
   try {
@@ -74,6 +82,10 @@ export function SessionListPanel({
   const [sessionNames, setSessionNames] = useState<Record<string, string>>(loadSessionNames);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+
+  useEffect(() => {
+    setSessionNames(loadSessionNames());
+  }, [activeSessionId]);
 
   const sortedSessions = useMemo(() => {
     return [...sessions]

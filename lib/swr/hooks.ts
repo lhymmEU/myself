@@ -82,6 +82,13 @@ export function useWishlist() {
   return useSWR("/api/dashboard/wishlist", swrFetcher);
 }
 
+export function useWishTodos(wishId: string | null) {
+  return useSWR(
+    wishId ? `/api/dashboard/wishlist/todos?wishId=${encodeURIComponent(wishId)}` : null,
+    swrFetcher,
+  );
+}
+
 export function useUserSkills() {
   return useSWR("/api/dashboard/skills", swrFetcher);
 }

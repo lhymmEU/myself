@@ -19,9 +19,12 @@ import {
   X,
   Swords,
   Palette,
+  ShieldCheck,
 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
+import { useRouter } from "next/navigation";
 import { useUserSkills, useCharacterAppearance } from "@/lib/swr/hooks";
+import { Badge } from "@/components/ui/badge";
 import dynamic from "next/dynamic";
 import type { UserColors } from "./vrm-viewer";
 
@@ -36,13 +39,21 @@ const CharacterViewer = dynamic(
   }
 );
 
+type SkillLevel = "familiar" | "fluent" | "mastering";
+
 interface UserSkill {
   id: string;
   name: string;
-  level: number;
+  level: SkillLevel;
   category: string | null;
   createdAt: number;
 }
+
+const LEVEL_BADGE_VARIANT: Record<SkillLevel, "secondary" | "default" | "destructive"> = {
+  familiar: "secondary",
+  fluent: "default",
+  mastering: "destructive",
+};
 
 const DEFAULT_USER_COLORS: Required<UserColors> = {
   skin: "#ffe0bd",
@@ -62,12 +73,13 @@ const COLOR_LABELS: Record<keyof UserColors, string> = {
 
 export function UserPanel() {
   const t = useT();
+  const router = useRouter();
   const { data: skillsData, mutate: mutateSkills } = useUserSkills();
   const { data: appearanceData, mutate: mutateAppearance } = useCharacterAppearance("user");
   const skills: UserSkill[] = skillsData?.skills ?? [];
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ name: "", level: 1, category: "" });
+  const [form, setForm] = useState<{ name: string; level: SkillLevel; category: string }>({ name: "", level: "familiar", category: "" });
 
   const userColorsFromApi: Required<UserColors> = appearanceData?.appearance
     ? {
@@ -128,7 +140,7 @@ export function UserPanel() {
       }
       setEditingId(null);
       setAdding(false);
-      setForm({ name: "", level: 1, category: "" });
+      setForm({ name: "", level: "familiar", category: "" });
       await mutateSkills();
     } catch {
       // silently fail
@@ -161,8 +173,20 @@ export function UserPanel() {
   const cancelEdit = () => {
     setEditingId(null);
     setAdding(false);
-    setForm({ name: "", level: 1, category: "" });
+    setForm({ name: "", level: "familiar", category: "" });
   };
+
+  const handleVerifySkill = useCallback(
+    (skill: UserSkill) => {
+      const levelLabel = t(`dashboard.game.userPanel.level${skill.level.charAt(0).toUpperCase() + skill.level.slice(1)}` as "dashboard.game.userPanel.levelFamiliar");
+      const prompt = encodeURIComponent(
+        `I claim "${levelLabel}" proficiency in "${skill.name}". Please design a comprehensive, real-world skill assessment: present practical scenarios and challenges that professionals actually encounter with this skill at the "${levelLabel}" tier, evaluate my responses, and give an honest verdict on whether my claimed level is accurate.`,
+      );
+      const sessionName = encodeURIComponent(`${skill.name} verification`);
+      router.push(`/dashboard/claw?askClaw=${prompt}&sessionName=${sessionName}`);
+    },
+    [router, t],
+  );
 
   return (
     <Card className="flex flex-col h-full">
@@ -231,19 +255,17 @@ export function UserPanel() {
                 className="h-6 text-xs flex-1"
                 autoFocus
               />
-              <Input
-                type="number"
+              <select
                 value={form.level}
                 onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    level: parseInt(e.target.value) || 1,
-                  }))
+                  setForm((f) => ({ ...f, level: e.target.value as SkillLevel }))
                 }
-                className="h-6 text-xs w-14"
-                min={1}
-                max={10}
-              />
+                className="h-6 text-xs rounded-md border bg-transparent px-1.5"
+              >
+                <option value="familiar">{t("dashboard.game.userPanel.levelFamiliar")}</option>
+                <option value="fluent">{t("dashboard.game.userPanel.levelFluent")}</option>
+                <option value="mastering">{t("dashboard.game.userPanel.levelMastering")}</option>
+              </select>
             </div>
             <Input
               value={form.category}
@@ -291,9 +313,12 @@ export function UserPanel() {
                       <span className="text-xs font-medium truncate">
                         {skill.name}
                       </span>
-                      <span className="text-[10px] text-muted-foreground shrink-0">
-                        Lv {skill.level}
-                      </span>
+                      <Badge
+                        variant={LEVEL_BADGE_VARIANT[skill.level]}
+                        className="text-[9px] px-1 py-0 shrink-0"
+                      >
+                        {t(`dashboard.game.userPanel.level${skill.level.charAt(0).toUpperCase() + skill.level.slice(1)}` as "dashboard.game.userPanel.levelFamiliar")}
+                      </Badge>
                     </div>
                     {skill.category && (
                       <span className="text-[10px] text-muted-foreground">
@@ -302,6 +327,15 @@ export function UserPanel() {
                     )}
                   </div>
                   <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleVerifySkill(skill)}
+                      className="h-5 w-5 p-0"
+                      title={t("dashboard.game.userPanel.verifySkill")}
+                    >
+                      <ShieldCheck className="h-2.5 w-2.5" />
+                    </Button>
                     <Button
                       size="sm"
                       variant="ghost"

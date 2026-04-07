@@ -1,9 +1,11 @@
 "use client";
 
-import { useReducer, useCallback, useEffect, useRef } from "react";
+import { useReducer, useCallback, useEffect, useRef, useMemo } from "react";
 import { nanoid } from "nanoid";
+import { useSWRConfig } from "swr";
 import { Server, Loader2 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
+import { useClawSessions } from "@/lib/swr/hooks";
 import type {
   DMState,
   DMAction,
@@ -12,7 +14,7 @@ import type {
   ResponseType,
   PendingToolCall,
 } from "./types";
-import { SessionListPanel } from "./session-list-panel";
+import { SessionListPanel, saveSessionName } from "./session-list-panel";
 import { AgentStatusBar } from "./agent-status-bar";
 import { MessageThread } from "./message-thread";
 import { ActionShelf } from "./action-shelf";
@@ -90,11 +92,30 @@ interface ClawDMPanelProps {
   connectionId: string | null;
   connected: boolean;
   initialPrompt?: string;
+  initialSessionName?: string;
 }
 
-export function ClawDMPanel({ connectionId, connected, initialPrompt }: ClawDMPanelProps) {
+export function ClawDMPanel({ connectionId, connected, initialPrompt, initialSessionName }: ClawDMPanelProps) {
   const t = useT();
   const [state, dispatch] = useReducer(dmReducer, initialState);
+  const { mutate: globalMutate } = useSWRConfig();
+  const { data: sessionsData } = useClawSessions(connectionId, connected);
+
+  const agentIds = useMemo(() => {
+    const sessions: { agentId?: string }[] = sessionsData?.sessions ?? [];
+    const set = new Set<string>();
+    for (const s of sessions) {
+      if (s.agentId) set.add(s.agentId);
+    }
+    return Array.from(set);
+  }, [sessionsData]);
+
+  const revalidateSessions = useCallback(() => {
+    if (!connectionId) return;
+    globalMutate(
+      `/api/claw/sessions?connectionId=${encodeURIComponent(connectionId)}`,
+    );
+  }, [connectionId, globalMutate]);
 
   const fetchSessionHistory = useCallback(
     async (sessionKey: string, agentId: string) => {
@@ -108,6 +129,10 @@ export function ClawDMPanel({ connectionId, connected, initialPrompt }: ClawDMPa
         const res = await fetch(
           `/api/claw/sessions/${encodeURIComponent(sessionKey)}/history?${qs}`
         );
+        if (!res.ok) {
+          dispatch({ type: "SET_LOADING_HISTORY", loading: false });
+          return;
+        }
         const data = await res.json();
         const messages: Message[] = (data.messages ?? []).map(
           (msg: { role: string; content: string; timestamp: number }) => ({
@@ -195,6 +220,14 @@ export function ClawDMPanel({ connectionId, connected, initialPrompt }: ClawDMPa
           message: agentMessage,
           sessionId: data.sessionId ?? undefined,
         });
+
+        if (!state.sessionTarget?.sessionId && data.sessionId) {
+          const autoName = initialSessionName
+            ? initialSessionName
+            : text.length > 50 ? text.substring(0, 47) + "..." : text;
+          saveSessionName(data.sessionId, autoName);
+          revalidateSessions();
+        }
       } catch (err) {
         dispatch({
           type: "SET_ERROR",
@@ -202,7 +235,7 @@ export function ClawDMPanel({ connectionId, connected, initialPrompt }: ClawDMPa
         });
       }
     },
-    [connectionId, state.sessionTarget],
+    [connectionId, state.sessionTarget, revalidateSessions, initialSessionName],
   );
 
   const handlePillInsert = useCallback(
@@ -279,6 +312,24 @@ export function ClawDMPanel({ connectionId, connected, initialPrompt }: ClawDMPa
     },
     [],
   );
+
+  const autoSessionCreated = useRef(false);
+  useEffect(() => {
+    if (
+      initialPrompt &&
+      !autoSessionCreated.current &&
+      connected &&
+      !state.sessionTarget &&
+      agentIds.length > 0
+    ) {
+      autoSessionCreated.current = true;
+      handleSessionChange({
+        agentId: agentIds[0],
+        sessionId: null,
+        label: initialSessionName ?? t("claw.dm.session.newConversation"),
+      });
+    }
+  }, [initialPrompt, connected, state.sessionTarget, agentIds, handleSessionChange, initialSessionName, t]);
 
   const initialPromptSent = useRef(false);
   useEffect(() => {

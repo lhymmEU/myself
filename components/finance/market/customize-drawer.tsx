@@ -31,8 +31,8 @@ export function CustomizeDrawer({ enabledModules, onToggle }: CustomizeDrawerPro
           {t("finance.market.customize")}
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-80 sm:w-96 overflow-y-auto">
-        <SheetHeader>
+      <SheetContent className="w-80 sm:w-96 overflow-y-auto px-4">
+        <SheetHeader className="px-0">
           <SheetTitle>{t("finance.market.customizeTitle")}</SheetTitle>
         </SheetHeader>
         <div className="space-y-6 mt-6">

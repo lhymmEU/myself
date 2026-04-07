@@ -14,10 +14,12 @@ export const characterAppearance = sqliteTable("character_appearance", {
   eyeColor: text("eye_color"),
 });
 
+export type SkillLevel = "familiar" | "fluent" | "mastering";
+
 export const userSkills = sqliteTable("user_skills", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  level: integer("level", { mode: "number" }).notNull().default(1),
+  level: text("level").notNull().default("familiar"),
   category: text("category").default(""),
   createdAt: integer("created_at", { mode: "number" }).notNull(),
 });
@@ -25,9 +27,18 @@ export const userSkills = sqliteTable("user_skills", {
 export const skillWishlist = sqliteTable("skill_wishlist", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  targetLevel: integer("target_level", { mode: "number" }).notNull().default(5),
+  targetLevel: text("target_level").notNull().default("familiar"),
   priority: text("priority").notNull().default("medium"),
   notes: text("notes").default(""),
+  createdAt: integer("created_at", { mode: "number" }).notNull(),
+});
+
+export const wishlistTodos = sqliteTable("wishlist_todos", {
+  id: text("id").primaryKey(),
+  wishId: text("wish_id").notNull(),
+  content: text("content").notNull(),
+  completed: integer("completed", { mode: "number" }).notNull().default(0),
+  sortOrder: integer("sort_order", { mode: "number" }).notNull().default(0),
   createdAt: integer("created_at", { mode: "number" }).notNull(),
 });
 
