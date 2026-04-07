@@ -155,10 +155,10 @@ export const zh: Translations = {
       extend: "扩展",
     },
     connection: {
-      sshConnection: "SSH 连接",
+      sshConnection: "OpenClaw 连接",
       disconnected: "未连接",
       addServer: "添加服务器",
-      addSshConnection: "添加 SSH 连接",
+      addSshConnection: "添加连接",
       host: "主机",
       port: "端口",
       username: "用户名",

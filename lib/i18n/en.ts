@@ -153,10 +153,10 @@ export const en = {
       extend: "Extend",
     },
     connection: {
-      sshConnection: "SSH Connection",
+      sshConnection: "OpenClaw Connection",
       disconnected: "Disconnected",
       addServer: "Add Server",
-      addSshConnection: "Add SSH Connection",
+      addSshConnection: "Add Connection",
       host: "Host",
       port: "Port",
       username: "Username",

@@ -17,7 +17,17 @@ export interface ToolCallRequest {
 
 function classifyResponse(text: string): string {
   const lower = text.toLowerCase();
-  if (/\b(error|failed|exception|crash|fatal)\b/.test(lower)) return "error";
+  const firstLine = lower.split("\n")[0].trim();
+
+  // Only classify as error when the response itself IS an error, not when it
+  // merely discusses errors (e.g. "error handling", "error boundaries").
+  if (
+    /^(error\b|failed\b|fatal\b|exception\b)/.test(firstLine) ||
+    /\b(error occurred|operation failed|command failed|connection (refused|failed|lost|timed? ?out))\b/.test(lower)
+  ) {
+    return "error";
+  }
+
   if (/\b(status|running|stopped|healthy|unhealthy|gateway|uptime)\b/.test(lower)) return "status";
   if (/\b(task|created|started|queued|progress|completed)\b/.test(lower)) return "task";
   if (/\b(memor|remember|recall|knowledge)\b/.test(lower)) return "memory";

@@ -118,7 +118,10 @@ export function ClawDMPanel({ connectionId, connected, initialPrompt, initialSes
   }, [connectionId, globalMutate]);
 
   const fetchSessionHistory = useCallback(
-    async (sessionKey: string, agentId: string) => {
+    async (sessionKey: string, agentId: string, transcriptId?: string) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7491/ingest/599ee872-411b-4edc-a1b8-877fd5fc2059',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'209874'},body:JSON.stringify({sessionId:'209874',location:'claw-dm-panel.tsx:fetchSessionHistory',message:'fetchSessionHistory called',data:{sessionKey,agentId,connectionId,transcriptId},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       if (!connectionId) return;
       dispatch({ type: "SET_LOADING_HISTORY", loading: true });
       try {
@@ -126,9 +129,13 @@ export function ClawDMPanel({ connectionId, connected, initialPrompt, initialSes
           connectionId,
           agentId,
         });
+        if (transcriptId) qs.set("transcriptId", transcriptId);
         const res = await fetch(
           `/api/claw/sessions/${encodeURIComponent(sessionKey)}/history?${qs}`
         );
+        // #region agent log
+        fetch('http://127.0.0.1:7491/ingest/599ee872-411b-4edc-a1b8-877fd5fc2059',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'209874'},body:JSON.stringify({sessionId:'209874',location:'claw-dm-panel.tsx:fetchSessionHistory:response',message:'history API response',data:{status:res.status,ok:res.ok,sessionKey,agentId},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         if (!res.ok) {
           dispatch({ type: "SET_LOADING_HISTORY", loading: false });
           return;
@@ -142,8 +149,23 @@ export function ClawDMPanel({ connectionId, connected, initialPrompt, initialSes
             timestamp: msg.timestamp,
           })
         );
+        // #region agent log
+        fetch('http://127.0.0.1:7491/ingest/599ee872-411b-4edc-a1b8-877fd5fc2059',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'209874'},body:JSON.stringify({sessionId:'209874',location:'claw-dm-panel.tsx:fetchSessionHistory:parsed',message:'parsed messages',data:{messageCount:messages.length,rawMessageCount:(data.messages??[]).length,sessionKey},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         dispatch({ type: "LOAD_HISTORY", messages });
-      } catch {
+
+        if (messages.length > 0) {
+          const firstUserMsg = messages.find((m) => m.role === "user");
+          if (firstUserMsg) {
+            const text = firstUserMsg.content;
+            const autoName = text.length > 50 ? text.substring(0, 47) + "..." : text;
+            saveSessionName(sessionKey, autoName);
+          }
+        }
+      } catch (err) {
+        // #region agent log
+        fetch('http://127.0.0.1:7491/ingest/599ee872-411b-4edc-a1b8-877fd5fc2059',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'209874'},body:JSON.stringify({sessionId:'209874',location:'claw-dm-panel.tsx:fetchSessionHistory:error',message:'fetch error',data:{error:err instanceof Error?err.message:String(err)},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         dispatch({ type: "SET_LOADING_HISTORY", loading: false });
       }
     },
@@ -152,9 +174,12 @@ export function ClawDMPanel({ connectionId, connected, initialPrompt, initialSes
 
   const handleSessionChange = useCallback(
     (target: SessionTarget) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7491/ingest/599ee872-411b-4edc-a1b8-877fd5fc2059',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'209874'},body:JSON.stringify({sessionId:'209874',location:'claw-dm-panel.tsx:handleSessionChange',message:'session changed',data:{sessionId:target.sessionId,agentId:target.agentId,label:target.label,transcriptId:target.transcriptId,willFetchHistory:!!target.sessionId},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       dispatch({ type: "SET_SESSION", target });
       if (target.sessionId) {
-        fetchSessionHistory(target.sessionId, target.agentId);
+        fetchSessionHistory(target.sessionId, target.agentId, target.transcriptId);
       }
     },
     [fetchSessionHistory]

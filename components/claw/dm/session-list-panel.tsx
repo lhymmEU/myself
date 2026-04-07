@@ -20,6 +20,7 @@ import type { SessionTarget } from "./types";
 interface SessionEntry {
   agentId?: string;
   key?: string;
+  sessionId?: string;
   model?: string;
   lastActive?: string;
   messageCount?: number;
@@ -49,10 +50,8 @@ function saveSessionNames(names: Record<string, string>) {
 
 export function saveSessionName(sessionId: string, name: string) {
   const names = loadSessionNames();
-  if (!names[sessionId]) {
-    names[sessionId] = name;
-    saveSessionNames(names);
-  }
+  names[sessionId] = name;
+  saveSessionNames(names);
 }
 
 function formatDate(iso?: string): string {
@@ -85,7 +84,7 @@ export function SessionListPanel({
 
   useEffect(() => {
     setSessionNames(loadSessionNames());
-  }, [activeSessionId]);
+  }, [activeSessionId, data]);
 
   const sortedSessions = useMemo(() => {
     return [...sessions]
@@ -116,20 +115,28 @@ export function SessionListPanel({
     }
   }, [agentIds, onSessionChange, t]);
 
+  const getDisplayName = useCallback(
+    (session: SessionEntry): string => {
+      if (!session.key) return t("claw.dm.sessionPanel.untitled");
+      if (sessionNames[session.key]) return sessionNames[session.key];
+      return formatDate(session.lastActive) || t("claw.dm.sessionPanel.untitled");
+    },
+    [sessionNames, t],
+  );
+
   const handleSelectSession = useCallback(
     (session: SessionEntry) => {
       if (session.agentId && session.key) {
         onSessionChange({
           agentId: session.agentId,
           sessionId: session.key,
-          label:
-            sessionNames[session.key] ||
-            `${t("claw.dm.session.conversationFrom")} ${formatDate(session.lastActive)}`,
+          label: getDisplayName(session),
           model: session.model,
+          transcriptId: session.sessionId,
         });
       }
     },
-    [onSessionChange, sessionNames, t]
+    [onSessionChange, getDisplayName],
   );
 
   const startRename = (key: string) => {
@@ -200,9 +207,7 @@ export function SessionListPanel({
           {sortedSessions.map((session) => {
             const key = session.key!;
             const isActive = key === activeSessionId;
-            const displayName =
-              sessionNames[key] ||
-              `${t("claw.dm.session.conversationFrom")} ${formatDate(session.lastActive)}`;
+            const displayName = getDisplayName(session);
 
             return (
               <div

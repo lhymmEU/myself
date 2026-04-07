@@ -11,6 +11,8 @@ export interface SessionTarget {
   sessionId: string | null;
   label: string;
   model?: string;
+  /** UUID of the transcript file on disk (distinct from the compound session key) */
+  transcriptId?: string;
 }
 
 export interface Message {

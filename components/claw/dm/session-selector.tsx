@@ -17,6 +17,7 @@ import type { SessionTarget } from "./types";
 interface SessionEntry {
   agentId?: string;
   key?: string;
+  sessionId?: string;
   model?: string;
   lastActive?: string;
   messageCount?: number;
@@ -76,8 +77,9 @@ export function SessionSelector({
           onSessionChange({
             agentId: first.agentId,
             sessionId: first.key,
-            label: `${t("claw.dm.session.conversationFrom")} ${formatDate(first.lastActive)}`,
+            label: formatDate(first.lastActive) || t("claw.dm.sessionPanel.untitled"),
             model: first.model,
+            transcriptId: first.sessionId,
           });
         }
       }
@@ -121,8 +123,9 @@ export function SessionSelector({
         onSessionChange({
           agentId: session.agentId,
           sessionId: session.key,
-          label: `${t("claw.dm.session.conversationFrom")} ${formatDate(session.lastActive)}`,
+          label: formatDate(session.lastActive) || t("claw.dm.sessionPanel.untitled"),
           model: session.model,
+          transcriptId: session.sessionId,
         });
       }
     },
@@ -153,8 +156,7 @@ export function SessionSelector({
               <SelectItem key={s.key} value={s.key!}>
                 <span className="flex items-center gap-2">
                   <span className="truncate max-w-[200px]">
-                    {t("claw.dm.session.conversationFrom")}{" "}
-                    {formatDate(s.lastActive)}
+                    {formatDate(s.lastActive) || t("claw.dm.sessionPanel.untitled")}
                   </span>
                   {s.model && (
                     <Badge variant="secondary" className="text-[10px] px-1.5">
