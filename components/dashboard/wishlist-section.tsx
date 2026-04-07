@@ -46,6 +46,13 @@ const LEVEL_BADGE_VARIANT: Record<SkillLevel, "secondary" | "default" | "destruc
   mastering: "destructive",
 };
 
+const LEVEL_SCORE: Record<SkillLevel, number> = { familiar: 1, fluent: 2, mastering: 3 };
+const PRIORITY_SCORE: Record<string, number> = { low: 1, medium: 2, high: 3 };
+
+function wishScore(wish: Wish): number {
+  return (LEVEL_SCORE[wish.targetLevel] ?? 1) + (PRIORITY_SCORE[wish.priority] ?? 2);
+}
+
 function WishTodoList({ wishId, onTodoCountChange }: { wishId: string; onTodoCountChange?: (count: number) => void }) {
   const { data: todoData, mutate: mutateTodos } = useWishTodos(wishId);
   const todos: WishTodo[] = todoData?.todos ?? [];
@@ -239,7 +246,9 @@ export function WishlistSection() {
   const t = useT();
   const router = useRouter();
   const { data: wishData, isLoading: loading, mutate } = useWishlist();
-  const wishes: Wish[] = wishData?.wishes ?? [];
+  const wishes: Wish[] = (wishData?.wishes ?? [] as Wish[])
+    .slice()
+    .sort((a: Wish, b: Wish) => wishScore(b) - wishScore(a));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState<{
