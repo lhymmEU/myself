@@ -18,6 +18,7 @@ import {
   Blend,
   MapPlus,
   User,
+  Bookmark,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,6 +44,7 @@ const MYSELF_CHILDREN: NavItem[] = [
   { href: "/dashboard/plans", labelKey: "sidebar.plans", icon: Blend },
   { href: "/dashboard/invoice", labelKey: "sidebar.invoice", icon: Receipt },
   { href: "/dashboard/vault", labelKey: "sidebar.vault", icon: Lock },
+  { href: "/dashboard/marked", labelKey: "sidebar.marked", icon: Bookmark },
 ];
 
 const BOTTOM_ITEMS: NavItem[] = [

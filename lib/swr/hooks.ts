@@ -143,3 +143,16 @@ export function useMindMapScenes(mode: string) {
 export function useTodoSource() {
   return useSWR("/api/mind-map?todoSource=true", swrFetcher);
 }
+
+// --- Marked hooks ---
+
+export function useMarkedCollections() {
+  return useSWR("/api/marked?entity=collection", swrFetcher);
+}
+
+export function useMarkedItems(collectionId?: string | null) {
+  const params = collectionId
+    ? `&collectionId=${encodeURIComponent(collectionId)}`
+    : "";
+  return useSWR(`/api/marked?entity=item${params}`, swrFetcher);
+}

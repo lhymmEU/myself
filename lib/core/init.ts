@@ -9,6 +9,7 @@ import { vaultModule } from "@/lib/modules/vault";
 import { clawModule } from "@/lib/modules/claw";
 import { invoiceModule } from "@/lib/modules/invoice";
 import { dashboardModule } from "@/lib/modules/dashboard";
+import { markedModule } from "@/lib/modules/marked";
 
 let booted = false;
 
@@ -26,6 +27,7 @@ export function bootApp() {
   moduleRegistry.register(clawModule);
   moduleRegistry.register(invoiceModule);
   moduleRegistry.register(dashboardModule);
+  moduleRegistry.register(markedModule);
 
   moduleRegistry.initAll();
   booted = true;

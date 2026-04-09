@@ -1,0 +1,36 @@
+import { NextRequest, NextResponse } from "next/server";
+import { bootApp } from "@/lib/core/init";
+import {
+  getCollection,
+  listItems,
+  encodeCollectionPayload,
+} from "@/lib/modules/marked/actions";
+
+export async function GET(req: NextRequest) {
+  bootApp();
+  try {
+    const collectionId = req.nextUrl.searchParams.get("collectionId");
+    if (!collectionId)
+      return NextResponse.json(
+        { error: "Missing collectionId" },
+        { status: 400 },
+      );
+
+    const collection = getCollection(collectionId);
+    if (!collection)
+      return NextResponse.json(
+        { error: "Collection not found" },
+        { status: 404 },
+      );
+
+    const items = listItems(collectionId);
+    const payload = encodeCollectionPayload(collection, items);
+
+    return NextResponse.json({ collection, items, payload });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Unknown error" },
+      { status: 500 },
+    );
+  }
+}
