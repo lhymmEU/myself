@@ -46,3 +46,14 @@ export const pmDemands = sqliteTable("pm_demands", {
   createdAt: integer("created_at", { mode: "number" }).notNull(),
   updatedAt: integer("updated_at", { mode: "number" }).notNull(),
 });
+
+export const pmStakeholders = sqliteTable("pm_stakeholders", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  role: text("role").notNull().default(""),
+  roleColor: text("role_color").notNull().default("#8b5cf6"),
+  details: text("details").notNull().default("{}"),
+  clawNotes: text("claw_notes").notNull().default(""),
+  createdAt: integer("created_at", { mode: "number" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "number" }).notNull(),
+});

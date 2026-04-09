@@ -98,6 +98,17 @@ CREATE TABLE IF NOT EXISTS pm_demands (
   updated_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS pm_stakeholders (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT '',
+  role_color TEXT NOT NULL DEFAULT '#8b5cf6',
+  details TEXT NOT NULL DEFAULT '{}',
+  claw_notes TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS invoice_clients (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,

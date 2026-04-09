@@ -31,4 +31,4 @@ export const mindMapScenes = sqliteTable("mind_map_scenes", {
   updatedAt: integer("updated_at", { mode: "number" }).notNull(),
 });
 
-export { pmUserProfiles, pmFeatures, pmDemands } from "./product-schema";
+export { pmUserProfiles, pmFeatures, pmDemands, pmStakeholders } from "./product-schema";

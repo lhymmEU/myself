@@ -76,4 +76,8 @@ export type {
   UpdateDemandInput,
   DemandType,
   DemandStatus,
+  PmStakeholder,
+  StakeholderDetail,
+  CreateStakeholderInput,
+  UpdateStakeholderInput,
 } from "./product-types";

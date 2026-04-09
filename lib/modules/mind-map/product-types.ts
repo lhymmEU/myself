@@ -99,3 +99,40 @@ export interface UpdateDemandInput {
   status?: DemandStatus;
   evidence?: string;
 }
+
+// --- Stakeholders ---
+
+export interface StakeholderDetail {
+  objectives: string;
+  desires: string;
+  requirements: string;
+  expectations: string;
+}
+
+export interface PmStakeholder {
+  id: string;
+  name: string;
+  role: string;
+  roleColor: string;
+  details: StakeholderDetail;
+  clawNotes: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CreateStakeholderInput {
+  name: string;
+  role?: string;
+  roleColor?: string;
+  details?: Partial<StakeholderDetail>;
+  clawNotes?: string;
+}
+
+export interface UpdateStakeholderInput {
+  id: string;
+  name?: string;
+  role?: string;
+  roleColor?: string;
+  details?: Partial<StakeholderDetail>;
+  clawNotes?: string;
+}

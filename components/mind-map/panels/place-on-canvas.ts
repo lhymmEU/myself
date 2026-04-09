@@ -3,7 +3,7 @@ import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
 export const DRAG_DATA_TYPE = "application/x-pm-entity";
 
-export type EntityType = "user" | "feature" | "demand";
+export type EntityType = "user" | "feature" | "demand" | "stakeholder";
 
 export interface DragEntityData {
   entityType: EntityType;
@@ -16,6 +16,7 @@ const ENTITY_COLORS = {
   user: { stroke: "#3b82f6", bg: "#1e3a5f" },
   feature: { stroke: "#22c55e", bg: "#14532d" },
   demand: { stroke: "#f97316", bg: "#431407" },
+  stakeholder: { stroke: "#8b5cf6", bg: "#2e1065" },
 } as const;
 
 function hexToDarkBg(hex: string): string {
@@ -44,6 +45,7 @@ function buildElements(
     user: "USER",
     feature: "FEATURE",
     demand: "DEMAND",
+    stakeholder: "STAKEHOLDER",
   };
 
   const displayText = `[${badgeMap[entityType]}]\n${label}${subtitle ? `\n${subtitle}` : ""}`;
