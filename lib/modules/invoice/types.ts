@@ -84,6 +84,7 @@ export interface InvoiceWithDetails extends Invoice {
 }
 
 export interface CreateInvoiceInput {
+  invoiceNumber?: string;
   clientId?: string;
   date: string;
   dueDate?: string;
@@ -100,6 +101,7 @@ export interface CreateInvoiceInput {
 
 export interface UpdateInvoiceInput {
   id: string;
+  invoiceNumber?: string;
   clientId?: string;
   date?: string;
   dueDate?: string;

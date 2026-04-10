@@ -165,12 +165,14 @@ export function InvoiceEditor({ invoiceId, onBack, onPreview }: InvoiceEditorPro
       ? {
           id: invoiceId,
           ...form,
+          invoiceNumber,
           clientId: form.clientId || undefined,
           signatureId: form.signatureId || undefined,
           items,
         }
       : {
           ...form,
+          invoiceNumber,
           clientId: form.clientId || undefined,
           signatureId: form.signatureId || undefined,
           items,
@@ -266,7 +268,10 @@ export function InvoiceEditor({ invoiceId, onBack, onPreview }: InvoiceEditorPro
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">{t("invoice.editor.invoiceNumber")}</Label>
-                <Input value={invoiceNumber} readOnly className="bg-muted" />
+                <Input
+                  value={invoiceNumber}
+                  onChange={(e) => setInvoiceNumber(e.target.value)}
+                />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">{t("invoice.editor.currency")}</Label>

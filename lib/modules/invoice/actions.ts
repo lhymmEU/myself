@@ -194,7 +194,7 @@ export async function createInvoice(input: CreateInvoiceInput): Promise<InvoiceW
   const db = getDb();
   const id = nanoid();
   const now = Date.now();
-  const invoiceNumber = await getNextInvoiceNumber();
+  const invoiceNumber = input.invoiceNumber || await getNextInvoiceNumber();
 
   const subtotal = input.items.reduce((sum, it) => sum + it.amount, 0);
   const tax = input.tax ?? 0;
@@ -306,6 +306,7 @@ export async function updateInvoice(input: UpdateInvoiceInput): Promise<InvoiceW
   const total = subtotal + tax;
 
   const updateData: Record<string, unknown> = { updatedAt: now, subtotal, tax, total };
+  if (input.invoiceNumber !== undefined) updateData.invoiceNumber = input.invoiceNumber;
   if (input.clientId !== undefined) updateData.clientId = input.clientId;
   if (input.date !== undefined) updateData.date = input.date;
   if (input.dueDate !== undefined) updateData.dueDate = input.dueDate;
