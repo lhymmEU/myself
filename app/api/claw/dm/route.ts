@@ -9,6 +9,7 @@ import {
   buildClawContext,
   formatContextForPrompt,
 } from "@/app/api/claw/context/route";
+import { clawCatalog } from "@/lib/claw-ui/catalog";
 
 export interface ToolCallRequest {
   name: string;
@@ -61,6 +62,41 @@ function extractAgentText(raw: string): { text: string; sessionId?: string } {
   }
 
   return { text: agentText.trim(), sessionId };
+}
+
+const UI_SPEC_REGEX = /\[UI_SPEC\]\s*([\s\S]*?)\s*\[\/UI_SPEC\]/g;
+
+function extractUISpec(text: string): {
+  cleanText: string;
+  uiSpec: unknown | null;
+} {
+  let uiSpec: unknown | null = null;
+  const cleanText = text
+    .replace(UI_SPEC_REGEX, (_, json: string) => {
+      try {
+        const parsed = JSON.parse(json.trim());
+        if (parsed && typeof parsed === "object" && parsed.root && parsed.elements) {
+          uiSpec = parsed;
+        }
+      } catch {
+        return _;
+      }
+      return "";
+    })
+    .trim();
+
+  if (!uiSpec) {
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed === "object" && parsed.root && parsed.elements) {
+        return { cleanText: "", uiSpec: parsed };
+      }
+    } catch {
+      // not a json-render spec
+    }
+  }
+
+  return { cleanText, uiSpec };
 }
 
 const TOOL_CALL_REGEX = /\[TOOL_CALL\]\s*([\s\S]*?)\s*\[\/TOOL_CALL\]/g;
@@ -135,6 +171,13 @@ export async function POST(req: NextRequest) {
       // Context injection is best-effort; proceed with the original message
     }
 
+    try {
+      const uiPrompt = clawCatalog.prompt({ mode: "inline" });
+      enrichedMessage = `${uiPrompt}\n\nWhen your response contains structured data (tables, status info, lists of items, key-value pairs, progress updates), wrap the JSON UI spec in [UI_SPEC]...[/UI_SPEC] tags. For simple conversational text, respond normally without UI specs.\n\n${enrichedMessage}`;
+    } catch {
+      // Catalog prompt injection is best-effort
+    }
+
     const b64 = Buffer.from(enrichedMessage).toString("base64");
 
     let cmd = `MSG=$(echo ${b64} | base64 -d) && openclaw agent --message "$MSG" --json --timeout 120 --agent ${agentId}`;
@@ -163,23 +206,25 @@ export async function POST(req: NextRequest) {
     }
 
     const extracted = extractAgentText(raw);
-    const { cleanText, toolCalls } = extractToolCalls(extracted.text);
+    const { cleanText: textAfterTools, toolCalls } = extractToolCalls(extracted.text);
 
     if (toolCalls.length > 0) {
       return NextResponse.json({
-        content: cleanText || null,
+        content: textAfterTools || null,
         responseType: "tool_request",
         toolCalls,
         sessionId: extracted.sessionId ?? sessionId ?? null,
       });
     }
 
-    const responseType = classifyResponse(cleanText);
+    const { cleanText, uiSpec } = extractUISpec(textAfterTools);
+    const responseType = classifyResponse(cleanText || textAfterTools);
 
     return NextResponse.json({
-      content: cleanText,
+      content: cleanText || textAfterTools,
       responseType,
       sessionId: extracted.sessionId ?? sessionId ?? null,
+      ...(uiSpec ? { uiSpec } : {}),
     });
   } catch (err) {
     return NextResponse.json(

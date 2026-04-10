@@ -4,6 +4,8 @@ import { User, Bot } from "lucide-react";
 import type { Message } from "./types";
 import { ResponseCard } from "./response-card";
 import { ToolApprovalCard } from "./tool-approval-card";
+import { GenerativeResponse } from "./generative-response";
+import { MarkdownResponse } from "./markdown-response";
 
 interface MessageBubbleProps {
   message: Message;
@@ -18,6 +20,21 @@ function formatTime(ts: number): string {
   });
 }
 
+const MARKDOWN_PATTERNS = [
+  /\|.+\|.+\|/,          // table rows
+  /^#{1,4}\s+/m,         // headings
+  /^```/m,               // code fences
+  /^[-*]\s+/m,           // unordered lists
+  /^\d+\.\s+/m,          // ordered lists
+  /\*\*.+\*\*/,          // bold
+  /\[.+\]\(.+\)/,        // links
+  /^>\s+/m,              // blockquotes
+];
+
+function hasMarkdownStructures(text: string): boolean {
+  return MARKDOWN_PATTERNS.some((p) => p.test(text));
+}
+
 export function MessageBubble({
   message,
   onApproveToolCall,
@@ -25,6 +42,7 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
 
+  // Tool request rendering (unchanged)
   if (
     !isUser &&
     message.responseType === "tool_request" &&
@@ -59,10 +77,22 @@ export function MessageBubble({
     );
   }
 
+  // Generative UI: json-render spec present
+  if (!isUser && message.uiSpec) {
+    return <GenerativeResponse message={message} />;
+  }
+
+  // Rich markdown: agent responses with structured markdown content
+  if (!isUser && message.content && hasMarkdownStructures(message.content)) {
+    return <MarkdownResponse message={message} />;
+  }
+
+  // Legacy ResponseCard for typed responses without markdown or UI spec
   if (!isUser && message.responseType && message.responseType !== "text") {
     return <ResponseCard message={message} />;
   }
 
+  // Plain bubble for user messages and simple agent text
   return (
     <div
       className={`flex gap-2.5 min-w-0 ${isUser ? "flex-row-reverse" : "flex-row"}`}

@@ -23,6 +23,8 @@ export interface Message {
   responseType?: ResponseType;
   metadata?: Record<string, unknown>;
   toolCalls?: PendingToolCall[];
+  /** json-render spec for generative UI rendering */
+  uiSpec?: unknown;
 }
 
 export type ResponseType =

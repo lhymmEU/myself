@@ -223,6 +223,7 @@ export function ClawDMPanel({ connectionId, connected, initialPrompt, initialSes
           timestamp: Date.now(),
           responseType: data.responseType as ResponseType,
           toolCalls,
+          uiSpec: data.uiSpec ?? undefined,
         };
 
         dispatch({
