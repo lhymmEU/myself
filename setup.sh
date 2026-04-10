@@ -11,7 +11,7 @@ echo ""
 if ! command -v node &> /dev/null; then
   echo "[ERROR] Node.js is not installed."
   echo ""
-  echo "  Please install Node.js (v18 or later) from:"
+  echo "  Please install Node.js (v20 or later) from:"
   echo "    https://nodejs.org/"
   echo ""
   echo "  After installing, close this terminal, open a new one,"
@@ -20,8 +20,8 @@ if ! command -v node &> /dev/null; then
 fi
 
 NODE_VERSION=$(node -v | sed 's/v//' | cut -d. -f1)
-if [ "$NODE_VERSION" -lt 18 ]; then
-  echo "[ERROR] Node.js v18+ is required (you have $(node -v))."
+if [ "$NODE_VERSION" -lt 20 ]; then
+  echo "[ERROR] Node.js v20+ is required (you have $(node -v))."
   echo "  Please update from: https://nodejs.org/"
   exit 1
 fi
@@ -40,7 +40,21 @@ echo ""
 
 # --- Install dependencies ---
 echo "[1/2] Installing dependencies (this may take a minute)..."
-npm install
+if ! npm install; then
+  echo ""
+  echo "[ERROR] npm install failed."
+  echo ""
+  echo "  If you see errors about 'node-gyp' or 'better-sqlite3':"
+  echo "    - macOS: Install Xcode Command Line Tools:"
+  echo "        xcode-select --install"
+  echo "    - Linux: Install build essentials:"
+  echo "        sudo apt install build-essential python3  (Debian/Ubuntu)"
+  echo "        sudo dnf groupinstall 'Development Tools'  (Fedora)"
+  echo ""
+  echo "  Alternatively, make sure you are using Node.js v20 or v22 LTS"
+  echo "  which includes prebuilt native binaries."
+  exit 1
+fi
 echo ""
 
 # --- Build the app ---

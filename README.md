@@ -25,14 +25,14 @@ You need two things installed on your machine before you begin:
 
 | Software | Required? | Version | Download |
 |----------|-----------|---------|----------|
-| **Node.js** | Yes | v18 or later | [nodejs.org](https://nodejs.org/) — choose the **LTS** version |
+| **Node.js** | Yes | v20 or later | [nodejs.org](https://nodejs.org/) — choose the **LTS** version |
 | **Git** | Yes | any | [git-scm.com](https://git-scm.com/) |
 | **Python** | Optional | 3.9–3.12 | [python.org](https://www.python.org/) — only needed for finance market data |
 
 **How to check if they're installed:**
 
 ```bash
-node -v     # should print v18.x.x or higher
+node -v     # should print v20.x.x or higher
 git --version
 ```
 
@@ -54,9 +54,14 @@ macOS / Linux:
 ./setup.sh
 ```
 
-Windows:
+Windows (Command Prompt):
 ```
 setup.bat
+```
+
+Windows (PowerShell):
+```powershell
+powershell -ExecutionPolicy Bypass -File setup.ps1
 ```
 
 The script checks your environment, installs all dependencies, and builds the app.

@@ -1,7 +1,10 @@
 @echo off
+setlocal enabledelayedexpansion
+chcp 65001 >nul 2>nul
+
 echo.
 echo ========================================
-echo   Life Dashboard — Setup
+echo   Life Dashboard - Setup
 echo ========================================
 echo.
 
@@ -10,7 +13,7 @@ where node >nul 2>nul
 if %errorlevel% neq 0 (
   echo [ERROR] Node.js is not installed.
   echo.
-  echo   Please install Node.js ^(v18 or later^) from:
+  echo   Please install Node.js ^(v20 or later^) from:
   echo     https://nodejs.org/
   echo.
   echo   After installing, close this window, open a new one,
@@ -19,8 +22,25 @@ if %errorlevel% neq 0 (
   exit /b 1
 )
 
-for /f "tokens=1 delims=v." %%a in ('node -v') do set NODE_MAJOR=%%a
-echo [OK] Node.js detected
+:: Parse the major version number from node -v (e.g. "v22.0.0" -> "22")
+for /f "usebackq tokens=*" %%i in (`node -e "process.stdout.write(process.version.split('.')[0].slice(1))"`) do set NODE_MAJOR=%%i
+
+if not defined NODE_MAJOR (
+  echo [ERROR] Could not determine Node.js version.
+  echo   Please ensure Node.js is installed correctly.
+  pause
+  exit /b 1
+)
+
+if %NODE_MAJOR% LSS 20 (
+  echo [ERROR] Node.js v20+ is required.
+  for /f "usebackq tokens=*" %%v in (`node -v`) do echo   You have %%v installed.
+  echo   Please update from: https://nodejs.org/
+  pause
+  exit /b 1
+)
+
+for /f "usebackq tokens=*" %%v in (`node -v`) do echo [OK] Node.js %%v detected
 
 :: --- Check npm ---
 where npm >nul 2>nul
@@ -31,14 +51,24 @@ if %errorlevel% neq 0 (
   exit /b 1
 )
 
-echo [OK] npm detected
+for /f "usebackq tokens=*" %%v in (`npm -v`) do echo [OK] npm %%v detected
 echo.
 
 :: --- Install dependencies ---
 echo [1/2] Installing dependencies (this may take a minute)...
 call npm install
 if %errorlevel% neq 0 (
-  echo [ERROR] npm install failed. Please check the errors above.
+  echo.
+  echo [ERROR] npm install failed.
+  echo.
+  echo   If you see errors about "node-gyp" or "better-sqlite3":
+  echo     1. Install Visual Studio Build Tools from:
+  echo        https://visualstudio.microsoft.com/visual-cpp-build-tools/
+  echo     2. During installation, select "Desktop development with C++"
+  echo     3. Restart this terminal and run setup.bat again
+  echo.
+  echo   Alternatively, make sure you are using Node.js v20 or v22 LTS
+  echo   which includes prebuilt native binaries.
   pause
   exit /b 1
 )
@@ -48,6 +78,7 @@ echo.
 echo [2/2] Building the app...
 call npm run build
 if %errorlevel% neq 0 (
+  echo.
   echo [ERROR] Build failed. Please check the errors above.
   pause
   exit /b 1
@@ -67,3 +98,4 @@ echo.
 echo   The database is created automatically on first launch.
 echo.
 pause
+endlocal

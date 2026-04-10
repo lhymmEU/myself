@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFile, stat } from "fs/promises";
-import { resolve } from "path";
+import { basename, resolve } from "path";
 import { homedir } from "os";
 
 const MAX_FILE_SIZE = 64 * 1024; // 64 KB
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     }
 
     const contents = await readFile(filePath, "utf-8");
-    return NextResponse.json({ contents, fileName: filePath.split("/").pop() });
+    return NextResponse.json({ contents, fileName: basename(filePath) });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to read file" },

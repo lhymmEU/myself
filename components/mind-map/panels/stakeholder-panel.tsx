@@ -31,7 +31,6 @@ import {
   ChevronRight,
   Shell,
   Users,
-  StickyNote,
 } from "lucide-react";
 import { placeEntityOnCanvas, DRAG_DATA_TYPE, type DragEntityData } from "./place-on-canvas";
 
@@ -47,7 +46,6 @@ interface FormData {
   desires: string;
   requirements: string;
   expectations: string;
-  clawNotes: string;
 }
 
 const ROLE_COLOR_PRESETS = [
@@ -69,7 +67,6 @@ const emptyForm: FormData = {
   desires: "",
   requirements: "",
   expectations: "",
-  clawNotes: "",
 };
 
 export function StakeholderPanel({ excalidrawAPI }: StakeholderPanelProps) {
@@ -84,6 +81,33 @@ export function StakeholderPanel({ excalidrawAPI }: StakeholderPanelProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [sectionOpen, setSectionOpen] = useState(true);
   const [sectionNotes, setSectionNotes] = useState("");
+  const [notesSaveTimer, setNotesSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchSectionNotes = useCallback(async () => {
+    try {
+      const res = await fetch("/api/settings");
+      const data = await res.json();
+      if (data.pm_stakeholder_section_notes) {
+        setSectionNotes(data.pm_stakeholder_section_notes);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const saveSectionNotes = useCallback((value: string) => {
+    fetch("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: "pm_stakeholder_section_notes", value }),
+    }).catch(() => {});
+  }, []);
+
+  const handleSectionNotesChange = (value: string) => {
+    setSectionNotes(value);
+    if (notesSaveTimer) clearTimeout(notesSaveTimer);
+    setNotesSaveTimer(setTimeout(() => saveSectionNotes(value), 800));
+  };
 
   const fetchStakeholders = useCallback(async () => {
     try {
@@ -98,7 +122,8 @@ export function StakeholderPanel({ excalidrawAPI }: StakeholderPanelProps) {
 
   useEffect(() => {
     fetchStakeholders();
-  }, [fetchStakeholders]);
+    fetchSectionNotes();
+  }, [fetchStakeholders, fetchSectionNotes]);
 
   const handleSave = async () => {
     if (!form.name.trim()) return;
@@ -114,7 +139,6 @@ export function StakeholderPanel({ excalidrawAPI }: StakeholderPanelProps) {
           requirements: form.requirements,
           expectations: form.expectations,
         },
-        clawNotes: form.clawNotes,
       };
       await fetch("/api/mind-map/stakeholders", {
         method: editingId ? "PUT" : "POST",
@@ -160,7 +184,6 @@ export function StakeholderPanel({ excalidrawAPI }: StakeholderPanelProps) {
       desires: s.details.desires,
       requirements: s.details.requirements,
       expectations: s.details.expectations,
-      clawNotes: s.clawNotes,
     });
     setDialogOpen(true);
   };
@@ -324,17 +347,6 @@ export function StakeholderPanel({ excalidrawAPI }: StakeholderPanelProps) {
                         );
                       })}
 
-                      {s.clawNotes && (
-                        <div>
-                          <div className="flex items-center gap-1 mb-0.5">
-                            <StickyNote className="w-3 h-3 text-muted-foreground" />
-                            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                              {t("mindMap.product.clawNotes")}
-                            </p>
-                          </div>
-                          <p className="text-xs whitespace-pre-wrap">{s.clawNotes}</p>
-                        </div>
-                      )}
                     </div>
                   </CollapsibleContent>
                 </div>
@@ -342,31 +354,29 @@ export function StakeholderPanel({ excalidrawAPI }: StakeholderPanelProps) {
             ))}
 
             {stakeholders.length > 0 && (
-              <div className="space-y-2 pt-1">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full gap-1.5"
-                  onClick={handleAskClaw}
-                >
-                  <Shell className="w-3.5 h-3.5" />
-                  {t("mindMap.product.askClaw")}
-                </Button>
-
-                <div>
-                  <Label className="text-xs text-muted-foreground">
-                    {t("mindMap.product.sectionNotes")}
-                  </Label>
-                  <Textarea
-                    value={sectionNotes}
-                    onChange={(e) => setSectionNotes(e.target.value)}
-                    placeholder={t("mindMap.product.sectionNotesPlaceholder")}
-                    rows={3}
-                    className="text-xs mt-1"
-                  />
-                </div>
-              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full gap-1.5"
+                onClick={handleAskClaw}
+              >
+                <Shell className="w-3.5 h-3.5" />
+                {t("mindMap.product.askClaw")}
+              </Button>
             )}
+
+            <div>
+              <Label className="text-xs text-muted-foreground">
+                {t("mindMap.product.sectionNotes")}
+              </Label>
+              <Textarea
+                value={sectionNotes}
+                onChange={(e) => handleSectionNotesChange(e.target.value)}
+                placeholder={t("mindMap.product.sectionNotesPlaceholder")}
+                rows={3}
+                className="text-xs mt-1"
+              />
+            </div>
           </div>
         </CollapsibleContent>
       </Collapsible>
@@ -438,17 +448,6 @@ export function StakeholderPanel({ excalidrawAPI }: StakeholderPanelProps) {
                 />
               </div>
             ))}
-            <div>
-              <Label>{t("mindMap.product.clawNotes")}</Label>
-              <Textarea
-                value={form.clawNotes}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, clawNotes: e.target.value }))
-                }
-                placeholder={t("mindMap.product.clawNotesPlaceholder")}
-                rows={3}
-              />
-            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>

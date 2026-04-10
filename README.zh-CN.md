@@ -25,14 +25,14 @@
 
 | 软件 | 是否必需？ | 版本要求 | 下载地址 |
 |------|-----------|---------|---------|
-| **Node.js** | 是 | v18 或更高 | [nodejs.org](https://nodejs.org/) — 选择 **LTS** 版本 |
+| **Node.js** | 是 | v20 或更高 | [nodejs.org](https://nodejs.org/) — 选择 **LTS** 版本 |
 | **Git** | 是 | 任意版本 | [git-scm.com](https://git-scm.com/) |
 | **Python** | 可选 | 3.9–3.12 | [python.org](https://www.python.org/) — 仅在需要财务市场数据时安装 |
 
 **检查是否已安装：**
 
 ```bash
-node -v     # 应输出 v18.x.x 或更高版本
+node -v     # 应输出 v20.x.x 或更高版本
 git --version
 ```
 
@@ -54,9 +54,14 @@ macOS / Linux：
 ./setup.sh
 ```
 
-Windows：
+Windows（命令提示符）：
 ```
 setup.bat
+```
+
+Windows（PowerShell）：
+```powershell
+powershell -ExecutionPolicy Bypass -File setup.ps1
 ```
 
 脚本会检查你的环境、安装所有依赖并构建应用。
