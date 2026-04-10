@@ -232,7 +232,7 @@ export default function PlansPage() {
           sidebarOpen ? "w-[280px] border-r px-2" : "w-0"
         }`}
       >
-        <div className="w-[260px] h-full">
+        <div className="w-[260px] h-full overflow-hidden">
           <PageList
             plans={plans}
             folders={folders}

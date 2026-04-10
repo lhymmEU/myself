@@ -55,7 +55,7 @@ export function MessageBubble({
         </div>
         <div className="max-w-[80%] space-y-2 min-w-0">
           {message.content && (
-            <div className="rounded-2xl rounded-tl-md bg-muted px-4 py-2.5 text-sm leading-relaxed text-foreground max-h-[60vh] overflow-y-auto overflow-x-hidden">
+            <div className="rounded-2xl rounded-tl-md bg-muted px-4 py-2.5 text-sm leading-relaxed text-foreground max-h-[60vh] overflow-auto">
               <p className="whitespace-pre-wrap break-words" style={{ overflowWrap: "anywhere" }}>
                 {message.content}
               </p>
@@ -111,7 +111,7 @@ export function MessageBubble({
         )}
       </div>
       <div
-        className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed max-h-[60vh] overflow-y-auto overflow-x-hidden ${
+        className={`max-w-[80%] min-w-0 rounded-2xl px-4 py-2.5 text-sm leading-relaxed max-h-[60vh] overflow-auto ${
           isUser
             ? "bg-foreground text-background rounded-tr-md"
             : "bg-muted text-foreground rounded-tl-md"

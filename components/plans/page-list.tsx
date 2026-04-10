@@ -122,7 +122,7 @@ function SortablePlanItem({
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
+    <div ref={setNodeRef} style={style} {...attributes} className="min-w-0">
       <div
         role="button"
         tabIndex={0}
@@ -230,7 +230,7 @@ function FolderSection({
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} className="mb-1">
+    <div ref={setNodeRef} style={style} {...attributes} className="mb-1 min-w-0">
       <div
         className={`group flex items-center gap-1 px-1.5 py-1.5 rounded-md cursor-pointer transition-colors ${
           highlighted
@@ -524,8 +524,8 @@ export function PageList({
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-8 py-3 space-y-3">
+    <div className="flex flex-col h-full w-full overflow-hidden">
+      <div className="px-3 py-3 space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {t("plans.pages")}
@@ -561,7 +561,7 @@ export function PageList({
           />
         </div>
       </div>
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-w-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -574,7 +574,7 @@ export function PageList({
             items={allSortableIds}
             strategy={verticalListSortingStrategy}
           >
-          <div className="pb-2 space-y-0.5">
+          <div className="pb-2 px-2 space-y-0.5 ">
             {!isSearching &&
               folders.map((folder) => (
                 <FolderSection

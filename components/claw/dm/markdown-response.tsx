@@ -133,7 +133,7 @@ export function MarkdownResponse({ message }: MarkdownResponseProps) {
         <Bot className="h-3.5 w-3.5" />
       </div>
       <div
-        className={`max-w-[80%] rounded-2xl rounded-tl-md border ${borderClass} bg-muted/50 px-4 py-2.5 text-sm min-w-0 max-h-[60vh] overflow-y-auto overflow-x-hidden`}
+        className={`max-w-[80%] rounded-2xl rounded-tl-md border ${borderClass} bg-muted/50 px-4 py-2.5 text-sm min-w-0 max-h-[60vh] overflow-auto`}
       >
         <MemoizedMarkdown content={message.content} />
         <p className="mt-2 text-[10px] text-muted-foreground">

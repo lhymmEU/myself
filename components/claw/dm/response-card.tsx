@@ -125,16 +125,16 @@ export function ResponseCard({ message }: ResponseCardProps) {
         <Bot className="h-3.5 w-3.5" />
       </div>
       <Card
-        className={`max-w-[80%] border ${style.border} ${style.bg} shadow-none max-h-[60vh] overflow-y-auto`}
+        className={`max-w-[80%] min-w-0 border ${style.border} ${style.bg} shadow-none max-h-[60vh] overflow-auto`}
       >
-        <CardContent className="p-3">
+        <CardContent className="p-3 min-w-0">
           <div className="flex items-center gap-2 mb-2">
             {style.icon}
             <span className="text-xs font-medium text-muted-foreground capitalize">
               {message.responseType}
             </span>
           </div>
-          <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+          <div className="text-sm leading-relaxed whitespace-pre-wrap break-words min-w-0" style={{ overflowWrap: "anywhere" }}>
             {replaceJargon(message.content)}
           </div>
           <p className="mt-2 text-[10px] text-muted-foreground">

@@ -212,7 +212,7 @@ export function SessionListPanel({
             return (
               <div
                 key={key}
-                className={`group relative rounded-md px-2.5 py-2 cursor-pointer transition-colors ${
+                className={`group relative rounded-md px-2.5 py-2 cursor-pointer transition-colors overflow-hidden ${
                   isActive
                     ? "bg-muted border border-border"
                     : "hover:bg-muted/50 border border-transparent"
@@ -254,9 +254,9 @@ export function SessionListPanel({
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <MessageCircle className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                      <span className="text-xs font-medium truncate flex-1">
+                      <span className="text-xs font-medium truncate flex-1 min-w-0">
                         {displayName}
                       </span>
                       <Button
