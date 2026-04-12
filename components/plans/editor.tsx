@@ -8,7 +8,7 @@ import {
   BlockNoteSchema,
   defaultBlockSpecs,
 } from "@blocknote/core";
-import { useT } from "@/lib/i18n/context";
+import { SelectionActions } from "@/components/plans/claw/selection-actions";
 
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
@@ -20,12 +20,20 @@ const schema = BlockNoteSchema.create({
 interface EditorProps {
   content: Block[] | null;
   onChange: (content: Block[]) => void;
+  clawConnected?: boolean;
+  onTranslate?: (text: string) => void;
+  onExplain?: (text: string) => void;
 }
 
-export function Editor({ content, onChange }: EditorProps) {
-  const t = useT();
+export function Editor({
+  content,
+  onChange,
+  clawConnected = false,
+  onTranslate,
+  onExplain,
+}: EditorProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [selectedCharCount, setSelectedCharCount] = useState(0);
+  const [selectedText, setSelectedText] = useState("");
 
   const editor = useCreateBlockNote({
     schema,
@@ -43,8 +51,7 @@ export function Editor({ content, onChange }: EditorProps) {
   }, [onChange, editor]);
 
   const handleSelectionChange = useCallback(() => {
-    const text = editor.getSelectedText();
-    setSelectedCharCount(text.length);
+    setSelectedText(editor.getSelectedText());
   }, [editor]);
 
   return (
@@ -56,11 +63,13 @@ export function Editor({ content, onChange }: EditorProps) {
         theme="dark"
         className="bn-seamless"
       />
-      {selectedCharCount > 0 && (
-        <div className="fixed bottom-6 right-6 z-50 px-3 py-1.5 rounded-full bg-muted/90 border border-border/60 shadow-lg backdrop-blur-sm text-xs text-muted-foreground tabular-nums animate-in fade-in slide-in-from-bottom-2 duration-200">
-          {selectedCharCount} {t("plans.charsSelected")}
-        </div>
-      )}
+      <SelectionActions
+        charCount={selectedText.length}
+        selectedText={selectedText}
+        clawConnected={clawConnected}
+        onTranslate={onTranslate ?? (() => {})}
+        onExplain={onExplain ?? (() => {})}
+      />
     </div>
   );
 }

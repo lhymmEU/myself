@@ -9,6 +9,7 @@ import type { Block } from "@blocknote/core";
 import { useT } from "@/lib/i18n/context";
 import { usePlanList, usePlanFolders } from "@/lib/swr/hooks";
 import { Button } from "@/components/ui/button";
+import { usePlanClaw } from "@/components/plans/claw/plan-claw-provider";
 
 interface Plan {
   id: string;
@@ -24,6 +25,7 @@ export default function PlansPage() {
   const t = useT();
   const { data: plansData, mutate: mutatePlans } = usePlanList();
   const { data: foldersData, mutate: mutateFolders } = usePlanFolders();
+  const { clawConnected, handleTranslate, handleExplain, panelElement } = usePlanClaw();
   const plans: Plan[] = useMemo(() => (Array.isArray(plansData) ? plansData : []), [plansData]);
   const folders: PlanFolder[] = useMemo(() => foldersData?.folders ?? [], [foldersData]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -285,6 +287,9 @@ export default function PlansPage() {
                 key={activePlan.id}
                 content={activePlan.content as Block[]}
                 onChange={handleContentChange}
+                clawConnected={clawConnected}
+                onTranslate={handleTranslate}
+                onExplain={handleExplain}
               />
             </div>
           </div>
@@ -313,6 +318,7 @@ export default function PlansPage() {
           </div>
         )}
       </div>
+      {panelElement}
     </div>
   );
 }

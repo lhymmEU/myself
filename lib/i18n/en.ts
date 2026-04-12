@@ -871,6 +871,19 @@ export const en = {
     hAgo: "h ago",
     dAgo: "d ago",
     charsSelected: "chars selected",
+    translate: "Translate",
+    explain: "Explain",
+    translateTooltip: "Ask Claw to translate selected text",
+    explainTooltip: "Ask Claw to explain selected text",
+    clawPanel: {
+      translate: "Translate",
+      translateDesc: "Translation by your Claw agent",
+      explain: "Explain",
+      explainDesc: "Explanation by your Claw agent",
+      loading: "Claw is thinking...",
+      copyToClipboard: "Copy to clipboard",
+      copied: "Copied!",
+    },
   },
 
   marked: {

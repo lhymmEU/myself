@@ -871,6 +871,19 @@ export const zh: Translations = {
     hAgo: "小时前",
     dAgo: "天前",
     charsSelected: "个字符已选中",
+    translate: "翻译",
+    explain: "解释",
+    translateTooltip: "让 Claw 翻译选中的文字",
+    explainTooltip: "让 Claw 解释选中的内容",
+    clawPanel: {
+      translate: "翻译",
+      translateDesc: "由你的 Claw 代理翻译",
+      explain: "解释",
+      explainDesc: "由你的 Claw 代理解释",
+      loading: "Claw 正在思考...",
+      copyToClipboard: "复制到剪贴板",
+      copied: "已复制！",
+    },
   },
 
   marked: {
