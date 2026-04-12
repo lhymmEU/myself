@@ -1,6 +1,6 @@
 "use client";
 
-import { Languages, BookOpen } from "lucide-react";
+import { Languages, Search } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
 
 interface SelectionActionsProps {
@@ -45,7 +45,7 @@ export function SelectionActions({
             className="p-1.5 mr-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             title={t("plans.explainTooltip")}
           >
-            <BookOpen className="h-3.5 w-3.5" />
+            <Search className="h-3.5 w-3.5" />
           </button>
         </>
       )}

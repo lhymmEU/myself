@@ -21,6 +21,8 @@ export function usePlanClaw(): PlanClawState {
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelMode, setPanelMode] = useState<PanelMode>(null);
   const [clawConnected, setClawConnected] = useState(false);
+  const [explainContext, setExplainContext] = useState("");
+  const [explainQuestion, setExplainQuestion] = useState("");
 
   const { data: connectionsData } = useClawConnections();
   const connections: { id: string }[] = Array.isArray(connectionsData)
@@ -67,14 +69,26 @@ export function usePlanClaw(): PlanClawState {
   const handleExplain = useCallback(
     (text: string) => {
       reset();
+      setExplainContext(text);
+      setExplainQuestion("");
       setPanelMode("explain");
       setPanelOpen(true);
-      send(
-        `Explain the following concepts or text in simple, easy-to-understand terms. Break down any technical jargon, abbreviations, or complex ideas so a non-expert can understand them.\n\n${text}`,
-      );
     },
-    [send, reset],
+    [reset],
   );
+
+  const handleSendExplain = useCallback(() => {
+    if (!explainContext) return;
+    reset();
+
+    const questionPart = explainQuestion.trim()
+      ? `\n\nUser's question: ${explainQuestion.trim()}`
+      : "";
+
+    send(
+      `Explain the following concepts or text in simple, easy-to-understand terms. Break down any technical jargon, abbreviations, or complex ideas so a non-expert can understand them.\n\nContext:\n${explainContext}${questionPart}`,
+    );
+  }, [explainContext, explainQuestion, send, reset]);
 
   const handleOpenChange = useCallback(
     (open: boolean) => {
@@ -82,6 +96,8 @@ export function usePlanClaw(): PlanClawState {
       if (!open) {
         reset();
         setPanelMode(null);
+        setExplainContext("");
+        setExplainQuestion("");
       }
     },
     [reset],
@@ -106,6 +122,10 @@ export function usePlanClaw(): PlanClawState {
       content={response}
       loading={loading}
       error={error}
+      selectedText={panelMode === "explain" ? explainContext : undefined}
+      question={explainQuestion}
+      onQuestionChange={setExplainQuestion}
+      onSend={handleSendExplain}
     />
   );
 
