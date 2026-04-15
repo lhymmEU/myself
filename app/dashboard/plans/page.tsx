@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { PageList } from "@/components/plans/page-list";
 import type { PlanFolder } from "@/components/plans/page-list";
 import { Editor } from "@/components/plans/editor";
+import type { EditorHandle } from "@/components/plans/editor";
+import { ExportImportBar } from "@/components/plans/export-import-bar";
 import { FileText, PenLine, PanelLeft, PanelLeftClose } from "lucide-react";
 import type { Block } from "@blocknote/core";
 import { useT } from "@/lib/i18n/context";
@@ -33,6 +35,7 @@ export default function PlansPage() {
   const [title, setTitle] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const titleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editorRef = useRef<EditorHandle>(null);
 
   const loadPlan = useCallback(async (id: string) => {
     try {
@@ -221,6 +224,25 @@ export default function PlansPage() {
     [mutateFolders, mutatePlans]
   );
 
+  const handleImport = useCallback(
+    async (blocks: Block[]) => {
+      if (!activeId) return;
+      setActivePlan((prev) => (prev ? { ...prev, content: blocks } : prev));
+      try {
+        await fetch("/api/plans", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: activeId, content: blocks }),
+        });
+        mutatePlans();
+        loadPlan(activeId);
+      } catch {
+        // network error
+      }
+    },
+    [activeId, mutatePlans, loadPlan]
+  );
+
   useEffect(() => {
     return () => {
       if (titleDebounceRef.current) clearTimeout(titleDebounceRef.current);
@@ -265,6 +287,13 @@ export default function PlansPage() {
               <PanelLeft className="h-4 w-4" />
             )}
           </Button>
+          {activePlan && (
+            <ExportImportBar
+              editorRef={editorRef}
+              title={title}
+              onImport={handleImport}
+            />
+          )}
         </div>
         {activePlan ? (
           <div className="flex-1 overflow-y-auto">
@@ -284,6 +313,7 @@ export default function PlansPage() {
                 })}
               </p>
               <Editor
+                ref={editorRef}
                 key={activePlan.id}
                 content={activePlan.content as Block[]}
                 onChange={handleContentChange}

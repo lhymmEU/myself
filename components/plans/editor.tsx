@@ -1,10 +1,17 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import {
+  useRef,
+  useState,
+  useCallback,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
 import {
   type Block,
+  type BlockNoteEditor,
   BlockNoteSchema,
   defaultBlockSpecs,
 } from "@blocknote/core";
@@ -17,6 +24,11 @@ const schema = BlockNoteSchema.create({
   blockSpecs: defaultBlockSpecs,
 });
 
+export interface EditorHandle {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getEditor: () => BlockNoteEditor<any, any, any>;
+}
+
 interface EditorProps {
   content: Block[] | null;
   onChange: (content: Block[]) => void;
@@ -25,13 +37,10 @@ interface EditorProps {
   onExplain?: (text: string) => void;
 }
 
-export function Editor({
-  content,
-  onChange,
-  clawConnected = false,
-  onTranslate,
-  onExplain,
-}: EditorProps) {
+export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
+  { content, onChange, clawConnected = false, onTranslate, onExplain },
+  ref
+) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedText, setSelectedText] = useState("");
 
@@ -42,6 +51,8 @@ export function Editor({
         ? (content as (typeof schema.Block)[])
         : undefined,
   });
+
+  useImperativeHandle(ref, () => ({ getEditor: () => editor }), [editor]);
 
   const handleChange = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -72,4 +83,4 @@ export function Editor({
       />
     </div>
   );
-}
+});
