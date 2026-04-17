@@ -6,6 +6,21 @@ Write-Host "  Life Dashboard - Setup"
 Write-Host "========================================"
 Write-Host ""
 
+# --- Heads-up about PowerShell execution policy ---
+# If the user ran "./setup.ps1" directly without a bypass, PowerShell may
+# refuse to execute the script. Detect that situation and print the fix.
+try {
+    $policy = Get-ExecutionPolicy -Scope Process
+    if ($policy -eq "Restricted" -or $policy -eq "AllSigned") {
+        Write-Host "[INFO] Your PowerShell execution policy is '$policy'." -ForegroundColor Yellow
+        Write-Host "       If this script will not run, close this window and re-launch with:"
+        Write-Host "         powershell -ExecutionPolicy Bypass -File setup.ps1"
+        Write-Host ""
+    }
+} catch {
+    # Non-fatal: just continue.
+}
+
 # --- Check Node.js ---
 $nodePath = Get-Command node -ErrorAction SilentlyContinue
 if (-not $nodePath) {
@@ -41,6 +56,12 @@ $npmVersion = npm -v
 Write-Host "[OK] npm $npmVersion detected" -ForegroundColor Green
 Write-Host ""
 
+# --- Clean stale build cache so module resolution starts from a known state ---
+if (Test-Path ".next") {
+    Write-Host "[INFO] Removing stale .next build cache..."
+    Remove-Item -Recurse -Force ".next"
+}
+
 # --- Install dependencies ---
 Write-Host "[1/2] Installing dependencies (this may take a minute)..."
 npm install
@@ -58,6 +79,11 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "  which includes prebuilt native binaries."
     exit 1
 }
+Write-Host ""
+
+# Show the installed crypto library version so a regression is visible.
+Write-Host "[INFO] Installed @noble/hashes version:"
+npm ls @noble/hashes --depth=0 2>$null
 Write-Host ""
 
 # --- Build the app ---

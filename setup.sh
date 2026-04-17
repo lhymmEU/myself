@@ -38,6 +38,12 @@ fi
 echo "[OK] npm $(npm -v) detected"
 echo ""
 
+# --- Clean stale build cache so module resolution starts from a known state ---
+if [ -d ".next" ]; then
+  echo "[INFO] Removing stale .next build cache..."
+  rm -rf .next
+fi
+
 # --- Install dependencies ---
 echo "[1/2] Installing dependencies (this may take a minute)..."
 if ! npm install; then
@@ -55,6 +61,11 @@ if ! npm install; then
   echo "  which includes prebuilt native binaries."
   exit 1
 fi
+echo ""
+
+# Show the installed crypto library version so a regression is visible.
+echo "[INFO] Installed @noble/hashes version:"
+npm ls @noble/hashes --depth=0 2>/dev/null | grep "@noble/hashes" || true
 echo ""
 
 # --- Build the app ---

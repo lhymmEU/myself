@@ -54,6 +54,12 @@ if %errorlevel% neq 0 (
 for /f "usebackq tokens=*" %%v in (`npm -v`) do echo [OK] npm %%v detected
 echo.
 
+:: --- Clean stale build cache so module resolution starts from a known state ---
+if exist .next (
+  echo [INFO] Removing stale .next build cache...
+  rmdir /s /q .next
+)
+
 :: --- Install dependencies ---
 echo [1/2] Installing dependencies (this may take a minute)...
 call npm install
@@ -67,11 +73,19 @@ if %errorlevel% neq 0 (
   echo     2. During installation, select "Desktop development with C++"
   echo     3. Restart this terminal and run setup.bat again
   echo.
+  echo   If running setup.bat fails repeatedly, try the PowerShell version:
+  echo     powershell -ExecutionPolicy Bypass -File setup.ps1
+  echo.
   echo   Alternatively, make sure you are using Node.js v20 or v22 LTS
   echo   which includes prebuilt native binaries.
   pause
   exit /b 1
 )
+echo.
+
+:: Show the installed crypto library version so a regression is visible.
+echo [INFO] Installed @noble/hashes version:
+call npm ls @noble/hashes --depth=0 2>nul
 echo.
 
 :: --- Build the app ---
