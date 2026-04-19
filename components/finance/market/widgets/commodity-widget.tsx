@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { useOpenBB } from "@/lib/swr/hooks";
 import { useModuleContext } from "@/components/finance/market/module-card";
@@ -29,7 +29,10 @@ export function CommodityWidget() {
     provider: "yfinance",
   });
 
-  const prices = priceData?.results ?? [];
+  const prices = useMemo(
+    () => priceData?.results ?? [],
+    [priceData?.results],
+  );
   const label = PAIRS.find((p) => p.symbol === symbol)?.label ?? symbol;
 
   useEffect(() => {

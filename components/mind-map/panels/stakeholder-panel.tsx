@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import type { PmStakeholder, StakeholderDetail } from "@/lib/modules/mind-map/product-types";
 import { useT } from "@/lib/i18n/context";
+import type { TranslationKey } from "@/lib/i18n/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -121,6 +122,7 @@ export function StakeholderPanel({ excalidrawAPI }: StakeholderPanelProps) {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount; setState happens in async callbacks after fetch
     fetchStakeholders();
     fetchSectionNotes();
   }, [fetchStakeholders, fetchSectionNotes]);
@@ -224,7 +226,7 @@ export function StakeholderPanel({ excalidrawAPI }: StakeholderPanelProps) {
     router.push(`/dashboard/claw?askClaw=${encodeURIComponent(prompt.slice(0, 4000))}`);
   };
 
-  const detailFields: { key: keyof StakeholderDetail; labelKey: string; placeholderKey: string }[] = [
+  const detailFields: { key: keyof StakeholderDetail; labelKey: TranslationKey; placeholderKey: TranslationKey }[] = [
     { key: "objectives", labelKey: "mindMap.product.objectives", placeholderKey: "mindMap.product.objectivesPlaceholder" },
     { key: "desires", labelKey: "mindMap.product.desires", placeholderKey: "mindMap.product.desiresPlaceholder" },
     { key: "requirements", labelKey: "mindMap.product.requirements", placeholderKey: "mindMap.product.requirementsPlaceholder" },

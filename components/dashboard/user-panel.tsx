@@ -75,7 +75,7 @@ export function UserPanel() {
   const t = useT();
   const router = useRouter();
   const { data: skillsData, mutate: mutateSkills } = useUserSkills();
-  const { data: appearanceData, mutate: mutateAppearance } = useCharacterAppearance("user");
+  const { data: appearanceData } = useCharacterAppearance("user");
   const skills: UserSkill[] = skillsData?.skills ?? [];
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);

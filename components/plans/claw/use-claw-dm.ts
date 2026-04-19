@@ -29,9 +29,10 @@ export function useClawDM(): UseClawDMReturn {
   } | null>(null);
 
   const { data: connectionsData } = useClawConnections();
-  const connections: { id: string }[] = Array.isArray(connectionsData)
-    ? connectionsData
-    : [];
+  const connections: { id: string }[] = useMemo(
+    () => (Array.isArray(connectionsData) ? connectionsData : []),
+    [connectionsData],
+  );
 
   const connectionId = activeConnection?.id ?? connections[0]?.id ?? null;
   const connected = activeConnection?.connected ?? false;

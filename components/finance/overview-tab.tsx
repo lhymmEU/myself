@@ -1,14 +1,12 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, BarChart3, Activity } from "lucide-react";
 import { useOpenBB } from "@/lib/swr/hooks";
 import { ConnectionBanner } from "./connection-banner";
 import { Loader2 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
 import type { MarketIndex, TreasuryRate } from "@/lib/modules/finance/types";
-
-const MAJOR_INDICES = ["^GSPC", "^DJI", "^IXIC", "^FTSE", "^N225"];
 
 export function OverviewTab() {
   const t = useT();

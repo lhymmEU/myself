@@ -40,10 +40,13 @@ export function NewsWidget() {
     }
   }, []);
 
-  const articles = newsData?.results ?? [];
+  const articles = useMemo(
+    () => newsData?.results ?? [],
+    [newsData?.results],
+  );
   const headlineSlice = useMemo(
     () => articles.slice(0, 8).map((a) => a.title),
-    [newsData],
+    [articles],
   );
 
   useEffect(() => {

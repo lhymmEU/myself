@@ -24,7 +24,6 @@ const POPULAR_PAIRS = [
 export function CryptoTab() {
   const t = useT();
   const [symbol, setSymbol] = useState("BTCUSD");
-  const [customSearch, setCustomSearch] = useState("");
 
   const { data: healthData } = useOpenBB<{ connected: boolean }>("__health");
   const connected = healthData?.connected ?? false;
@@ -37,7 +36,6 @@ export function CryptoTab() {
   );
 
   const handleSearch = useCallback((q: string) => {
-    setCustomSearch(q);
     if (q) {
       const normalized = q.toUpperCase().replace(/[^A-Z]/g, "");
       setSymbol(normalized.endsWith("USD") ? normalized : `${normalized}USD`);
@@ -61,7 +59,6 @@ export function CryptoTab() {
               key={pair.symbol}
               onClick={() => {
                 setSymbol(pair.symbol);
-                setCustomSearch("");
               }}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 symbol === pair.symbol

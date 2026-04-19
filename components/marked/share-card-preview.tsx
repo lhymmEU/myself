@@ -247,7 +247,7 @@ function buildHtmlExport(
 
   const itemsHtml = items
     .map(
-      (item, i) => `
+      (item) => `
     <li>
       <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">
         ${escapeHtml(item.title)}

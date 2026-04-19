@@ -124,6 +124,7 @@ export function ClawPanel() {
   }, [checkConnection]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount; setState happens in async callback after fetch
     fetchClawSkills();
   }, [fetchClawSkills]);
 

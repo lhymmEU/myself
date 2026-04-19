@@ -39,6 +39,7 @@ export function OnboardingOverlay() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const done = localStorage.getItem(STORAGE_KEY);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time read from localStorage on mount; can't be initialized synchronously to avoid SSR hydration mismatch
     if (!done) setVisible(true);
   }, []);
 

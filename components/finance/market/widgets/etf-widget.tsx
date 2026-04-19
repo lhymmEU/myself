@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { useOpenBB } from "@/lib/swr/hooks";
 import { useModuleContext } from "@/components/finance/market/module-card";
@@ -53,7 +53,10 @@ export function EtfWidget() {
   const handleSearch = useCallback((q: string) => setQuery(q), []);
 
   const info = infoData?.results?.[0];
-  const holdings = holdingsData?.results ?? [];
+  const holdings = useMemo(
+    () => holdingsData?.results ?? [],
+    [holdingsData?.results],
+  );
   const searchResults = searchData?.results ?? [];
 
   useEffect(() => {

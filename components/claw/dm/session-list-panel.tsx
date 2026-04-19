@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -77,14 +77,21 @@ export function SessionListPanel({
 }: SessionListPanelProps) {
   const t = useT();
   const { data, isLoading: loading, isValidating, mutate } = useClawSessions(connectionId, connected);
-  const sessions: SessionEntry[] = data?.sessions ?? [];
-  const [sessionNames, setSessionNames] = useState<Record<string, string>>(loadSessionNames);
+  const sessions: SessionEntry[] = useMemo(
+    () => data?.sessions ?? [],
+    [data?.sessions],
+  );
+  const [namesVersion, setNamesVersion] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
-  useEffect(() => {
-    setSessionNames(loadSessionNames());
-  }, [activeSessionId, data]);
+  const sessionNames = useMemo(
+    () => loadSessionNames(),
+    // Re-read names from localStorage when the active session, fetched data,
+    // or our own rename version changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeSessionId, data, namesVersion],
+  );
 
   const sortedSessions = useMemo(() => {
     return [...sessions]
@@ -152,8 +159,8 @@ export function SessionListPanel({
       } else {
         delete updated[editingId];
       }
-      setSessionNames(updated);
       saveSessionNames(updated);
+      setNamesVersion((v) => v + 1);
       setEditingId(null);
     }
   };

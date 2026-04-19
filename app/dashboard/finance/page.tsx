@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Wallet, BarChart3 } from "lucide-react";
 import useSWR from "swr";
@@ -27,12 +27,6 @@ export default function FinancePage() {
   const defaultMode = (settingsData?.finance_default_mode ?? "market") as FinanceMode;
   const [mode, setMode] = useState<FinanceMode | null>(null);
   const activeMode = mode ?? defaultMode;
-
-  useEffect(() => {
-    if (mode === null && settingsData) {
-      setMode(defaultMode);
-    }
-  }, [settingsData, defaultMode, mode]);
 
   const enabledModules: string[] = useMemo(() => {
     try {

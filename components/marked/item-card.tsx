@@ -117,6 +117,7 @@ export function ItemCard({ item, collections, onMutate }: Props) {
         {/* Favicon */}
         <div className="mt-0.5 shrink-0">
           {item.favicon ? (
+            // eslint-disable-next-line @next/next/no-img-element -- arbitrary external favicon URLs aren't suitable for next/image optimization
             <img
               src={item.favicon}
               alt=""

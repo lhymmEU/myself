@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { Suspense, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { MessageCircle, Settings2 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
@@ -17,7 +17,7 @@ interface ConnectState {
 
 type ClawMode = "dm" | "advanced";
 
-export default function ClawPage() {
+function ClawPageInner() {
   const t = useT();
   const searchParams = useSearchParams();
   const initialPrompt = searchParams.get("askClaw") ?? undefined;
@@ -78,5 +78,13 @@ export default function ClawPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function ClawPage() {
+  return (
+    <Suspense fallback={<div className="px-8 py-4" />}>
+      <ClawPageInner />
+    </Suspense>
   );
 }

@@ -78,6 +78,7 @@ export function DemandPanel({ excalidrawAPI }: DemandPanelProps) {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount; setState happens in async callback after fetch
     fetchDemands();
   }, [fetchDemands]);
 

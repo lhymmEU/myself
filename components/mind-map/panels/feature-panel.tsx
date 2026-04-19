@@ -84,6 +84,7 @@ export function FeaturePanel({ excalidrawAPI }: FeaturePanelProps) {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount; setState happens in async callback after fetch
     fetchFeatures();
   }, [fetchFeatures]);
 

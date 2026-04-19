@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useState, useRef, useCallback, createContext, useContext } from "react";
+import { type ReactNode, useState, useCallback, createContext, useContext } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AskClawButton } from "@/components/finance/ask-claw-button";
 import { KeyRound, ExternalLink } from "lucide-react";
@@ -16,8 +16,6 @@ interface ModuleCardProps {
 export function ModuleCard({ moduleId, labelKey, missingProviders, children }: ModuleCardProps) {
   const t = useT();
   const [contextData, setContextData] = useState<Record<string, unknown>>({});
-  const contextRef = useRef(contextData);
-  contextRef.current = contextData;
 
   const updateContext = useCallback((data: Record<string, unknown>) => {
     setContextData(data);
@@ -34,7 +32,7 @@ export function ModuleCard({ moduleId, labelKey, missingProviders, children }: M
         {!hasMissingKeys && (
           <AskClawButton
             moduleName={t(labelKey as Parameters<typeof t>[0])}
-            contextData={contextRef.current}
+            contextData={contextData}
           />
         )}
       </CardHeader>

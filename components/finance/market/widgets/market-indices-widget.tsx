@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import { useOpenBB } from "@/lib/swr/hooks";
 import { useModuleContext } from "@/components/finance/market/module-card";
@@ -17,7 +17,10 @@ export function MarketIndicesWidget() {
     connected ? "index/snapshots" : null,
     { provider: "tmx" },
   );
-  const indices = indicesRaw?.results ?? [];
+  const indices = useMemo(
+    () => indicesRaw?.results ?? [],
+    [indicesRaw?.results],
+  );
 
   useEffect(() => {
     if (updateContext && indices.length > 0) {

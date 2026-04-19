@@ -22,7 +22,6 @@ export function ToolApprovalCard({
   const [showParams, setShowParams] = useState(false);
 
   const isPending = toolCall.status === "pending";
-  const isExecuting = toolCall.status === "executing";
 
   const statusBadge = () => {
     switch (toolCall.status) {

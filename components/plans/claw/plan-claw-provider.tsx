@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useClawConnections } from "@/lib/swr/hooks";
 import { useT } from "@/lib/i18n/context";
 import { useClawDM } from "./use-claw-dm";
@@ -25,9 +25,10 @@ export function usePlanClaw(): PlanClawState {
   const [explainQuestion, setExplainQuestion] = useState("");
 
   const { data: connectionsData } = useClawConnections();
-  const connections: { id: string }[] = Array.isArray(connectionsData)
-    ? connectionsData
-    : [];
+  const connections: { id: string }[] = useMemo(
+    () => (Array.isArray(connectionsData) ? connectionsData : []),
+    [connectionsData],
+  );
 
   const checkedRef = useRef(false);
   useEffect(() => {

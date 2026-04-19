@@ -27,7 +27,6 @@ const ENDPOINTS: Record<Indicator, string> = {
 
 function technicalToChartData(
   results: Array<Record<string, unknown>>,
-  indicator: Indicator,
 ): { date: string; close: number }[] {
   return results
     .map((row) => {
@@ -75,8 +74,8 @@ export function TechnicalWidget() {
   );
 
   const chartData = useMemo(
-    () => technicalToChartData(data?.results ?? [], indicator),
-    [data?.results, indicator],
+    () => technicalToChartData(data?.results ?? []),
+    [data?.results],
   );
 
   useEffect(() => {

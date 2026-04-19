@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useT } from "@/lib/i18n/context";
 import { useClawConnections } from "@/lib/swr/hooks";
 import { Button } from "@/components/ui/button";
@@ -86,7 +86,10 @@ interface ConnectionFormProps {
 export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
   const t = useT();
   const { data: connectionsData, mutate: mutateConnections } = useClawConnections();
-  const connections: ConnectionInfo[] = Array.isArray(connectionsData) ? connectionsData : [];
+  const connections: ConnectionInfo[] = useMemo(
+    () => (Array.isArray(connectionsData) ? connectionsData : []),
+    [connectionsData],
+  );
   const [connectState, setConnectState] = useState<ConnectState>({
     connected: false,
     connectionId: null,
