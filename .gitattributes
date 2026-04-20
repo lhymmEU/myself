@@ -1,0 +1,27 @@
+# Default: let Git decide line endings, but normalize text in the repo to LF.
+* text=auto eol=lf
+
+# Shell scripts must stay LF on every platform — bash refuses CRLF shebangs.
+*.sh        text eol=lf
+setup.sh    text eol=lf
+
+# Windows-only scripts must stay CRLF so cmd.exe and PowerShell parse them
+# correctly even when the repo is checked out on macOS/Linux and copied over.
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+*.ps1       text eol=crlf
+
+# Treat known binary formats as binary so Git never tries to munge them.
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.webp      binary
+*.pdf       binary
+*.db        binary
+*.db-shm    binary
+*.db-wal    binary
+*.vrm       binary
+*.woff      binary
+*.woff2     binary

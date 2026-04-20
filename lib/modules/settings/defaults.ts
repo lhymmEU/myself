@@ -4,7 +4,7 @@ export const SETTING_DEFAULTS: Record<string, string> = {
   llm_temperature: "0.7",
   theme: "system",
   accent_color: "#6366f1",
-  openbb_api_url: "http://localhost:6900",
+  openbb_api_url: "http://127.0.0.1:6900",
   claw_access_todos: "false",
   claw_access_finance: "false",
   claw_access_plans: "false",

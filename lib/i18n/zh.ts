@@ -1076,7 +1076,7 @@ export const zh: Translations = {
     openbb: {
       title: "OpenBB 市场数据",
       apiUrl: "OpenBB API 地址",
-      apiUrlHelp: "OpenBB API 侧车服务的地址。默认：http://localhost:6900",
+      apiUrlHelp: "OpenBB API 侧车服务的地址。默认：http://127.0.0.1:6900",
       testConnection: "测试连接",
       connected: "已连接",
       disconnected: "未连接",

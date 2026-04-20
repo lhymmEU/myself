@@ -1,6 +1,9 @@
 import { getSetting } from "@/lib/modules/settings/actions";
 
-const DEFAULT_URL = "http://localhost:6900";
+// Use 127.0.0.1 instead of localhost: on Windows (and some Linux configs)
+// `localhost` resolves to ::1 first, but openbb-api binds to 0.0.0.0/127.0.0.1
+// only by default, producing instant ECONNREFUSED with a confusing error.
+const DEFAULT_URL = "http://127.0.0.1:6900";
 
 function getBaseUrl(): string {
   return getSetting("openbb_api_url") || DEFAULT_URL;

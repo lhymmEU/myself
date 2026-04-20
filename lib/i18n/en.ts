@@ -1077,7 +1077,7 @@ export const en = {
       title: "OpenBB Market Data",
       apiUrl: "OpenBB API URL",
       apiUrlHelp:
-        "URL of the OpenBB API sidecar. Default: http://localhost:6900",
+        "URL of the OpenBB API sidecar. Default: http://127.0.0.1:6900",
       testConnection: "Test Connection",
       connected: "Connected",
       disconnected: "Not connected",

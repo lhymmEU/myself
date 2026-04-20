@@ -86,14 +86,23 @@ Write-Host "[INFO] Installed @noble/hashes version:"
 npm ls @noble/hashes --depth=0 2>$null
 Write-Host ""
 
-# --- Build the app ---
-Write-Host "[2/2] Building the app..."
-npm run build
+# --- Smoke check: verify the native sqlite binary actually loads ---
+# Catches the #1 install failure (better-sqlite3 not built for this Node
+# version) before the user hits it at runtime, without spending 1-2 minutes
+# on a full `next build` that `npm run dev` discards anyway.
+Write-Host "[2/2] Verifying native modules..."
+node -e "require('better-sqlite3')(':memory:').close()" 2>$null
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
-    Write-Host "[ERROR] Build failed. Please check the errors above." -ForegroundColor Red
+    Write-Host "[ERROR] better-sqlite3 failed to load." -ForegroundColor Red
+    Write-Host ""
+    Write-Host "  This usually means the native binary was not built for your Node.js"
+    Write-Host "  version. Try one of:"
+    Write-Host "    1. Install Visual Studio Build Tools (see above), or"
+    Write-Host "    2. Switch to Node.js v20 or v22 LTS which ships prebuilt binaries"
     exit 1
 }
+Write-Host "[OK] better-sqlite3 loaded successfully" -ForegroundColor Green
 Write-Host ""
 
 Write-Host "========================================"

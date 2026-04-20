@@ -70,7 +70,14 @@ The script checks your environment, installs all dependencies, and builds the ap
 
 ```bash
 npm install
+node -e "require('better-sqlite3')(':memory:').close()"   # smoke check
 ```
+
+If the smoke check fails, the native `better-sqlite3` binary did not build:
+
+- **Windows**: install [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (select "Desktop development with C++"), or switch to Node.js v20 / v22 LTS which ships prebuilt binaries.
+- **macOS**: run `xcode-select --install`.
+- **Linux**: install `build-essential python3` (Debian/Ubuntu) or `Development Tools` (Fedora).
 
 ### Step 4 — Start the Dashboard
 
