@@ -6,4 +6,5 @@ export const plansModule: FeatureModule = {
   description: "Plan pages with TipTap content and mind-map linking",
   tools: planTools,
   eventHandlers: {},
+  availableIn: ["local", "cloud"],
 };

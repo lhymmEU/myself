@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
-import { eq, desc } from "drizzle-orm";
-import { getDb } from "@/lib/core/db";
+import { and, eq, desc } from "drizzle-orm";
+import { getDb } from "@/lib/db";
+import { LOCAL_USER_ID } from "@/lib/core/runtime";
 import { eventBus } from "@/lib/core/event-bus";
 import {
   invoiceClients,
@@ -24,9 +25,16 @@ import type {
 
 // ── Clients ──
 
-export async function getAllClients(): Promise<InvoiceClient[]> {
+export async function getAllClients(
+  userId: string = LOCAL_USER_ID,
+): Promise<InvoiceClient[]> {
   const db = getDb();
-  const rows = db.select().from(invoiceClients).orderBy(desc(invoiceClients.createdAt)).all();
+  const rows = db
+    .select()
+    .from(invoiceClients)
+    .where(eq(invoiceClients.userId, userId))
+    .orderBy(desc(invoiceClients.createdAt))
+    .all();
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
@@ -39,9 +47,18 @@ export async function getAllClients(): Promise<InvoiceClient[]> {
   }));
 }
 
-export async function getClient(id: string): Promise<InvoiceClient | undefined> {
+export async function getClient(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): Promise<InvoiceClient | undefined> {
   const db = getDb();
-  const row = db.select().from(invoiceClients).where(eq(invoiceClients.id, id)).get();
+  const row = db
+    .select()
+    .from(invoiceClients)
+    .where(
+      and(eq(invoiceClients.id, id), eq(invoiceClients.userId, userId)),
+    )
+    .get();
   if (!row) return undefined;
   return {
     id: row.id,
@@ -55,38 +72,63 @@ export async function getClient(id: string): Promise<InvoiceClient | undefined> 
   };
 }
 
-export async function createClient(input: CreateClientInput): Promise<InvoiceClient> {
+export async function createClient(
+  input: CreateClientInput,
+  userId: string = LOCAL_USER_ID,
+): Promise<InvoiceClient> {
   const db = getDb();
   const id = nanoid();
   const now = Date.now();
   db.insert(invoiceClients)
-    .values({ id, ...input, createdAt: now })
+    .values({ id, userId, ...input, createdAt: now })
     .run();
   const result: InvoiceClient = { id, ...input, createdAt: now };
   await eventBus.emit("invoice", INVOICE_EVENTS.CLIENT_CREATED, result);
   return result;
 }
 
-export async function updateClient(input: UpdateClientInput): Promise<InvoiceClient> {
+export async function updateClient(
+  input: UpdateClientInput,
+  userId: string = LOCAL_USER_ID,
+): Promise<InvoiceClient> {
   const db = getDb();
   const { id, ...data } = input;
-  db.update(invoiceClients).set(data).where(eq(invoiceClients.id, id)).run();
-  const updated = await getClient(id);
+  db.update(invoiceClients)
+    .set(data)
+    .where(
+      and(eq(invoiceClients.id, id), eq(invoiceClients.userId, userId)),
+    )
+    .run();
+  const updated = await getClient(id, userId);
   if (!updated) throw new Error("Client not found");
   return updated;
 }
 
-export async function deleteClient(id: string): Promise<void> {
+export async function deleteClient(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): Promise<void> {
   const db = getDb();
-  db.delete(invoiceClients).where(eq(invoiceClients.id, id)).run();
+  db.delete(invoiceClients)
+    .where(
+      and(eq(invoiceClients.id, id), eq(invoiceClients.userId, userId)),
+    )
+    .run();
   await eventBus.emit("invoice", INVOICE_EVENTS.CLIENT_DELETED, { id });
 }
 
 // ── Signatures ──
 
-export async function getAllSignatures(): Promise<InvoiceSignature[]> {
+export async function getAllSignatures(
+  userId: string = LOCAL_USER_ID,
+): Promise<InvoiceSignature[]> {
   const db = getDb();
-  const rows = db.select().from(invoiceSignatures).orderBy(desc(invoiceSignatures.createdAt)).all();
+  const rows = db
+    .select()
+    .from(invoiceSignatures)
+    .where(eq(invoiceSignatures.userId, userId))
+    .orderBy(desc(invoiceSignatures.createdAt))
+    .all();
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
@@ -96,43 +138,83 @@ export async function getAllSignatures(): Promise<InvoiceSignature[]> {
   }));
 }
 
-export async function createSignature(input: CreateSignatureInput): Promise<InvoiceSignature> {
+export async function createSignature(
+  input: CreateSignatureInput,
+  userId: string = LOCAL_USER_ID,
+): Promise<InvoiceSignature> {
   const db = getDb();
   const id = nanoid();
   const now = Date.now();
   if (input.isDefault) {
-    db.update(invoiceSignatures).set({ isDefault: false }).run();
+    db.update(invoiceSignatures)
+      .set({ isDefault: false })
+      .where(eq(invoiceSignatures.userId, userId))
+      .run();
   }
   db.insert(invoiceSignatures)
     .values({
       id,
+      userId,
       name: input.name,
       dataUrl: input.dataUrl,
       isDefault: input.isDefault ?? false,
       createdAt: now,
     })
     .run();
-  return { id, name: input.name, dataUrl: input.dataUrl, isDefault: input.isDefault ?? false, createdAt: now };
+  return {
+    id,
+    name: input.name,
+    dataUrl: input.dataUrl,
+    isDefault: input.isDefault ?? false,
+    createdAt: now,
+  };
 }
 
-export async function setDefaultSignature(id: string): Promise<void> {
+export async function setDefaultSignature(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): Promise<void> {
   const db = getDb();
-  db.update(invoiceSignatures).set({ isDefault: false }).run();
-  db.update(invoiceSignatures).set({ isDefault: true }).where(eq(invoiceSignatures.id, id)).run();
+  db.update(invoiceSignatures)
+    .set({ isDefault: false })
+    .where(eq(invoiceSignatures.userId, userId))
+    .run();
+  db.update(invoiceSignatures)
+    .set({ isDefault: true })
+    .where(
+      and(
+        eq(invoiceSignatures.id, id),
+        eq(invoiceSignatures.userId, userId),
+      ),
+    )
+    .run();
 }
 
-export async function deleteSignature(id: string): Promise<void> {
+export async function deleteSignature(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): Promise<void> {
   const db = getDb();
-  db.delete(invoiceSignatures).where(eq(invoiceSignatures.id, id)).run();
+  db.delete(invoiceSignatures)
+    .where(
+      and(
+        eq(invoiceSignatures.id, id),
+        eq(invoiceSignatures.userId, userId),
+      ),
+    )
+    .run();
 }
 
 // ── Invoice number ──
 
-export async function getNextInvoiceNumber(): Promise<string> {
+export async function getNextInvoiceNumber(
+  userId: string = LOCAL_USER_ID,
+): Promise<string> {
   const db = getDb();
   const latest = db
     .select({ invoiceNumber: invoices.invoiceNumber })
     .from(invoices)
+    .where(eq(invoices.userId, userId))
     .orderBy(desc(invoices.createdAt))
     .limit(1)
     .get();
@@ -145,15 +227,29 @@ export async function getNextInvoiceNumber(): Promise<string> {
 
 // ── Invoices ──
 
-export async function getAllInvoices(): Promise<Invoice[]> {
+export async function getAllInvoices(
+  userId: string = LOCAL_USER_ID,
+): Promise<Invoice[]> {
   const db = getDb();
-  const rows = db.select().from(invoices).orderBy(desc(invoices.createdAt)).all();
+  const rows = db
+    .select()
+    .from(invoices)
+    .where(eq(invoices.userId, userId))
+    .orderBy(desc(invoices.createdAt))
+    .all();
   return rows.map(rowToInvoice);
 }
 
-export async function getInvoice(id: string): Promise<InvoiceWithDetails | undefined> {
+export async function getInvoice(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): Promise<InvoiceWithDetails | undefined> {
   const db = getDb();
-  const row = db.select().from(invoices).where(eq(invoices.id, id)).get();
+  const row = db
+    .select()
+    .from(invoices)
+    .where(and(eq(invoices.id, id), eq(invoices.userId, userId)))
+    .get();
   if (!row) return undefined;
   const inv = rowToInvoice(row);
 
@@ -166,7 +262,7 @@ export async function getInvoice(id: string): Promise<InvoiceWithDetails | undef
 
   let client: InvoiceClient | undefined;
   if (inv.clientId) {
-    client = await getClient(inv.clientId);
+    client = await getClient(inv.clientId, userId);
   }
 
   let signature: InvoiceSignature | undefined;
@@ -174,7 +270,12 @@ export async function getInvoice(id: string): Promise<InvoiceWithDetails | undef
     const sigRow = db
       .select()
       .from(invoiceSignatures)
-      .where(eq(invoiceSignatures.id, inv.signatureId))
+      .where(
+        and(
+          eq(invoiceSignatures.id, inv.signatureId),
+          eq(invoiceSignatures.userId, userId),
+        ),
+      )
       .get();
     if (sigRow) {
       signature = {
@@ -190,11 +291,15 @@ export async function getInvoice(id: string): Promise<InvoiceWithDetails | undef
   return { ...inv, client, items, signature };
 }
 
-export async function createInvoice(input: CreateInvoiceInput): Promise<InvoiceWithDetails> {
+export async function createInvoice(
+  input: CreateInvoiceInput,
+  userId: string = LOCAL_USER_ID,
+): Promise<InvoiceWithDetails> {
   const db = getDb();
   const id = nanoid();
   const now = Date.now();
-  const invoiceNumber = input.invoiceNumber || await getNextInvoiceNumber();
+  const invoiceNumber =
+    input.invoiceNumber || (await getNextInvoiceNumber(userId));
 
   const subtotal = input.items.reduce((sum, it) => sum + it.amount, 0);
   const tax = input.tax ?? 0;
@@ -203,6 +308,7 @@ export async function createInvoice(input: CreateInvoiceInput): Promise<InvoiceW
   db.insert(invoices)
     .values({
       id,
+      userId,
       invoiceNumber,
       clientId: input.clientId,
       date: input.date,
@@ -269,21 +375,30 @@ export async function createInvoice(input: CreateInvoiceInput): Promise<InvoiceW
   };
 
   let client: InvoiceClient | undefined;
-  if (input.clientId) client = await getClient(input.clientId);
+  if (input.clientId) client = await getClient(input.clientId, userId);
 
   await eventBus.emit("invoice", INVOICE_EVENTS.INVOICE_CREATED, invoice);
   return { ...invoice, client, items };
 }
 
-export async function updateInvoice(input: UpdateInvoiceInput): Promise<InvoiceWithDetails> {
+export async function updateInvoice(
+  input: UpdateInvoiceInput,
+  userId: string = LOCAL_USER_ID,
+): Promise<InvoiceWithDetails> {
   const db = getDb();
   const now = Date.now();
 
-  const existing = db.select().from(invoices).where(eq(invoices.id, input.id)).get();
+  const existing = db
+    .select()
+    .from(invoices)
+    .where(and(eq(invoices.id, input.id), eq(invoices.userId, userId)))
+    .get();
   if (!existing) throw new Error("Invoice not found");
 
   if (input.items) {
-    db.delete(invoiceItems).where(eq(invoiceItems.invoiceId, input.id)).run();
+    db.delete(invoiceItems)
+      .where(eq(invoiceItems.invoiceId, input.id))
+      .run();
     input.items.forEach((it, idx) => {
       db.insert(invoiceItems)
         .values({
@@ -305,43 +420,63 @@ export async function updateInvoice(input: UpdateInvoiceInput): Promise<InvoiceW
   const tax = input.tax ?? existing.tax;
   const total = subtotal + tax;
 
-  const updateData: Record<string, unknown> = { updatedAt: now, subtotal, tax, total };
-  if (input.invoiceNumber !== undefined) updateData.invoiceNumber = input.invoiceNumber;
+  const updateData: Record<string, unknown> = {
+    updatedAt: now,
+    subtotal,
+    tax,
+    total,
+  };
+  if (input.invoiceNumber !== undefined)
+    updateData.invoiceNumber = input.invoiceNumber;
   if (input.clientId !== undefined) updateData.clientId = input.clientId;
   if (input.date !== undefined) updateData.date = input.date;
   if (input.dueDate !== undefined) updateData.dueDate = input.dueDate;
   if (input.status !== undefined) updateData.status = input.status;
   if (input.currency !== undefined) updateData.currency = input.currency;
-  if (input.senderName !== undefined) updateData.senderName = input.senderName;
-  if (input.senderEmail !== undefined) updateData.senderEmail = input.senderEmail;
-  if (input.senderPhone !== undefined) updateData.senderPhone = input.senderPhone;
-  if (input.paymentInfo !== undefined) updateData.paymentInfo = input.paymentInfo;
-  if (input.signatureId !== undefined) updateData.signatureId = input.signatureId;
+  if (input.senderName !== undefined)
+    updateData.senderName = input.senderName;
+  if (input.senderEmail !== undefined)
+    updateData.senderEmail = input.senderEmail;
+  if (input.senderPhone !== undefined)
+    updateData.senderPhone = input.senderPhone;
+  if (input.paymentInfo !== undefined)
+    updateData.paymentInfo = input.paymentInfo;
+  if (input.signatureId !== undefined)
+    updateData.signatureId = input.signatureId;
   if (input.notes !== undefined) updateData.notes = input.notes;
 
-  db.update(invoices).set(updateData).where(eq(invoices.id, input.id)).run();
+  db.update(invoices)
+    .set(updateData)
+    .where(and(eq(invoices.id, input.id), eq(invoices.userId, userId)))
+    .run();
 
-  const result = await getInvoice(input.id);
+  const result = await getInvoice(input.id, userId);
   if (!result) throw new Error("Invoice not found after update");
   await eventBus.emit("invoice", INVOICE_EVENTS.INVOICE_UPDATED, result);
   return result;
 }
 
-export async function deleteInvoice(id: string): Promise<void> {
+export async function deleteInvoice(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): Promise<void> {
   const db = getDb();
   db.delete(invoiceItems).where(eq(invoiceItems.invoiceId, id)).run();
-  db.delete(invoices).where(eq(invoices.id, id)).run();
+  db.delete(invoices)
+    .where(and(eq(invoices.id, id), eq(invoices.userId, userId)))
+    .run();
   await eventBus.emit("invoice", INVOICE_EVENTS.INVOICE_DELETED, { id });
 }
 
 export async function markInvoiceStatus(
   id: string,
-  status: "draft" | "sent" | "paid" | "overdue"
+  status: "draft" | "sent" | "paid" | "overdue",
+  userId: string = LOCAL_USER_ID,
 ): Promise<void> {
   const db = getDb();
   db.update(invoices)
     .set({ status, updatedAt: Date.now() })
-    .where(eq(invoices.id, id))
+    .where(and(eq(invoices.id, id), eq(invoices.userId, userId)))
     .run();
   if (status === "sent") {
     await eventBus.emit("invoice", INVOICE_EVENTS.INVOICE_SENT, { id });

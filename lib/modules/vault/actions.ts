@@ -1,6 +1,9 @@
 import { nanoid } from "nanoid";
-import fs from "fs";
+import { and, desc, eq, sql } from "drizzle-orm";
+
 import { eventBus } from "@/lib/core/event-bus";
+import { LOCAL_USER_ID, isCloud } from "@/lib/core/runtime";
+import { vaultMeta, vaultSecrets } from "@/lib/db/schema/sqlite/vault";
 import { getVaultDb, getVaultPathSetting, moveVaultDb } from "./vault-db";
 import { VAULT_EVENTS } from "./events";
 import {
@@ -19,52 +22,66 @@ import type {
   SecretCategory,
 } from "./types";
 
-let _masterKey: Uint8Array | null = null;
+/**
+ * Per-user master key cache. Local mode keeps a single entry under the
+ * sentinel user id; cloud keeps one per signed-in user.
+ */
+const _masterKeys: Map<string, Uint8Array> = new Map();
 
-function requireUnlocked(): Uint8Array {
-  if (!_masterKey) throw new Error("Vault is locked");
-  return _masterKey;
+function requireUnlocked(userId: string = LOCAL_USER_ID): Uint8Array {
+  const key = _masterKeys.get(userId);
+  if (!key) throw new Error("Vault is locked");
+  return key;
 }
 
-export function isVaultInitialized(): boolean {
+export function isVaultInitialized(userId: string = LOCAL_USER_ID): boolean {
   const db = getVaultDb();
   const row = db
-    .prepare("SELECT value FROM vault_meta WHERE key = 'salt'")
-    .get() as { value: string } | undefined;
+    .select()
+    .from(vaultMeta)
+    .where(and(eq(vaultMeta.userId, userId), eq(vaultMeta.key, "salt")))
+    .get();
   return !!row;
 }
 
-export function isVaultUnlocked(): boolean {
-  return _masterKey !== null;
+export function isVaultUnlocked(userId: string = LOCAL_USER_ID): boolean {
+  return _masterKeys.has(userId);
 }
 
-export function getVaultStatus(): VaultStatus {
-  const initialized = isVaultInitialized();
+export function getVaultStatus(userId: string = LOCAL_USER_ID): VaultStatus {
+  const initialized = isVaultInitialized(userId);
   let secretCount = 0;
   if (initialized) {
     const db = getVaultDb();
     const row = db
-      .prepare("SELECT COUNT(*) as count FROM vault_secrets")
-      .get() as { count: number };
-    secretCount = row.count;
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(vaultSecrets)
+      .where(eq(vaultSecrets.userId, userId))
+      .get();
+    secretCount = Number(row?.count ?? 0);
   }
   return {
     initialized,
-    unlocked: isVaultUnlocked(),
+    unlocked: isVaultUnlocked(userId),
     secretCount,
     storagePath: getVaultPathSetting(),
   };
 }
 
-export function setupVault(password: string, storagePath?: string): void {
-  if (storagePath) {
+export function setupVault(
+  password: string,
+  storagePath?: string,
+  userId: string = LOCAL_USER_ID,
+): void {
+  if (storagePath && !isCloud()) {
     moveVaultDb(storagePath);
   }
 
   const db = getVaultDb();
-
   const existing = db
-    .prepare("SELECT value FROM vault_meta WHERE key = 'salt'")
+    .select()
+    .from(vaultMeta)
+    .where(and(eq(vaultMeta.userId, userId), eq(vaultMeta.key, "salt")))
     .get();
   if (existing) throw new Error("Vault is already initialized");
 
@@ -72,58 +89,57 @@ export function setupVault(password: string, storagePath?: string): void {
   const key = deriveKey(password, salt);
   const hash = createVerificationHash(key);
 
-  db.prepare(
-    "INSERT INTO vault_meta (key, value) VALUES (?, ?)"
-  ).run("salt", salt);
-  db.prepare(
-    "INSERT INTO vault_meta (key, value) VALUES (?, ?)"
-  ).run("verification_hash", hash);
+  db.insert(vaultMeta).values({ userId, key: "salt", value: salt }).run();
+  db.insert(vaultMeta)
+    .values({ userId, key: "verification_hash", value: hash })
+    .run();
 
-  _masterKey = key;
+  _masterKeys.set(userId, key);
   eventBus.emit("vault", VAULT_EVENTS.VAULT_UNLOCKED, {});
 }
 
-export function unlockVault(password: string): boolean {
+export function unlockVault(
+  password: string,
+  userId: string = LOCAL_USER_ID,
+): boolean {
   const db = getVaultDb();
   const saltRow = db
-    .prepare("SELECT value FROM vault_meta WHERE key = 'salt'")
-    .get() as { value: string } | undefined;
+    .select()
+    .from(vaultMeta)
+    .where(and(eq(vaultMeta.userId, userId), eq(vaultMeta.key, "salt")))
+    .get();
   const hashRow = db
-    .prepare("SELECT value FROM vault_meta WHERE key = 'verification_hash'")
-    .get() as { value: string } | undefined;
+    .select()
+    .from(vaultMeta)
+    .where(
+      and(
+        eq(vaultMeta.userId, userId),
+        eq(vaultMeta.key, "verification_hash"),
+      ),
+    )
+    .get();
 
   if (!saltRow || !hashRow) throw new Error("Vault not initialized");
 
   const key = deriveKey(password, saltRow.value);
   const computedHash = createVerificationHash(key);
-
   if (computedHash !== hashRow.value) return false;
 
-  _masterKey = key;
+  _masterKeys.set(userId, key);
   eventBus.emit("vault", VAULT_EVENTS.VAULT_UNLOCKED, {});
   return true;
 }
 
-export function lockVault(): void {
-  if (_masterKey) {
-    _masterKey.fill(0);
-    _masterKey = null;
+export function lockVault(userId: string = LOCAL_USER_ID): void {
+  const existing = _masterKeys.get(userId);
+  if (existing) {
+    existing.fill(0);
+    _masterKeys.delete(userId);
   }
   eventBus.emit("vault", VAULT_EVENTS.VAULT_LOCKED, {});
 }
 
-interface SecretRow {
-  id: string;
-  name: string;
-  category: string;
-  encrypted_value: string;
-  nonce: string;
-  encrypted_notes: string | null;
-  notes_nonce: string | null;
-  tags: string;
-  created_at: number;
-  updated_at: number;
-}
+type SecretRow = typeof vaultSecrets.$inferSelect;
 
 function rowToMeta(row: SecretRow): VaultSecretMeta {
   let tags: string[] = [];
@@ -137,18 +153,18 @@ function rowToMeta(row: SecretRow): VaultSecretMeta {
     name: row.name,
     category: row.category as SecretCategory,
     tags,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   };
 }
 
 function rowToFull(row: SecretRow, key: Uint8Array): VaultSecretWithValue {
   const meta = rowToMeta(row);
-  const value = decrypt(key, row.encrypted_value, row.nonce);
+  const value = decrypt(key, row.encryptedValue, row.nonce);
   let notes: string | undefined;
-  if (row.encrypted_notes && row.notes_nonce) {
+  if (row.encryptedNotes && row.notesNonce) {
     try {
-      notes = decrypt(key, row.encrypted_notes, row.notes_nonce);
+      notes = decrypt(key, row.encryptedNotes, row.notesNonce);
     } catch {
       notes = undefined;
     }
@@ -156,31 +172,38 @@ function rowToFull(row: SecretRow, key: Uint8Array): VaultSecretWithValue {
   return { ...meta, value, notes };
 }
 
-export function getAllSecrets(): VaultSecretMeta[] {
-  requireUnlocked();
+export function getAllSecrets(userId: string = LOCAL_USER_ID): VaultSecretMeta[] {
+  requireUnlocked(userId);
   const db = getVaultDb();
   const rows = db
-    .prepare(
-      "SELECT id, name, category, encrypted_value, nonce, encrypted_notes, notes_nonce, tags, created_at, updated_at FROM vault_secrets ORDER BY updated_at DESC"
-    )
-    .all() as SecretRow[];
+    .select()
+    .from(vaultSecrets)
+    .where(eq(vaultSecrets.userId, userId))
+    .orderBy(desc(vaultSecrets.updatedAt))
+    .all();
   return rows.map(rowToMeta);
 }
 
-export function getSecret(id: string): VaultSecretWithValue | null {
-  const key = requireUnlocked();
+export function getSecret(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): VaultSecretWithValue | null {
+  const key = requireUnlocked(userId);
   const db = getVaultDb();
   const row = db
-    .prepare(
-      "SELECT id, name, category, encrypted_value, nonce, encrypted_notes, notes_nonce, tags, created_at, updated_at FROM vault_secrets WHERE id = ?"
-    )
-    .get(id) as SecretRow | undefined;
+    .select()
+    .from(vaultSecrets)
+    .where(and(eq(vaultSecrets.id, id), eq(vaultSecrets.userId, userId)))
+    .get();
   if (!row) return null;
   return rowToFull(row, key);
 }
 
-export function createSecret(input: CreateSecretInput): VaultSecretMeta {
-  const key = requireUnlocked();
+export function createSecret(
+  input: CreateSecretInput,
+  userId: string = LOCAL_USER_ID,
+): VaultSecretMeta {
+  const key = requireUnlocked(userId);
   const db = getVaultDb();
   const now = Date.now();
   const id = nanoid();
@@ -194,21 +217,21 @@ export function createSecret(input: CreateSecretInput): VaultSecretMeta {
     notesNonce = enc.nonce;
   }
 
-  db.prepare(
-    `INSERT INTO vault_secrets (id, name, category, encrypted_value, nonce, encrypted_notes, notes_nonce, tags, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    id,
-    input.name,
-    input.category ?? "other",
-    ciphertext,
-    nonce,
-    encryptedNotes,
-    notesNonce,
-    JSON.stringify(input.tags ?? []),
-    now,
-    now
-  );
+  db.insert(vaultSecrets)
+    .values({
+      id,
+      userId,
+      name: input.name,
+      category: input.category ?? "other",
+      encryptedValue: ciphertext,
+      nonce,
+      encryptedNotes,
+      notesNonce,
+      tags: JSON.stringify(input.tags ?? []),
+      createdAt: now,
+      updatedAt: now,
+    })
+    .run();
 
   const result: VaultSecretMeta = {
     id,
@@ -223,21 +246,26 @@ export function createSecret(input: CreateSecretInput): VaultSecretMeta {
   return result;
 }
 
-export function updateSecret(input: UpdateSecretInput): VaultSecretMeta {
-  const key = requireUnlocked();
+export function updateSecret(
+  input: UpdateSecretInput,
+  userId: string = LOCAL_USER_ID,
+): VaultSecretMeta {
+  const key = requireUnlocked(userId);
   const db = getVaultDb();
   const now = Date.now();
 
   const existing = db
-    .prepare("SELECT * FROM vault_secrets WHERE id = ?")
-    .get(input.id) as SecretRow | undefined;
+    .select()
+    .from(vaultSecrets)
+    .where(and(eq(vaultSecrets.id, input.id), eq(vaultSecrets.userId, userId)))
+    .get();
   if (!existing) throw new Error(`Secret not found: ${input.id}`);
 
   const name = input.name ?? existing.name;
   const category = input.category ?? existing.category;
   const tags = input.tags ?? JSON.parse(existing.tags);
 
-  let encVal = existing.encrypted_value;
+  let encVal = existing.encryptedValue;
   let encNonce = existing.nonce;
   if (input.value !== undefined) {
     const enc = encrypt(key, input.value);
@@ -245,8 +273,8 @@ export function updateSecret(input: UpdateSecretInput): VaultSecretMeta {
     encNonce = enc.nonce;
   }
 
-  let encNotes = existing.encrypted_notes;
-  let notesNonce = existing.notes_nonce;
+  let encNotes: string | null = existing.encryptedNotes ?? null;
+  let notesNonce: string | null = existing.notesNonce ?? null;
   if (input.notes !== undefined) {
     if (input.notes) {
       const enc = encrypt(key, input.notes);
@@ -258,19 +286,26 @@ export function updateSecret(input: UpdateSecretInput): VaultSecretMeta {
     }
   }
 
-  db.prepare(
-    `UPDATE vault_secrets
-     SET name = ?, category = ?, encrypted_value = ?, nonce = ?,
-         encrypted_notes = ?, notes_nonce = ?, tags = ?, updated_at = ?
-     WHERE id = ?`
-  ).run(name, category, encVal, encNonce, encNotes, notesNonce, JSON.stringify(tags), now, input.id);
+  db.update(vaultSecrets)
+    .set({
+      name,
+      category,
+      encryptedValue: encVal,
+      nonce: encNonce,
+      encryptedNotes: encNotes,
+      notesNonce,
+      tags: JSON.stringify(tags),
+      updatedAt: now,
+    })
+    .where(and(eq(vaultSecrets.id, input.id), eq(vaultSecrets.userId, userId)))
+    .run();
 
   const result: VaultSecretMeta = {
     id: input.id,
     name,
     category: category as SecretCategory,
     tags,
-    createdAt: existing.created_at,
+    createdAt: existing.createdAt,
     updatedAt: now,
   };
 
@@ -278,24 +313,36 @@ export function updateSecret(input: UpdateSecretInput): VaultSecretMeta {
   return result;
 }
 
-export function deleteSecret(id: string): void {
-  requireUnlocked();
+export function deleteSecret(id: string, userId: string = LOCAL_USER_ID): void {
+  requireUnlocked(userId);
   const db = getVaultDb();
-  db.prepare("DELETE FROM vault_secrets WHERE id = ?").run(id);
+  db.delete(vaultSecrets)
+    .where(and(eq(vaultSecrets.id, id), eq(vaultSecrets.userId, userId)))
+    .run();
   eventBus.emit("vault", VAULT_EVENTS.SECRET_DELETED, { id });
 }
 
 export function changePassword(
   currentPassword: string,
-  newPassword: string
+  newPassword: string,
+  userId: string = LOCAL_USER_ID,
 ): boolean {
   const db = getVaultDb();
   const saltRow = db
-    .prepare("SELECT value FROM vault_meta WHERE key = 'salt'")
-    .get() as { value: string } | undefined;
+    .select()
+    .from(vaultMeta)
+    .where(and(eq(vaultMeta.userId, userId), eq(vaultMeta.key, "salt")))
+    .get();
   const hashRow = db
-    .prepare("SELECT value FROM vault_meta WHERE key = 'verification_hash'")
-    .get() as { value: string } | undefined;
+    .select()
+    .from(vaultMeta)
+    .where(
+      and(
+        eq(vaultMeta.userId, userId),
+        eq(vaultMeta.key, "verification_hash"),
+      ),
+    )
+    .get();
 
   if (!saltRow || !hashRow) throw new Error("Vault not initialized");
 
@@ -303,51 +350,67 @@ export function changePassword(
   if (createVerificationHash(oldKey) !== hashRow.value) return false;
 
   const rows = db
-    .prepare(
-      "SELECT id, name, category, encrypted_value, nonce, encrypted_notes, notes_nonce, tags, created_at, updated_at FROM vault_secrets"
-    )
-    .all() as SecretRow[];
-
-  const decrypted = rows.map((row) => rowToFull(row, oldKey));
+    .select()
+    .from(vaultSecrets)
+    .where(eq(vaultSecrets.userId, userId))
+    .all();
+  const decrypted = rows.map((row: SecretRow) => rowToFull(row, oldKey));
 
   const newSalt = generateSalt();
   const newKey = deriveKey(newPassword, newSalt);
   const newHash = createVerificationHash(newKey);
 
-  const tx = db.transaction(() => {
-    db.prepare("UPDATE vault_meta SET value = ? WHERE key = 'salt'").run(newSalt);
-    db.prepare("UPDATE vault_meta SET value = ? WHERE key = 'verification_hash'").run(newHash);
+  db.update(vaultMeta)
+    .set({ value: newSalt })
+    .where(and(eq(vaultMeta.userId, userId), eq(vaultMeta.key, "salt")))
+    .run();
+  db.update(vaultMeta)
+    .set({ value: newHash })
+    .where(
+      and(
+        eq(vaultMeta.userId, userId),
+        eq(vaultMeta.key, "verification_hash"),
+      ),
+    )
+    .run();
 
-    for (const secret of decrypted) {
-      const enc = encrypt(newKey, secret.value);
-      let encNotes: string | null = null;
-      let notesNonce: string | null = null;
-      if (secret.notes) {
-        const ne = encrypt(newKey, secret.notes);
-        encNotes = ne.ciphertext;
-        notesNonce = ne.nonce;
-      }
-      db.prepare(
-        `UPDATE vault_secrets
-         SET encrypted_value = ?, nonce = ?, encrypted_notes = ?, notes_nonce = ?
-         WHERE id = ?`
-      ).run(enc.ciphertext, enc.nonce, encNotes, notesNonce, secret.id);
+  for (const secret of decrypted) {
+    const enc = encrypt(newKey, secret.value);
+    let encNotes: string | null = null;
+    let notesNonce: string | null = null;
+    if (secret.notes) {
+      const ne = encrypt(newKey, secret.notes);
+      encNotes = ne.ciphertext;
+      notesNonce = ne.nonce;
     }
-  });
+    db.update(vaultSecrets)
+      .set({
+        encryptedValue: enc.ciphertext,
+        nonce: enc.nonce,
+        encryptedNotes: encNotes,
+        notesNonce,
+      })
+      .where(
+        and(eq(vaultSecrets.id, secret.id), eq(vaultSecrets.userId, userId)),
+      )
+      .run();
+  }
 
-  tx();
-  _masterKey = newKey;
+  _masterKeys.set(userId, newKey);
   return true;
 }
 
 export function changeVaultPath(newPath: string): void {
+  if (isCloud()) return; // no-op in cloud
   const wasUnlocked = isVaultUnlocked();
-  const savedKey = _masterKey ? new Uint8Array(_masterKey) : null;
+  const savedKey = wasUnlocked
+    ? new Uint8Array(_masterKeys.get(LOCAL_USER_ID)!)
+    : null;
 
   moveVaultDb(newPath);
 
   if (wasUnlocked && savedKey) {
-    _masterKey = savedKey;
+    _masterKeys.set(LOCAL_USER_ID, savedKey);
   }
 }
 
@@ -356,7 +419,11 @@ export function getStoragePath(): string {
 }
 
 export function getVaultDbFileSize(): number {
+  if (isCloud()) return 0;
   const p = getVaultPathSetting();
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  const fs = require("fs");
+  /* eslint-enable @typescript-eslint/no-require-imports */
   try {
     const stat = fs.statSync(p);
     return stat.size;

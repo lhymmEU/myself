@@ -1,10 +1,5 @@
-import { defineConfig } from "drizzle-kit";
-
-export default defineConfig({
-  schema: "./lib/modules/*/schema.ts",
-  out: "./drizzle",
-  dialect: "sqlite",
-  dbCredentials: {
-    url: "./data/dashboard.db",
-  },
-});
+/**
+ * Default Drizzle config — points at the SQLite (local) source of truth.
+ * For Postgres, use `drizzle-kit ... --config drizzle.postgres.config.ts`.
+ */
+export { default } from "./drizzle.sqlite.config";

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
+import { isLocal } from "@/lib/core/runtime";
+import { requireUserId } from "@/lib/core/route-helpers";
 import { getSetting } from "@/lib/modules/settings/actions";
 
 const PROVIDER_KEYS = [
@@ -18,10 +20,15 @@ const PROVIDER_KEYS = [
 
 export async function GET() {
   bootApp();
+  if (!isLocal()) {
+    return NextResponse.json({}, { status: 200 });
+  }
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
 
   const status: Record<string, boolean> = {};
   for (const key of PROVIDER_KEYS) {
-    const val = getSetting(key);
+    const val = getSetting(key, auth.userId);
     status[key] = !!val && val.length > 0;
   }
 

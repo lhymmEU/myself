@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
+import { requireUserId } from "@/lib/core/route-helpers";
 import {
   executeCommand,
   isSSHConnected,
@@ -41,11 +42,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
     const { id: sessionKey } = await params;
     const cid = req.nextUrl.searchParams.get("connectionId");
     const agentId = req.nextUrl.searchParams.get("agentId");
-    const connectionId = cid ?? getDefaultConnection()?.id;
+    const connectionId = cid ?? getDefaultConnection(auth.userId)?.id;
 
     if (!connectionId) {
       return NextResponse.json({ error: "No connection configured" }, { status: 400 });

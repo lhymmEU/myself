@@ -23,6 +23,8 @@ import { useT } from "@/lib/i18n/context";
 import type { TranslationKey } from "@/lib/i18n/types";
 import { SECRET_CATEGORIES } from "@/lib/modules/vault/types";
 import type { SecretCategory } from "@/lib/modules/vault/types";
+import { createSecretUi } from "@/lib/modules/vault/api";
+import { isLocal } from "@/lib/core/runtime";
 
 interface AddSecretProps {
   onCreated: () => void;
@@ -117,29 +119,21 @@ export function AddSecret({ onCreated }: AddSecretProps) {
         .map((s) => s.trim())
         .filter(Boolean);
 
-      const res = await fetch("/api/vault", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          value: value.trim(),
-          category,
-          notes: notes.trim() || undefined,
-          tags: tags.length > 0 ? tags : undefined,
-        }),
+      await createSecretUi({
+        name: name.trim(),
+        value: value.trim(),
+        category,
+        notes: notes.trim() || undefined,
+        tags: tags.length > 0 ? tags : undefined,
       });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error ?? t("vault.addSecret.failedCreate"));
-        return;
-      }
 
       reset();
       setOpen(false);
       onCreated();
-    } catch {
-      setError(t("vault.addSecret.errorNetwork"));
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : t("vault.addSecret.failedCreate"),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -222,16 +216,18 @@ export function AddSecret({ onCreated }: AddSecretProps) {
                     <Upload className="h-3 w-3 mr-1" />
                     {t("common.browse")}
                   </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={showPathInput ? "secondary" : "outline"}
-                    className="h-6 px-2 text-[11px]"
-                    onClick={() => setShowPathInput(!showPathInput)}
-                  >
-                    <FolderOpen className="h-3 w-3 mr-1" />
-                    {t("vault.addSecret.fromPath")}
-                  </Button>
+                  {isLocal() && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={showPathInput ? "secondary" : "outline"}
+                      className="h-6 px-2 text-[11px]"
+                      onClick={() => setShowPathInput(!showPathInput)}
+                    >
+                      <FolderOpen className="h-3 w-3 mr-1" />
+                      {t("vault.addSecret.fromPath")}
+                    </Button>
+                  )}
                 </div>
               )}
             </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
+import { requireUserId } from "@/lib/core/route-helpers";
 import {
   executeOpenClawCommand,
   executeCommand,
@@ -28,10 +29,12 @@ const ALLOWED_COMMANDS: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
     const { connectionId, command, raw } = await req.json();
 
-    const id = connectionId ?? getDefaultConnection()?.id;
+    const id = connectionId ?? getDefaultConnection(auth.userId)?.id;
     if (!id) {
       return NextResponse.json({ error: "No connection configured" }, { status: 400 });
     }

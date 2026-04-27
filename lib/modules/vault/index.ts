@@ -7,4 +7,5 @@ export const vaultModule: FeatureModule = {
     "Secure secret storage with post-quantum encryption (XChaCha20-Poly1305 + scrypt + SHA3)",
   tools: vaultTools,
   eventHandlers: {},
+  availableIn: ["local", "cloud"],
 };

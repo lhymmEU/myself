@@ -6,4 +6,5 @@ export const settingsModule: FeatureModule = {
   description: "Application settings and configuration management",
   tools: settingsTools,
   eventHandlers: {},
+  availableIn: ["local", "cloud"],
 };

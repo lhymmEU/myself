@@ -1,0 +1,18 @@
+# Local SQLite + uploads
+data/
+
+# Local-install setup scripts (Vercel doesn't need them)
+setup.sh
+setup.bat
+setup.ps1
+INSTALL.md
+INSTALL.zh-CN.md
+
+# Subprojects shipped with the local install only
+lobsterd/
+workers/
+
+# Tooling output
+.next/
+node_modules/.cache/
+*.tsbuildinfo

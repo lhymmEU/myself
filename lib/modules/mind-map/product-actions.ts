@@ -1,7 +1,13 @@
 import { nanoid } from "nanoid";
-import { eq } from "drizzle-orm";
-import { getDb } from "@/lib/core/db";
-import { pmUserProfiles, pmFeatures, pmDemands, pmStakeholders } from "./product-schema";
+import { and, eq } from "drizzle-orm";
+import { getDb } from "@/lib/db";
+import { LOCAL_USER_ID } from "@/lib/core/runtime";
+import {
+  pmUserProfiles,
+  pmFeatures,
+  pmDemands,
+  pmStakeholders,
+} from "./product-schema";
 import type {
   PmUserProfile,
   CreateUserProfileInput,
@@ -21,31 +27,47 @@ import type {
 // ─── User Profiles ───
 
 function parseUserRow(
-  row: typeof pmUserProfiles.$inferSelect
+  row: typeof pmUserProfiles.$inferSelect,
 ): PmUserProfile {
   return { ...row };
 }
 
-export function getAllUserProfiles(): PmUserProfile[] {
+export function getAllUserProfiles(
+  userId: string = LOCAL_USER_ID,
+): PmUserProfile[] {
   const db = getDb();
-  return db.select().from(pmUserProfiles).all().map(parseUserRow);
+  return db
+    .select()
+    .from(pmUserProfiles)
+    .where(eq(pmUserProfiles.userId, userId))
+    .all()
+    .map(parseUserRow);
 }
 
-export function getUserProfile(id: string): PmUserProfile | null {
+export function getUserProfile(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): PmUserProfile | null {
   const db = getDb();
   const row = db
     .select()
     .from(pmUserProfiles)
-    .where(eq(pmUserProfiles.id, id))
+    .where(
+      and(eq(pmUserProfiles.id, id), eq(pmUserProfiles.userId, userId)),
+    )
     .get();
   return row ? parseUserRow(row) : null;
 }
 
-export function createUserProfile(input: CreateUserProfileInput): PmUserProfile {
+export function createUserProfile(
+  input: CreateUserProfileInput,
+  userId: string = LOCAL_USER_ID,
+): PmUserProfile {
   const db = getDb();
   const now = Date.now();
   const row = {
     id: nanoid(),
+    userId,
     name: input.name,
     type: input.type ?? "",
     typeColor: input.typeColor ?? "#3b82f6",
@@ -58,12 +80,17 @@ export function createUserProfile(input: CreateUserProfileInput): PmUserProfile 
   return parseUserRow(row as typeof pmUserProfiles.$inferSelect);
 }
 
-export function updateUserProfile(input: UpdateUserProfileInput): PmUserProfile {
+export function updateUserProfile(
+  input: UpdateUserProfileInput,
+  userId: string = LOCAL_USER_ID,
+): PmUserProfile {
   const db = getDb();
   const existing = db
     .select()
     .from(pmUserProfiles)
-    .where(eq(pmUserProfiles.id, input.id))
+    .where(
+      and(eq(pmUserProfiles.id, input.id), eq(pmUserProfiles.userId, userId)),
+    )
     .get();
   if (!existing) throw new Error(`User profile not found: ${input.id}`);
 
@@ -78,26 +105,35 @@ export function updateUserProfile(input: UpdateUserProfileInput): PmUserProfile 
 
   db.update(pmUserProfiles)
     .set(updates)
-    .where(eq(pmUserProfiles.id, input.id))
+    .where(
+      and(eq(pmUserProfiles.id, input.id), eq(pmUserProfiles.userId, userId)),
+    )
     .run();
   const row = db
     .select()
     .from(pmUserProfiles)
-    .where(eq(pmUserProfiles.id, input.id))
+    .where(
+      and(eq(pmUserProfiles.id, input.id), eq(pmUserProfiles.userId, userId)),
+    )
     .get();
   return parseUserRow(row!);
 }
 
-export function deleteUserProfile(id: string): void {
+export function deleteUserProfile(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): void {
   const db = getDb();
-  db.delete(pmUserProfiles).where(eq(pmUserProfiles.id, id)).run();
+  db.delete(pmUserProfiles)
+    .where(
+      and(eq(pmUserProfiles.id, id), eq(pmUserProfiles.userId, userId)),
+    )
+    .run();
 }
 
 // ─── Features ───
 
-function parseFeatureRow(
-  row: typeof pmFeatures.$inferSelect
-): PmFeature {
+function parseFeatureRow(row: typeof pmFeatures.$inferSelect): PmFeature {
   return {
     ...row,
     status: row.status as PmFeature["status"],
@@ -105,26 +141,40 @@ function parseFeatureRow(
   };
 }
 
-export function getAllFeatures(): PmFeature[] {
+export function getAllFeatures(
+  userId: string = LOCAL_USER_ID,
+): PmFeature[] {
   const db = getDb();
-  return db.select().from(pmFeatures).all().map(parseFeatureRow);
+  return db
+    .select()
+    .from(pmFeatures)
+    .where(eq(pmFeatures.userId, userId))
+    .all()
+    .map(parseFeatureRow);
 }
 
-export function getFeature(id: string): PmFeature | null {
+export function getFeature(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): PmFeature | null {
   const db = getDb();
   const row = db
     .select()
     .from(pmFeatures)
-    .where(eq(pmFeatures.id, id))
+    .where(and(eq(pmFeatures.id, id), eq(pmFeatures.userId, userId)))
     .get();
   return row ? parseFeatureRow(row) : null;
 }
 
-export function createFeature(input: CreateFeatureInput): PmFeature {
+export function createFeature(
+  input: CreateFeatureInput,
+  userId: string = LOCAL_USER_ID,
+): PmFeature {
   const db = getDb();
   const now = Date.now();
   const row = {
     id: nanoid(),
+    userId,
     name: input.name,
     description: input.description ?? "",
     status: input.status ?? "planned",
@@ -137,12 +187,15 @@ export function createFeature(input: CreateFeatureInput): PmFeature {
   return parseFeatureRow(row as typeof pmFeatures.$inferSelect);
 }
 
-export function updateFeature(input: UpdateFeatureInput): PmFeature {
+export function updateFeature(
+  input: UpdateFeatureInput,
+  userId: string = LOCAL_USER_ID,
+): PmFeature {
   const db = getDb();
   const existing = db
     .select()
     .from(pmFeatures)
-    .where(eq(pmFeatures.id, input.id))
+    .where(and(eq(pmFeatures.id, input.id), eq(pmFeatures.userId, userId)))
     .get();
   if (!existing) throw new Error(`Feature not found: ${input.id}`);
 
@@ -157,26 +210,29 @@ export function updateFeature(input: UpdateFeatureInput): PmFeature {
 
   db.update(pmFeatures)
     .set(updates)
-    .where(eq(pmFeatures.id, input.id))
+    .where(and(eq(pmFeatures.id, input.id), eq(pmFeatures.userId, userId)))
     .run();
   const row = db
     .select()
     .from(pmFeatures)
-    .where(eq(pmFeatures.id, input.id))
+    .where(and(eq(pmFeatures.id, input.id), eq(pmFeatures.userId, userId)))
     .get();
   return parseFeatureRow(row!);
 }
 
-export function deleteFeature(id: string): void {
+export function deleteFeature(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): void {
   const db = getDb();
-  db.delete(pmFeatures).where(eq(pmFeatures.id, id)).run();
+  db.delete(pmFeatures)
+    .where(and(eq(pmFeatures.id, id), eq(pmFeatures.userId, userId)))
+    .run();
 }
 
 // ─── Demands & Assumptions ───
 
-function parseDemandRow(
-  row: typeof pmDemands.$inferSelect
-): PmDemand {
+function parseDemandRow(row: typeof pmDemands.$inferSelect): PmDemand {
   return {
     ...row,
     type: row.type as PmDemand["type"],
@@ -184,26 +240,38 @@ function parseDemandRow(
   };
 }
 
-export function getAllDemands(): PmDemand[] {
+export function getAllDemands(userId: string = LOCAL_USER_ID): PmDemand[] {
   const db = getDb();
-  return db.select().from(pmDemands).all().map(parseDemandRow);
+  return db
+    .select()
+    .from(pmDemands)
+    .where(eq(pmDemands.userId, userId))
+    .all()
+    .map(parseDemandRow);
 }
 
-export function getDemand(id: string): PmDemand | null {
+export function getDemand(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): PmDemand | null {
   const db = getDb();
   const row = db
     .select()
     .from(pmDemands)
-    .where(eq(pmDemands.id, id))
+    .where(and(eq(pmDemands.id, id), eq(pmDemands.userId, userId)))
     .get();
   return row ? parseDemandRow(row) : null;
 }
 
-export function createDemand(input: CreateDemandInput): PmDemand {
+export function createDemand(
+  input: CreateDemandInput,
+  userId: string = LOCAL_USER_ID,
+): PmDemand {
   const db = getDb();
   const now = Date.now();
   const row = {
     id: nanoid(),
+    userId,
     title: input.title,
     description: input.description ?? "",
     type: input.type ?? "demand",
@@ -216,12 +284,15 @@ export function createDemand(input: CreateDemandInput): PmDemand {
   return parseDemandRow(row as typeof pmDemands.$inferSelect);
 }
 
-export function updateDemand(input: UpdateDemandInput): PmDemand {
+export function updateDemand(
+  input: UpdateDemandInput,
+  userId: string = LOCAL_USER_ID,
+): PmDemand {
   const db = getDb();
   const existing = db
     .select()
     .from(pmDemands)
-    .where(eq(pmDemands.id, input.id))
+    .where(and(eq(pmDemands.id, input.id), eq(pmDemands.userId, userId)))
     .get();
   if (!existing) throw new Error(`Demand not found: ${input.id}`);
 
@@ -236,19 +307,24 @@ export function updateDemand(input: UpdateDemandInput): PmDemand {
 
   db.update(pmDemands)
     .set(updates)
-    .where(eq(pmDemands.id, input.id))
+    .where(and(eq(pmDemands.id, input.id), eq(pmDemands.userId, userId)))
     .run();
   const row = db
     .select()
     .from(pmDemands)
-    .where(eq(pmDemands.id, input.id))
+    .where(and(eq(pmDemands.id, input.id), eq(pmDemands.userId, userId)))
     .get();
   return parseDemandRow(row!);
 }
 
-export function deleteDemand(id: string): void {
+export function deleteDemand(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): void {
   const db = getDb();
-  db.delete(pmDemands).where(eq(pmDemands.id, id)).run();
+  db.delete(pmDemands)
+    .where(and(eq(pmDemands.id, id), eq(pmDemands.userId, userId)))
+    .run();
 }
 
 // ─── Stakeholders ───
@@ -261,7 +337,7 @@ const EMPTY_DETAILS: StakeholderDetail = {
 };
 
 function parseStakeholderRow(
-  row: typeof pmStakeholders.$inferSelect
+  row: typeof pmStakeholders.$inferSelect,
 ): PmStakeholder {
   let details: StakeholderDetail;
   try {
@@ -272,27 +348,43 @@ function parseStakeholderRow(
   return { ...row, details };
 }
 
-export function getAllStakeholders(): PmStakeholder[] {
+export function getAllStakeholders(
+  userId: string = LOCAL_USER_ID,
+): PmStakeholder[] {
   const db = getDb();
-  return db.select().from(pmStakeholders).all().map(parseStakeholderRow);
+  return db
+    .select()
+    .from(pmStakeholders)
+    .where(eq(pmStakeholders.userId, userId))
+    .all()
+    .map(parseStakeholderRow);
 }
 
-export function getStakeholder(id: string): PmStakeholder | null {
+export function getStakeholder(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): PmStakeholder | null {
   const db = getDb();
   const row = db
     .select()
     .from(pmStakeholders)
-    .where(eq(pmStakeholders.id, id))
+    .where(
+      and(eq(pmStakeholders.id, id), eq(pmStakeholders.userId, userId)),
+    )
     .get();
   return row ? parseStakeholderRow(row) : null;
 }
 
-export function createStakeholder(input: CreateStakeholderInput): PmStakeholder {
+export function createStakeholder(
+  input: CreateStakeholderInput,
+  userId: string = LOCAL_USER_ID,
+): PmStakeholder {
   const db = getDb();
   const now = Date.now();
   const details = { ...EMPTY_DETAILS, ...input.details };
   const row = {
     id: nanoid(),
+    userId,
     name: input.name,
     role: input.role ?? "",
     roleColor: input.roleColor ?? "#8b5cf6",
@@ -305,12 +397,20 @@ export function createStakeholder(input: CreateStakeholderInput): PmStakeholder 
   return parseStakeholderRow(row as typeof pmStakeholders.$inferSelect);
 }
 
-export function updateStakeholder(input: UpdateStakeholderInput): PmStakeholder {
+export function updateStakeholder(
+  input: UpdateStakeholderInput,
+  userId: string = LOCAL_USER_ID,
+): PmStakeholder {
   const db = getDb();
   const existing = db
     .select()
     .from(pmStakeholders)
-    .where(eq(pmStakeholders.id, input.id))
+    .where(
+      and(
+        eq(pmStakeholders.id, input.id),
+        eq(pmStakeholders.userId, userId),
+      ),
+    )
     .get();
   if (!existing) throw new Error(`Stakeholder not found: ${input.id}`);
 
@@ -333,17 +433,34 @@ export function updateStakeholder(input: UpdateStakeholderInput): PmStakeholder 
 
   db.update(pmStakeholders)
     .set(updates)
-    .where(eq(pmStakeholders.id, input.id))
+    .where(
+      and(
+        eq(pmStakeholders.id, input.id),
+        eq(pmStakeholders.userId, userId),
+      ),
+    )
     .run();
   const row = db
     .select()
     .from(pmStakeholders)
-    .where(eq(pmStakeholders.id, input.id))
+    .where(
+      and(
+        eq(pmStakeholders.id, input.id),
+        eq(pmStakeholders.userId, userId),
+      ),
+    )
     .get();
   return parseStakeholderRow(row!);
 }
 
-export function deleteStakeholder(id: string): void {
+export function deleteStakeholder(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): void {
   const db = getDb();
-  db.delete(pmStakeholders).where(eq(pmStakeholders.id, id)).run();
+  db.delete(pmStakeholders)
+    .where(
+      and(eq(pmStakeholders.id, id), eq(pmStakeholders.userId, userId)),
+    )
+    .run();
 }

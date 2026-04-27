@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
+import { requireUserId } from "@/lib/core/route-helpers";
 import {
   executeOpenClawCommand,
   isSSHConnected,
@@ -8,9 +9,11 @@ import {
 
 export async function GET(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
     const cid = req.nextUrl.searchParams.get("connectionId");
-    const connectionId = cid ?? getDefaultConnection()?.id;
+    const connectionId = cid ?? getDefaultConnection(auth.userId)?.id;
 
     if (!connectionId) {
       return NextResponse.json(

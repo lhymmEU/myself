@@ -1,0 +1,35 @@
+/**
+ * OAuth + magic-link callback.
+ *
+ * Supabase redirects the browser to /auth/callback?code=... after a
+ * successful sign-in. We exchange the code for a session (which sets the
+ * cookie via our SSR helper) then redirect to the page the user was
+ * originally trying to reach (`?next=...`) or the dashboard.
+ *
+ * Reference: https://supabase.com/docs/guides/auth/server-side/nextjs
+ */
+
+import { NextResponse, type NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+
+export async function GET(request: NextRequest) {
+  const url = new URL(request.url);
+  const code = url.searchParams.get("code");
+  const next = url.searchParams.get("next") ?? "/dashboard";
+
+  // Only redirect to in-app paths to avoid open-redirect.
+  const safeNext = next.startsWith("/") ? next : "/dashboard";
+
+  if (code) {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) {
+      return NextResponse.redirect(new URL(safeNext, request.url));
+    }
+    return NextResponse.redirect(
+      new URL(`/login?error=${encodeURIComponent(error.message)}`, request.url),
+    );
+  }
+
+  return NextResponse.redirect(new URL("/login?error=missing_code", request.url));
+}

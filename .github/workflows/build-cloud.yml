@@ -1,0 +1,55 @@
+name: build-cloud
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: build-cloud-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DEPLOYMENT_MODE: cloud
+  NEXT_PUBLIC_DEPLOYMENT_MODE: cloud
+  # Build-time placeholders. Real values are wired in Vercel's project settings.
+  NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+  DATABASE_URL: postgres://placeholder:placeholder@localhost:5432/placeholder
+
+jobs:
+  build:
+    name: lint + typecheck + build (cloud / postgres, no native deps)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies (omit optional native modules)
+        run: npm ci --omit=optional
+
+      - name: Verify native modules are absent
+        run: |
+          for pkg in better-sqlite3 ssh2 nodemailer; do
+            if [ -d "node_modules/$pkg" ]; then
+              echo "::error::optionalDependency '$pkg' was installed in cloud build — bundle is heavier than necessary."
+              exit 1
+            fi
+          done
+          echo "OK — better-sqlite3 / ssh2 / nodemailer not installed."
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Schema parity (sqlite ↔ postgres)
+        run: npm run schema:check
+
+      - name: Build (cloud mode)
+        run: npm run build:cloud

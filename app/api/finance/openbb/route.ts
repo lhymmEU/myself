@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
+import { isLocal } from "@/lib/core/runtime";
 import { fetchOpenBB, checkConnection } from "@/lib/modules/finance/openbb-client";
 
 export async function GET(req: NextRequest) {
   bootApp();
+  if (!isLocal()) {
+    return NextResponse.json(
+      {
+        error:
+          "OpenBB market data is only available in local installs.",
+      },
+      { status: 410 },
+    );
+  }
 
   const endpoint = req.nextUrl.searchParams.get("endpoint");
 

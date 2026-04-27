@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
+import { requireUserId } from "@/lib/core/route-helpers";
 import {
   connectSSH,
   disconnectSSH,
@@ -10,10 +11,13 @@ import {
 
 export async function POST(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
+  const { userId } = auth;
   try {
     const { connectionId, action } = await req.json();
 
-    const id = connectionId ?? getDefaultConnection()?.id;
+    const id = connectionId ?? getDefaultConnection(userId)?.id;
     if (!id) {
       return NextResponse.json(
         { error: "No connection configured" },
@@ -27,7 +31,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "status") {
-      const conn = getConnection(id);
+      const conn = getConnection(id, userId);
       return NextResponse.json({
         connected: isSSHConnected(id),
         connectionId: id,
@@ -44,7 +48,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const conn = getConnection(id);
+    const conn = getConnection(id, userId);
     return NextResponse.json({
       connected: true,
       connectionId: id,

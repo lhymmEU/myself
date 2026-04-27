@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
+import { requireUserId } from "@/lib/core/route-helpers";
 import {
   getOrCreateDefaultScene,
   getScene,
@@ -13,11 +14,14 @@ import {
 
 export async function GET(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
+  const { userId } = auth;
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
 
   if (id) {
-    const scene = getScene(id);
+    const scene = getScene(id, userId);
     if (!scene) {
       return NextResponse.json({ error: "Scene not found" }, { status: 404 });
     }
@@ -26,7 +30,7 @@ export async function GET(req: NextRequest) {
 
   const todoSource = searchParams.get("todoSource");
   if (todoSource === "true") {
-    const scene = getTodoSourceScene();
+    const scene = getTodoSourceScene(userId);
     if (!scene) {
       return NextResponse.json({ error: "No todo source set" }, { status: 404 });
     }
@@ -36,28 +40,36 @@ export async function GET(req: NextRequest) {
   const listAll = searchParams.get("all");
   if (listAll === "true") {
     const mode = searchParams.get("mode") as "mind" | "product" | null;
-    return NextResponse.json(getAllScenes(mode ?? undefined));
+    return NextResponse.json(getAllScenes(mode ?? undefined, userId));
   }
 
-  const scene = getOrCreateDefaultScene();
+  const scene = getOrCreateDefaultScene(userId);
   return NextResponse.json(scene);
 }
 
 export async function POST(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   const body = await req.json();
-  const scene = createScene({
-    name: body.name,
-    elements: body.elements,
-    appState: body.appState,
-    files: body.files,
-    mode: body.mode,
-  });
+  const scene = createScene(
+    {
+      name: body.name,
+      elements: body.elements,
+      appState: body.appState,
+      files: body.files,
+      mode: body.mode,
+    },
+    auth.userId,
+  );
   return NextResponse.json(scene, { status: 201 });
 }
 
 export async function PUT(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
+  const { userId } = auth;
   const body = await req.json();
 
   if (!body.id) {
@@ -65,27 +77,32 @@ export async function PUT(req: NextRequest) {
   }
 
   if (body.isTodoSource !== undefined) {
-    const scene = setTodoSource(body.id, body.isTodoSource);
+    const scene = setTodoSource(body.id, body.isTodoSource, userId);
     return NextResponse.json(scene);
   }
 
-  const scene = updateScene({
-    id: body.id,
-    name: body.name,
-    elements: body.elements,
-    appState: body.appState,
-    files: body.files,
-  });
+  const scene = updateScene(
+    {
+      id: body.id,
+      name: body.name,
+      elements: body.elements,
+      appState: body.appState,
+      files: body.files,
+    },
+    userId,
+  );
   return NextResponse.json(scene);
 }
 
 export async function DELETE(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
-  deleteScene(id);
+  deleteScene(id, auth.userId);
   return NextResponse.json({ success: true });
 }

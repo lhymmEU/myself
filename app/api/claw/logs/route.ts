@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { bootApp } from "@/lib/core/init";
+import { requireUserId } from "@/lib/core/route-helpers";
 import {
   getSSHClient,
   isSSHConnected,
@@ -11,9 +12,11 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
 
   const connectionId =
-    req.nextUrl.searchParams.get("connectionId") ?? getDefaultConnection()?.id;
+    req.nextUrl.searchParams.get("connectionId") ?? getDefaultConnection(auth.userId)?.id;
 
   if (!connectionId) {
     return new Response("No connection configured", { status: 400 });

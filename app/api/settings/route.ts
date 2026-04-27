@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
+import { requireUserId } from "@/lib/core/route-helpers";
 import { getAllSettings, updateSetting } from "@/lib/modules/settings/actions";
 
 export async function GET() {
@@ -11,8 +12,10 @@ export async function GET() {
       { status: 500 }
     );
   }
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
-    const settings = await getAllSettings();
+    const settings = await getAllSettings(auth.userId);
     return NextResponse.json(settings);
   } catch (err) {
     return NextResponse.json(
@@ -31,6 +34,8 @@ export async function PUT(req: NextRequest) {
       { status: 500 }
     );
   }
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
     const { key, value } = await req.json();
     if (!key || value === undefined) {
@@ -39,7 +44,7 @@ export async function PUT(req: NextRequest) {
         { status: 400 }
       );
     }
-    await updateSetting(key, value);
+    await updateSetting(key, value, auth.userId);
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json(

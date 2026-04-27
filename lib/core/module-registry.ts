@@ -1,12 +1,21 @@
 import type { FeatureModule, ModuleContext } from "./types";
 import { toolRegistry } from "./tool-registry";
 import { eventBus } from "./event-bus";
+import { MODE, isModuleAvailable } from "./runtime";
 
 class ModuleRegistry {
   private modules: Map<string, FeatureModule> = new Map();
   private initialized = false;
 
   register(mod: FeatureModule) {
+    if (!isModuleAvailable({ name: mod.name, availableIn: mod.availableIn ?? ["local", "cloud"] })) {
+      if (process.env.NODE_ENV !== "production") {
+        console.info(
+          `[module-registry] skipping "${mod.name}" — not available in mode "${MODE}"`,
+        );
+      }
+      return;
+    }
     this.modules.set(mod.name, mod);
   }
 

@@ -4,7 +4,8 @@ import { financeTools } from "./tools";
 export const financeModule: FeatureModule = {
   name: "finance",
   description:
-    "Financial market data powered by OpenBB — stocks, crypto, economy indicators, and news",
+    "Personal finance + market data (market intelligence is local-only via OpenBB)",
   tools: financeTools,
   eventHandlers: {},
+  availableIn: ["local", "cloud"],
 };

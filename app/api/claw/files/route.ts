@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
+import { requireUserId } from "@/lib/core/route-helpers";
 import {
   getSFTP,
   isSSHConnected,
   getDefaultConnection,
 } from "@/lib/modules/claw/actions";
 
-function resolveConnectionId(req: NextRequest): string | null {
+function resolveConnectionId(req: NextRequest, userId: string): string | null {
   return (
     req.nextUrl.searchParams.get("connectionId") ??
-    getDefaultConnection()?.id ??
+    getDefaultConnection(userId)?.id ??
     null
   );
 }
@@ -35,8 +36,10 @@ function normalizePath(raw: string): string {
 // GET — list directory or download a file
 export async function GET(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
-    const connectionId = resolveConnectionId(req);
+    const connectionId = resolveConnectionId(req, auth.userId);
     const err = guard(connectionId);
     if (err) return err;
 
@@ -113,11 +116,13 @@ export async function GET(req: NextRequest) {
 // POST — upload, mkdir, delete, rename
 export async function POST(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
     const formData = await req.formData();
     const connectionId =
       (formData.get("connectionId") as string) ??
-      getDefaultConnection()?.id ??
+      getDefaultConnection(auth.userId)?.id ??
       null;
     const err = guard(connectionId);
     if (err) return err;

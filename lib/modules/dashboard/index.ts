@@ -6,4 +6,5 @@ export const dashboardModule: FeatureModule = {
   description: "Dashboard features: user skills, wishlist, and assigned jobs",
   tools: dashboardTools,
   eventHandlers: {},
+  availableIn: ["local", "cloud"],
 };

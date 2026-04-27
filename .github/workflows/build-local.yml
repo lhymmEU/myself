@@ -1,0 +1,41 @@
+name: build-local
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: build-local-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DEPLOYMENT_MODE: local
+  NEXT_PUBLIC_DEPLOYMENT_MODE: local
+
+jobs:
+  build:
+    name: lint + typecheck + build (local / sqlite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies (with native modules)
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Schema parity (sqlite ↔ postgres)
+        run: npm run schema:check
+
+      - name: Build (local mode)
+        run: npm run build:local

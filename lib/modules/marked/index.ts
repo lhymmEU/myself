@@ -6,4 +6,5 @@ export const markedModule: FeatureModule = {
   description: "URL bookmarking organized into shareable collections",
   tools: markedTools,
   eventHandlers: {},
+  availableIn: ["local", "cloud"],
 };

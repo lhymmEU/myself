@@ -1,16 +1,10 @@
-export const SETTING_DEFAULTS: Record<string, string> = {
+import { isLocal } from "@/lib/core/runtime";
+
+const LOCAL_ONLY_DEFAULTS: Record<string, string> = {
   openrouter_api_key: "",
   llm_model: "anthropic/claude-sonnet-4",
   llm_temperature: "0.7",
-  theme: "system",
-  accent_color: "#6366f1",
   openbb_api_url: "http://127.0.0.1:6900",
-  claw_access_todos: "false",
-  claw_access_finance: "false",
-  claw_access_plans: "false",
-  claw_access_wishlist: "false",
-  claw_access_mindmap: "false",
-  claw_access_skills: "false",
 
   fmp_api_key: "",
   polygon_api_key: "",
@@ -24,7 +18,17 @@ export const SETTING_DEFAULTS: Record<string, string> = {
   tradier_account_type: "sandbox",
   tradingeconomics_api_key: "",
   tiingo_token: "",
+};
 
+const COMMON_DEFAULTS: Record<string, string> = {
+  theme: "system",
+  accent_color: "#6366f1",
+  claw_access_todos: "false",
+  claw_access_finance: "false",
+  claw_access_plans: "false",
+  claw_access_wishlist: "false",
+  claw_access_mindmap: "false",
+  claw_access_skills: "false",
   finance_default_mode: "market",
   finance_enabled_modules: JSON.stringify([
     "market-indices", "treasury-rates", "equity", "crypto",
@@ -35,6 +39,10 @@ export const SETTING_DEFAULTS: Record<string, string> = {
     "currency-snapshots", "economy-indicators", "news-world", "news-company",
   ]),
 };
+
+export const SETTING_DEFAULTS: Record<string, string> = isLocal()
+  ? { ...LOCAL_ONLY_DEFAULTS, ...COMMON_DEFAULTS }
+  : { ...COMMON_DEFAULTS };
 
 export const CLAW_ACCESS_MODULES = [
   "todos",

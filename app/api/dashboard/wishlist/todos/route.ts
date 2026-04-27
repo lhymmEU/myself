@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireUserId } from "@/lib/core/route-helpers";
 import {
   listWishTodos,
   createWishTodo,
@@ -8,12 +9,14 @@ import {
 } from "@/lib/modules/dashboard/actions";
 
 export async function GET(req: NextRequest) {
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
     const wishId = req.nextUrl.searchParams.get("wishId");
     if (!wishId) {
       return NextResponse.json({ error: "wishId required" }, { status: 400 });
     }
-    const todos = listWishTodos(wishId);
+    const todos = listWishTodos(wishId, auth.userId);
     return NextResponse.json({ todos });
   } catch (err) {
     return NextResponse.json(
@@ -24,13 +27,15 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
     const body = await req.json();
     const { action } = body;
 
     if (action === "create") {
       try {
-        const result = createWishTodo(body);
+        const result = createWishTodo(body, auth.userId);
         return NextResponse.json(result);
       } catch (e) {
         if (e instanceof Error && e.message === "wish_todos_full") {
@@ -41,17 +46,17 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "update") {
-      updateWishTodo(body.id, body.data);
+      updateWishTodo(body.id, body.data, auth.userId);
       return NextResponse.json({ success: true });
     }
 
     if (action === "delete") {
-      deleteWishTodo(body.id);
+      deleteWishTodo(body.id, auth.userId);
       return NextResponse.json({ success: true });
     }
 
     if (action === "bulk-create") {
-      const result = bulkCreateWishTodos(body.wishId, body.contents);
+      const result = bulkCreateWishTodos(body.wishId, body.contents, auth.userId);
       return NextResponse.json(result);
     }
 

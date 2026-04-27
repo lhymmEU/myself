@@ -1,0 +1,37 @@
+name = "lobster-relay"
+main = "src/index.ts"
+# Bumped to a date that includes `cloudflare:sockets` (TCP outbound) used by
+# the /dial route. Any compat date >= 2024-09-23 enables the API; we keep it
+# fresh to pick up streaming improvements.
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Durable Object class hosting one room per pairing token.
+[[durable_objects.bindings]]
+name = "RELAY_ROOM"
+class_name = "RelayRoom"
+
+# Per-user concurrent /dial session limiter (one DO instance per userId).
+[[durable_objects.bindings]]
+name = "DIAL_LIMITER"
+class_name = "DialLimiter"
+
+# Migration that creates the DO storage namespace.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RelayRoom"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["DialLimiter"]
+
+[vars]
+# Allowed origins for browser peers (comma separated). The agent peer is
+# allowed from any origin since lobsterd doesn't run in a browser.
+ALLOWED_BROWSER_ORIGINS = "https://myself.magicsheep.tech"
+
+# Hard cap on simultaneous /dial WebSockets per user. Tune this against
+# your Cloudflare Worker TCP socket budget. Default is 5 if unset.
+DIAL_MAX_CONCURRENT_PER_USER = "5"
+
+# JWT secret is set via `wrangler secret put RELAY_JWT_SECRET`.

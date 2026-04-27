@@ -49,6 +49,9 @@ import {
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import type { VaultSecretMeta, SecretCategory } from "@/lib/modules/vault/types";
+import { isCloud } from "@/lib/core/runtime";
+import { AddEdgeServer } from "@/components/claw/add-edge-server";
+import { PairLobster } from "@/components/claw/pair-lobster";
 
 const CATEGORY_ICONS: Record<SecretCategory, typeof KeyRound> = {
   password: KeyRound,
@@ -70,6 +73,9 @@ interface ConnectionInfo {
   authMethod: "password" | "key";
   gatewayPort: number;
   isDefault: boolean;
+  transport?: "ssh" | "relay" | "edge";
+  credentialSecretId?: string;
+  hostKeyFingerprint?: string;
 }
 
 interface ConnectState {
@@ -429,11 +435,28 @@ export function ConnectionForm({ onConnectionChange }: ConnectionFormProps) {
             </div>
           ))}
 
+          {isCloud() && (
+            <>
+              <AddEdgeServer onAdded={() => mutateConnections()} />
+              <PairLobster onPaired={() => mutateConnections()} />
+            </>
+          )}
+
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" variant="outline">
+              <Button
+                size="sm"
+                variant={isCloud() ? "ghost" : "outline"}
+                title={
+                  isCloud()
+                    ? "Add an SSH connection without going through the edge transport (advanced)"
+                    : undefined
+                }
+              >
                 <Plus className="h-3.5 w-3.5 mr-1.5" />
-                {t("claw.connection.addServer")}
+                {isCloud()
+                  ? t("claw.connection.addSshConnection")
+                  : t("claw.connection.addServer")}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">

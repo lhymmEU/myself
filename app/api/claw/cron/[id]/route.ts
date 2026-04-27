@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireUserId } from "@/lib/core/route-helpers";
 import {
   executeOpenClawCommand,
   executeCommand,
@@ -9,6 +10,8 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
     const { id } = await params;
     const body = await req.json();
@@ -70,6 +73,8 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
     const { id } = await params;
     const connectionId = req.nextUrl.searchParams.get("connectionId");

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
+import { isLocal } from "@/lib/core/runtime";
+import { requireUserId } from "@/lib/core/route-helpers";
 import { getSetting } from "@/lib/modules/settings/actions";
 import { writeFile, readFile, mkdir } from "fs/promises";
 import { join } from "path";
@@ -22,6 +24,15 @@ const PROVIDER_KEYS = [
 
 export async function PUT() {
   bootApp();
+  if (!isLocal()) {
+    return NextResponse.json(
+      { error: "OpenBB credentials are local-only." },
+      { status: 410 },
+    );
+  }
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
+  const { userId } = auth;
 
   const configDir = join(homedir(), ".openbb_platform");
   const configPath = join(configDir, "user_settings.json");
@@ -36,7 +47,7 @@ export async function PUT() {
 
   const credentials: Record<string, string> = {};
   for (const key of PROVIDER_KEYS) {
-    const val = getSetting(key);
+    const val = getSetting(key, userId);
     if (val) {
       credentials[key] = val;
     }

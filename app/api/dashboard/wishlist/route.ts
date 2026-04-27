@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireUserId } from "@/lib/core/route-helpers";
 import {
   listWishlist,
   createWish,
@@ -7,8 +8,10 @@ import {
 } from "@/lib/modules/dashboard/actions";
 
 export async function GET() {
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
-    const wishes = listWishlist();
+    const wishes = listWishlist(auth.userId);
     return NextResponse.json({ wishes });
   } catch (err) {
     return NextResponse.json(
@@ -19,13 +22,15 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
     const body = await req.json();
     const { action } = body;
 
     if (action === "create") {
       try {
-        const result = createWish(body);
+        const result = createWish(body, auth.userId);
         return NextResponse.json(result);
       } catch (e) {
         if (e instanceof Error && e.message === "wishlist_full") {
@@ -36,12 +41,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "update") {
-      updateWish(body.id, body.data);
+      updateWish(body.id, body.data, auth.userId);
       return NextResponse.json({ success: true });
     }
 
     if (action === "delete") {
-      deleteWish(body.id);
+      deleteWish(body.id, auth.userId);
       return NextResponse.json({ success: true });
     }
 

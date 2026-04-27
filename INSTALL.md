@@ -6,6 +6,8 @@ This guide is written for someone who has never opened a terminal before. It wal
 
 It works on **Windows 10/11** and **macOS**. Pick the section for your operating system in each step.
 
+> **Just want to try it without installing anything?** Open the hosted version at **https://lifedashboard.app** (or whichever URL is pinned in this repo's "About"), click **Sign in**, and use your email for a magic-link login. The hosted version doesn't have the live OpenBB market data, the embedded SSH terminal, or a built-in LLM — those are all in this local install. See [`README.md`](./README.md) for the side-by-side comparison.
+
 ---
 
 ## Step 1. Install the two programs you need

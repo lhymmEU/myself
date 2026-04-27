@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
-import { eq, asc, sql, isNull } from "drizzle-orm";
-import { getDb } from "@/lib/core/db";
+import { and, eq, asc, sql, isNull } from "drizzle-orm";
+import { getDb } from "@/lib/db";
+import { LOCAL_USER_ID } from "@/lib/core/runtime";
 import { eventBus } from "@/lib/core/event-bus";
 import { markedCollections, markedItems } from "./schema";
 import { MARKED_EVENTS } from "./events";
@@ -35,27 +36,41 @@ function makeSlug(name: string): string {
 // Collections
 // ---------------------------------------------------------------------------
 
-export function listCollections(): MarkedCollection[] {
+export function listCollections(
+  userId: string = LOCAL_USER_ID,
+): MarkedCollection[] {
   const db = getDb();
   return db
     .select()
     .from(markedCollections)
+    .where(eq(markedCollections.userId, userId))
     .orderBy(asc(markedCollections.sortOrder))
     .all();
 }
 
-export function getCollection(id: string): MarkedCollection | null {
+export function getCollection(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): MarkedCollection | null {
   const db = getDb();
   return (
     db
       .select()
       .from(markedCollections)
-      .where(eq(markedCollections.id, id))
+      .where(
+        and(
+          eq(markedCollections.id, id),
+          eq(markedCollections.userId, userId),
+        ),
+      )
       .get() ?? null
   );
 }
 
-export function createCollection(input: CreateCollectionInput): MarkedCollection {
+export function createCollection(
+  input: CreateCollectionInput,
+  userId: string = LOCAL_USER_ID,
+): MarkedCollection {
   const db = getDb();
   const now = Date.now();
   const id = nanoid();
@@ -64,10 +79,12 @@ export function createCollection(input: CreateCollectionInput): MarkedCollection
       max: sql<number>`COALESCE(MAX(${markedCollections.sortOrder}), -1)`,
     })
     .from(markedCollections)
+    .where(eq(markedCollections.userId, userId))
     .get();
   const sortOrder = (maxRow?.max ?? -1) + 1;
   const row = {
     id,
+    userId,
     name: input.name,
     notes: input.notes ?? null,
     slug: makeSlug(input.name),
@@ -80,12 +97,20 @@ export function createCollection(input: CreateCollectionInput): MarkedCollection
   return row;
 }
 
-export function updateCollection(input: UpdateCollectionInput): MarkedCollection {
+export function updateCollection(
+  input: UpdateCollectionInput,
+  userId: string = LOCAL_USER_ID,
+): MarkedCollection {
   const db = getDb();
   const existing = db
     .select()
     .from(markedCollections)
-    .where(eq(markedCollections.id, input.id))
+    .where(
+      and(
+        eq(markedCollections.id, input.id),
+        eq(markedCollections.userId, userId),
+      ),
+    )
     .get();
   if (!existing) throw new Error(`Collection not found: ${input.id}`);
 
@@ -100,33 +125,66 @@ export function updateCollection(input: UpdateCollectionInput): MarkedCollection
 
   db.update(markedCollections)
     .set(updates)
-    .where(eq(markedCollections.id, input.id))
+    .where(
+      and(
+        eq(markedCollections.id, input.id),
+        eq(markedCollections.userId, userId),
+      ),
+    )
     .run();
   const row = db
     .select()
     .from(markedCollections)
-    .where(eq(markedCollections.id, input.id))
+    .where(
+      and(
+        eq(markedCollections.id, input.id),
+        eq(markedCollections.userId, userId),
+      ),
+    )
     .get()!;
   eventBus.emit("marked", MARKED_EVENTS.COLLECTION_UPDATED, row);
   return row;
 }
 
-export function deleteCollection(id: string): void {
+export function deleteCollection(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): void {
   const db = getDb();
   db.update(markedItems)
     .set({ collectionId: null })
-    .where(eq(markedItems.collectionId, id))
+    .where(
+      and(
+        eq(markedItems.collectionId, id),
+        eq(markedItems.userId, userId),
+      ),
+    )
     .run();
-  db.delete(markedCollections).where(eq(markedCollections.id, id)).run();
+  db.delete(markedCollections)
+    .where(
+      and(
+        eq(markedCollections.id, id),
+        eq(markedCollections.userId, userId),
+      ),
+    )
+    .run();
   eventBus.emit("marked", MARKED_EVENTS.COLLECTION_DELETED, { id });
 }
 
-export function reorderCollections(ids: string[]): void {
+export function reorderCollections(
+  ids: string[],
+  userId: string = LOCAL_USER_ID,
+): void {
   const db = getDb();
   ids.forEach((id, index) => {
     db.update(markedCollections)
       .set({ sortOrder: index })
-      .where(eq(markedCollections.id, id))
+      .where(
+        and(
+          eq(markedCollections.id, id),
+          eq(markedCollections.userId, userId),
+        ),
+      )
       .run();
   });
 }
@@ -135,13 +193,18 @@ export function reorderCollections(ids: string[]): void {
 // Items
 // ---------------------------------------------------------------------------
 
-export function listItems(collectionId?: string | null): MarkedItem[] {
+export function listItems(
+  collectionId?: string | null,
+  userId: string = LOCAL_USER_ID,
+): MarkedItem[] {
   const db = getDb();
   if (collectionId === "__uncollected__") {
     return db
       .select()
       .from(markedItems)
-      .where(isNull(markedItems.collectionId))
+      .where(
+        and(eq(markedItems.userId, userId), isNull(markedItems.collectionId)),
+      )
       .orderBy(asc(markedItems.sortOrder))
       .all();
   }
@@ -149,25 +212,41 @@ export function listItems(collectionId?: string | null): MarkedItem[] {
     return db
       .select()
       .from(markedItems)
-      .where(eq(markedItems.collectionId, collectionId))
+      .where(
+        and(
+          eq(markedItems.userId, userId),
+          eq(markedItems.collectionId, collectionId),
+        ),
+      )
       .orderBy(asc(markedItems.sortOrder))
       .all();
   }
   return db
     .select()
     .from(markedItems)
+    .where(eq(markedItems.userId, userId))
     .orderBy(asc(markedItems.sortOrder))
     .all();
 }
 
-export function getItem(id: string): MarkedItem | null {
+export function getItem(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): MarkedItem | null {
   const db = getDb();
   return (
-    db.select().from(markedItems).where(eq(markedItems.id, id)).get() ?? null
+    db
+      .select()
+      .from(markedItems)
+      .where(and(eq(markedItems.id, id), eq(markedItems.userId, userId)))
+      .get() ?? null
   );
 }
 
-export function createItem(input: CreateItemInput): MarkedItem {
+export function createItem(
+  input: CreateItemInput,
+  userId: string = LOCAL_USER_ID,
+): MarkedItem {
   const db = getDb();
   const now = Date.now();
   const id = nanoid();
@@ -176,10 +255,12 @@ export function createItem(input: CreateItemInput): MarkedItem {
       max: sql<number>`COALESCE(MAX(${markedItems.sortOrder}), -1)`,
     })
     .from(markedItems)
+    .where(eq(markedItems.userId, userId))
     .get();
   const sortOrder = (maxRow?.max ?? -1) + 1;
   const row = {
     id,
+    userId,
     url: input.url,
     title: input.title,
     sourceTag: input.sourceTag ?? generateSourceTag(input.url, input.title),
@@ -197,12 +278,17 @@ export function createItem(input: CreateItemInput): MarkedItem {
   return row;
 }
 
-export function updateItem(input: UpdateItemInput): MarkedItem {
+export function updateItem(
+  input: UpdateItemInput,
+  userId: string = LOCAL_USER_ID,
+): MarkedItem {
   const db = getDb();
   const existing = db
     .select()
     .from(markedItems)
-    .where(eq(markedItems.id, input.id))
+    .where(
+      and(eq(markedItems.id, input.id), eq(markedItems.userId, userId)),
+    )
     .get();
   if (!existing) throw new Error(`Item not found: ${input.id}`);
 
@@ -215,45 +301,57 @@ export function updateItem(input: UpdateItemInput): MarkedItem {
   if (input.notes !== undefined) updates.notes = input.notes;
   if (input.favicon !== undefined) updates.favicon = input.favicon;
   if (input.ogImage !== undefined) updates.ogImage = input.ogImage;
-  if (input.ogDescription !== undefined) updates.ogDescription = input.ogDescription;
-  if (input.collectionId !== undefined) updates.collectionId = input.collectionId;
+  if (input.ogDescription !== undefined)
+    updates.ogDescription = input.ogDescription;
+  if (input.collectionId !== undefined)
+    updates.collectionId = input.collectionId;
 
   db.update(markedItems)
     .set(updates)
-    .where(eq(markedItems.id, input.id))
+    .where(
+      and(eq(markedItems.id, input.id), eq(markedItems.userId, userId)),
+    )
     .run();
   const row = db
     .select()
     .from(markedItems)
-    .where(eq(markedItems.id, input.id))
+    .where(
+      and(eq(markedItems.id, input.id), eq(markedItems.userId, userId)),
+    )
     .get()!;
   eventBus.emit("marked", MARKED_EVENTS.ITEM_UPDATED, row);
   return row;
 }
 
-export function deleteItem(id: string): void {
+export function deleteItem(id: string, userId: string = LOCAL_USER_ID): void {
   const db = getDb();
-  db.delete(markedItems).where(eq(markedItems.id, id)).run();
+  db.delete(markedItems)
+    .where(and(eq(markedItems.id, id), eq(markedItems.userId, userId)))
+    .run();
   eventBus.emit("marked", MARKED_EVENTS.ITEM_DELETED, { id });
 }
 
 export function moveItemToCollection(
   itemId: string,
   collectionId: string | null,
+  userId: string = LOCAL_USER_ID,
 ): void {
   const db = getDb();
   db.update(markedItems)
     .set({ collectionId, updatedAt: Date.now() })
-    .where(eq(markedItems.id, itemId))
+    .where(and(eq(markedItems.id, itemId), eq(markedItems.userId, userId)))
     .run();
 }
 
-export function reorderItems(ids: string[]): void {
+export function reorderItems(
+  ids: string[],
+  userId: string = LOCAL_USER_ID,
+): void {
   const db = getDb();
   ids.forEach((id, index) => {
     db.update(markedItems)
       .set({ sortOrder: index })
-      .where(eq(markedItems.id, id))
+      .where(and(eq(markedItems.id, id), eq(markedItems.userId, userId)))
       .run();
   });
 }

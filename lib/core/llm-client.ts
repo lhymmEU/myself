@@ -1,10 +1,17 @@
 import OpenAI from "openai";
 import { getSetting } from "@/lib/modules/settings/actions";
+import { isLocal } from "@/lib/core/runtime";
 
 let _client: OpenAI | null = null;
 let _cachedKey: string | null = null;
 
+const CLOUD_DISABLED_MESSAGE =
+  "LLM features are disabled in cloud mode. Cloud users connect their own lobsters that hold their own model keys; the cloud server never proxies LLM calls.";
+
 function getClient(): OpenAI {
+  if (!isLocal()) {
+    throw new Error(CLOUD_DISABLED_MESSAGE);
+  }
   const key = getSettingSync("openrouter_api_key");
   if (!key) {
     throw new Error(
@@ -22,6 +29,10 @@ function getClient(): OpenAI {
   });
   _cachedKey = key;
   return _client;
+}
+
+export function isLlmAvailable(): boolean {
+  return isLocal();
 }
 
 function getSettingSync(key: string): string | null {

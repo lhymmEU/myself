@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
+import { requireUserId } from "@/lib/core/route-helpers";
 import {
   createTransaction,
   deleteTransaction,
@@ -8,8 +9,10 @@ import {
 
 export async function GET(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   const sp = req.nextUrl.searchParams;
-  const filters: Parameters<typeof getTransactions>[0] = {};
+  const filters: NonNullable<Parameters<typeof getTransactions>[0]> = {};
 
   const accountId = sp.get("account_id");
   if (accountId) filters.account_id = accountId;
@@ -32,23 +35,27 @@ export async function GET(req: NextRequest) {
     if (!Number.isNaN(n)) filters.limit = n;
   }
 
-  const result = getTransactions(filters);
+  const result = getTransactions(filters, auth.userId);
   return NextResponse.json(result);
 }
 
 export async function POST(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   const body = await req.json();
-  const result = createTransaction(body);
+  const result = createTransaction(body, auth.userId);
   return NextResponse.json(result);
 }
 
 export async function DELETE(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   const id = req.nextUrl.searchParams.get("id");
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
-  deleteTransaction(id);
+  deleteTransaction(id, auth.userId);
   return NextResponse.json({ success: true });
 }

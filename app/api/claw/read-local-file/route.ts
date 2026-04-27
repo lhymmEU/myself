@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { readFile, stat } from "fs/promises";
 import { basename, resolve } from "path";
 import { homedir } from "os";
+import { requireUserId } from "@/lib/core/route-helpers";
+import { isLocal } from "@/lib/core/runtime";
 
 const MAX_FILE_SIZE = 64 * 1024; // 64 KB
 
@@ -13,6 +15,14 @@ function expandHome(filePath: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  if (!isLocal()) {
+    return NextResponse.json(
+      { error: "Reading local files is only available in local mode" },
+      { status: 403 }
+    );
+  }
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
     const { path: rawPath } = await req.json();
     if (!rawPath || typeof rawPath !== "string") {

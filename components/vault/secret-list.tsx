@@ -39,6 +39,12 @@ import type {
   VaultStatus,
   SecretCategory,
 } from "@/lib/modules/vault/types";
+import {
+  listSecrets,
+  fetchSecret,
+  deleteSecretUi,
+  lockVaultUi,
+} from "@/lib/modules/vault/api";
 
 const CATEGORY_ICONS: Record<SecretCategory, typeof KeyRound> = {
   password: KeyRound,
@@ -73,10 +79,7 @@ export function SecretList({ status, onStatusChange }: SecretListProps) {
 
   const fetchSecrets = useCallback(async () => {
     try {
-      const res = await fetch("/api/vault");
-      if (res.ok) {
-        setSecrets(await res.json());
-      }
+      setSecrets(await listSecrets());
     } catch {
       /* ignore */
     } finally {
@@ -89,11 +92,7 @@ export function SecretList({ status, onStatusChange }: SecretListProps) {
   }, [fetchSecrets]);
 
   async function handleLock() {
-    await fetch("/api/vault?action=lock", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
+    await lockVaultUi();
     onStatusChange();
   }
 
@@ -105,10 +104,8 @@ export function SecretList({ status, onStatusChange }: SecretListProps) {
     setCopied(false);
 
     try {
-      const res = await fetch(`/api/vault?id=${id}`);
-      if (res.ok) {
-        setSelectedSecret(await res.json());
-      }
+      const result = await fetchSecret(id);
+      setSelectedSecret(result);
     } catch {
       /* ignore */
     } finally {
@@ -118,7 +115,7 @@ export function SecretList({ status, onStatusChange }: SecretListProps) {
 
   async function handleDelete(id: string) {
     setSecrets((prev) => prev.filter((s) => s.id !== id));
-    await fetch(`/api/vault?id=${id}`, { method: "DELETE" });
+    await deleteSecretUi(id);
     setDetailOpen(false);
     setSelectedSecret(null);
     fetchSecrets();

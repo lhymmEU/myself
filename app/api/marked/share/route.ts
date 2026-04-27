@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
+import { requireUserId } from "@/lib/core/route-helpers";
 import {
   getCollection,
   listItems,
@@ -8,6 +9,9 @@ import {
 
 export async function GET(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
+  const { userId } = auth;
   try {
     const collectionId = req.nextUrl.searchParams.get("collectionId");
     if (!collectionId)
@@ -16,14 +20,14 @@ export async function GET(req: NextRequest) {
         { status: 400 },
       );
 
-    const collection = getCollection(collectionId);
+    const collection = getCollection(collectionId, userId);
     if (!collection)
       return NextResponse.json(
         { error: "Collection not found" },
         { status: 404 },
       );
 
-    const items = listItems(collectionId);
+    const items = listItems(collectionId, userId);
     const payload = encodeCollectionPayload(collection, items);
 
     return NextResponse.json({ collection, items, payload });

@@ -6,4 +6,5 @@ export const todosModule: FeatureModule = {
   description: "Todos derived from mind map rectangle nodes",
   tools: todoTools,
   eventHandlers: {},
+  availableIn: ["local", "cloud"],
 };

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
+import { requireUserId } from "@/lib/core/route-helpers";
 import { executeToolCall, executeToolCalls } from "@/lib/agent/executor";
 import { toOpenAIFunctions, toMCPTools } from "@/lib/agent/adapter";
 import { toolRegistry } from "@/lib/core/tool-registry";
@@ -7,6 +8,8 @@ import { toolRegistry } from "@/lib/core/tool-registry";
 bootApp();
 
 export async function GET(request: NextRequest) {
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   const { searchParams } = new URL(request.url);
   const format = searchParams.get("format");
 
@@ -21,6 +24,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
     const body = await request.json();
 

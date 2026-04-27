@@ -6,4 +6,5 @@ export const invoiceModule: FeatureModule = {
   description: "Create and manage invoices, clients, and signatures",
   tools: invoiceTools,
   eventHandlers: {},
+  availableIn: ["local", "cloud"],
 };

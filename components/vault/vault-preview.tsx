@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { Lock, Unlock, ShieldCheck } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
+import {
+  fetchVaultStatus,
+  subscribeVaultClient,
+} from "@/lib/modules/vault/api";
 
 interface PreviewStatus {
   initialized: boolean;
@@ -15,10 +19,20 @@ export function VaultPreview() {
   const [status, setStatus] = useState<PreviewStatus | null>(null);
 
   useEffect(() => {
-    fetch("/api/vault?action=status")
-      .then((r) => r.json())
-      .then((data) => setStatus(data))
-      .catch(() => {});
+    let active = true;
+    const refresh = () => {
+      fetchVaultStatus()
+        .then((data) => {
+          if (active) setStatus(data);
+        })
+        .catch(() => {});
+    };
+    refresh();
+    const unsub = subscribeVaultClient(refresh);
+    return () => {
+      active = false;
+      unsub();
+    };
   }, []);
 
   if (!status || !status.initialized) {

@@ -13,8 +13,11 @@ import { BudgetView } from "@/components/finance/personal/budget-view";
 import { InvestmentPortfolio } from "@/components/finance/personal/investment-portfolio";
 import { ModuleGrid } from "@/components/finance/market/module-grid";
 import { CustomizeDrawer } from "@/components/finance/market/customize-drawer";
+import { isLocal } from "@/lib/core/runtime";
 
 type FinanceMode = "personal" | "market";
+
+const MARKET_AVAILABLE = isLocal();
 
 export default function FinancePage() {
   const t = useT();
@@ -24,9 +27,10 @@ export default function FinancePage() {
     swrFetcher,
   );
 
-  const defaultMode = (settingsData?.finance_default_mode ?? "market") as FinanceMode;
+  const rawDefaultMode = (settingsData?.finance_default_mode ?? "market") as FinanceMode;
+  const defaultMode: FinanceMode = MARKET_AVAILABLE ? rawDefaultMode : "personal";
   const [mode, setMode] = useState<FinanceMode | null>(null);
-  const activeMode = mode ?? defaultMode;
+  const activeMode: FinanceMode = MARKET_AVAILABLE ? (mode ?? defaultMode) : "personal";
 
   const enabledModules: string[] = useMemo(() => {
     try {
@@ -94,26 +98,35 @@ export default function FinancePage() {
             <Wallet className="size-3.5" />
             {t("finance.modes.personal")}
           </button>
-          <button
-            onClick={() => setMode("market")}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
-              activeMode === "market"
-                ? "bg-muted border-border text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <BarChart3 className="size-3.5" />
-            {t("finance.modes.market")}
-          </button>
+          {MARKET_AVAILABLE && (
+            <button
+              onClick={() => setMode("market")}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+                activeMode === "market"
+                  ? "bg-muted border-border text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <BarChart3 className="size-3.5" />
+              {t("finance.modes.market")}
+            </button>
+          )}
         </div>
 
-        {activeMode === "market" && (
+        {activeMode === "market" && MARKET_AVAILABLE && (
           <CustomizeDrawer
             enabledModules={enabledModules}
             onToggle={handleToggleModule}
           />
         )}
       </div>
+
+      {!MARKET_AVAILABLE && (
+        <div className="rounded-md border border-dashed bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+          Market Intelligence (OpenBB) is only available in local installs.
+          Install Life Dashboard locally to access live market data.
+        </div>
+      )}
 
       {activeMode === "personal" ? (
         <Tabs defaultValue="dashboard">

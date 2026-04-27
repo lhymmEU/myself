@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
+import { requireUserId } from "@/lib/core/route-helpers";
 import {
   executeCommand,
   isSSHConnected,
@@ -127,10 +128,12 @@ function extractToolCalls(text: string): {
 
 export async function POST(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
     const body = await req.json();
     const connectionId =
-      body.connectionId ?? getDefaultConnection()?.id ?? null;
+      body.connectionId ?? getDefaultConnection(auth.userId)?.id ?? null;
 
     if (!connectionId) {
       return NextResponse.json(
@@ -161,7 +164,7 @@ export async function POST(req: NextRequest) {
 
     let enrichedMessage = message;
     try {
-      const ctx = await buildClawContext();
+      const ctx = await buildClawContext(auth.userId);
       const hasContext = Object.keys(ctx.modules).length > 0;
       if (hasContext || ctx.availableTools.length > 0) {
         const contextBlock = formatContextForPrompt(ctx);

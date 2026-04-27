@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireUserId } from "@/lib/core/route-helpers";
 import {
   listAssignedJobs,
   createAssignedJob,
@@ -7,8 +8,10 @@ import {
 } from "@/lib/modules/dashboard/actions";
 
 export async function GET() {
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
-    const jobs = listAssignedJobs();
+    const jobs = listAssignedJobs(auth.userId);
     return NextResponse.json({ jobs });
   } catch (err) {
     return NextResponse.json(
@@ -19,22 +22,24 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
     const body = await req.json();
     const { action } = body;
 
     if (action === "create") {
-      const result = createAssignedJob(body);
+      const result = createAssignedJob(body, auth.userId);
       return NextResponse.json(result);
     }
 
     if (action === "update") {
-      updateAssignedJob(body.id, body.data);
+      updateAssignedJob(body.id, body.data, auth.userId);
       return NextResponse.json({ success: true });
     }
 
     if (action === "delete") {
-      deleteAssignedJob(body.id);
+      deleteAssignedJob(body.id, auth.userId);
       return NextResponse.json({ success: true });
     }
 

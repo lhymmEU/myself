@@ -1,9 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
-
-export const settings = sqliteTable("settings", {
-  key: text("key").primaryKey(),
-  value: text("value").notNull(),
-  updatedAt: integer("updated_at", { mode: "number" })
-    .notNull()
-    .$defaultFn(() => Date.now()),
-});
+/**
+ * Re-export shim. Source of truth: lib/db/schema/sqlite/settings.ts.
+ */
+export * from "@/lib/db/schema/sqlite/settings";

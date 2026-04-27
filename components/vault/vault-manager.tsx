@@ -18,6 +18,13 @@ import { SecretList } from "./secret-list";
 import { useT } from "@/lib/i18n/context";
 import type { TranslationKey } from "@/lib/i18n/types";
 import type { VaultStatus } from "@/lib/modules/vault/types";
+import { isCloud } from "@/lib/core/runtime";
+import {
+  fetchVaultStatus,
+  setupVaultUi,
+  unlockVaultUi,
+  subscribeVaultClient,
+} from "@/lib/modules/vault/api";
 
 export function VaultManager() {
   const t = useT();
@@ -27,10 +34,7 @@ export function VaultManager() {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch("/api/vault?action=status");
-      if (res.ok) {
-        setStatus(await res.json());
-      }
+      setStatus(await fetchVaultStatus());
     } catch {
       setError(t("vault.manager.failedConnect"));
     } finally {
@@ -40,6 +44,9 @@ export function VaultManager() {
 
   useEffect(() => {
     fetchStatus();
+    return subscribeVaultClient(() => {
+      fetchStatus();
+    });
   }, [fetchStatus]);
 
   if (loading) {
@@ -96,24 +103,16 @@ function SetupForm({ onComplete }: { onComplete: () => void }) {
 
     setSubmitting(true);
     try {
-      const body: Record<string, string> = { password };
-      if (storagePath.trim()) body.storagePath = storagePath.trim();
-
-      const res = await fetch("/api/vault?action=setup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+      await setupVaultUi(password, {
+        storagePath: storagePath.trim() || undefined,
       });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error ?? t("vault.manager.errorSetupFailed"));
-        return;
-      }
-
       onComplete();
-    } catch {
-      setError(t("vault.manager.errorNetwork"));
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : t("vault.manager.errorSetupFailed"),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -191,17 +190,19 @@ function SetupForm({ onComplete }: { onComplete: () => void }) {
             </div>
 
             <div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-xs text-muted-foreground px-0"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-              >
-                <FolderOpen className="h-3 w-3 mr-1" />
-                {showAdvanced ? t("vault.manager.hideStoragePath") : t("vault.manager.customStoragePath")}
-              </Button>
-              {showAdvanced && (
+              {!isCloud() && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-muted-foreground px-0"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                >
+                  <FolderOpen className="h-3 w-3 mr-1" />
+                  {showAdvanced ? t("vault.manager.hideStoragePath") : t("vault.manager.customStoragePath")}
+                </Button>
+              )}
+              {!isCloud() && showAdvanced && (
                 <div className="mt-2 space-y-2">
                   <Label htmlFor="setup-path">
                     {t("vault.manager.storagePath")}
@@ -268,21 +269,16 @@ function UnlockForm({ onComplete }: { onComplete: () => void }) {
     setSubmitting(true);
 
     try {
-      const res = await fetch("/api/vault?action=unlock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error ?? t("vault.manager.errorUnlock"));
+      const ok = await unlockVaultUi(password);
+      if (!ok) {
+        setError(t("vault.manager.errorUnlock"));
         return;
       }
-
       onComplete();
-    } catch {
-      setError(t("vault.manager.errorNetwork"));
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : t("vault.manager.errorNetwork"),
+      );
     } finally {
       setSubmitting(false);
     }

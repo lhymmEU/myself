@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
+import { requireUserId } from "@/lib/core/route-helpers";
 import {
   executeCommand,
   executeOpenClawCommand,
@@ -7,8 +8,12 @@ import {
   getDefaultConnection,
 } from "@/lib/modules/claw/actions";
 
-function resolveConnectionId(req: NextRequest): string | null {
-  return req.nextUrl.searchParams.get("connectionId") ?? getDefaultConnection()?.id ?? null;
+function resolveConnectionId(req: NextRequest, userId: string): string | null {
+  return (
+    req.nextUrl.searchParams.get("connectionId") ??
+    getDefaultConnection(userId)?.id ??
+    null
+  );
 }
 
 function guardConnection(connectionId: string | null) {
@@ -23,8 +28,10 @@ function guardConnection(connectionId: string | null) {
 
 export async function GET(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
-    const connectionId = resolveConnectionId(req);
+    const connectionId = resolveConnectionId(req, auth.userId);
     const err = guardConnection(connectionId);
     if (err) return err;
 
@@ -87,9 +94,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
     const body = await req.json();
-    const connectionId = body.connectionId ?? getDefaultConnection()?.id;
+    const connectionId =
+      body.connectionId ?? getDefaultConnection(auth.userId)?.id;
     const err = guardConnection(connectionId);
     if (err) return err;
 

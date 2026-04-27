@@ -1,3 +1,13 @@
+/**
+ * Transport types:
+ *   - `ssh`   : local mode talks directly via `ssh2` (legacy default).
+ *   - `relay` : cloud mode pairing flow — bytes go via lobsterd ↔ Worker.
+ *   - `edge`  : cloud mode browser WASM SSH client + Worker `/dial` TCP
+ *               bridge (Flavor A). Credentials live in the vault and the
+ *               server never sees plaintext.
+ */
+export type ClawTransportKind = "ssh" | "relay" | "edge";
+
 export interface ClawConnection {
   id: string;
   name: string;
@@ -13,6 +23,12 @@ export interface ClawConnection {
   /** OpenClaw gateway port on the remote host */
   gatewayPort: number;
   isDefault: boolean;
+  /** Which transport drives this row at runtime */
+  transport: ClawTransportKind;
+  /** Edge-only: vault entry holding the JSON SSH credential blob */
+  credentialSecretId?: string;
+  /** Edge-only: SHA256 host-key fingerprint pinned on first connect */
+  hostKeyFingerprint?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -27,6 +43,8 @@ export interface CreateConnectionInput {
   privateKey?: string;
   passphrase?: string;
   gatewayPort?: number;
+  transport?: ClawTransportKind;
+  credentialSecretId?: string;
 }
 
 export interface UpdateConnectionInput {
@@ -40,6 +58,9 @@ export interface UpdateConnectionInput {
   privateKey?: string;
   passphrase?: string;
   gatewayPort?: number;
+  transport?: ClawTransportKind;
+  credentialSecretId?: string | null;
+  hostKeyFingerprint?: string | null;
 }
 
 export interface ClawStatus {

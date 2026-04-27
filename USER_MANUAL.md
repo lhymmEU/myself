@@ -4,7 +4,9 @@
 
 A guided tour of every page inside the dashboard. The manual is organised in the same order as the left sidebar so you can read it with the app open beside you.
 
-If you have not installed the dashboard yet, start with **[INSTALL.md](./INSTALL.md)**.
+If you have not installed the dashboard yet, start with **[INSTALL.md](./INSTALL.md)** for the local install or with **[README.md](./README.md)** for the hosted version.
+
+> **Cloud vs local.** The dashboard ships in two modes from the same codebase: a hosted "try-it-online" version on Vercel + Supabase, and a single-user local install backed by SQLite. Sections marked with the **🖥 Local install only** badge below are disabled in the hosted version; everything else works in both modes. See [`README.md`](./README.md) for the full feature matrix.
 
 ---
 
@@ -16,7 +18,7 @@ When you open `http://localhost:3000`, you land on the dashboard home page. The 
 - **Top header** — shows the page title and a few global controls (theme toggle, language switch, etc.).
 - **Main area** — the actual page content.
 
-All your data lives locally in `data/dashboard.db` and `data/vault.db`. Nothing is uploaded.
+In the **local install**, your data lives in `data/dashboard.db` and `data/vault.db` on your own machine — nothing is uploaded. In the **hosted version**, your rows are stored in Supabase Postgres and isolated to your account by Row-Level Security; the vault payload is encrypted client-side before it ever reaches the server.
 
 ---
 
@@ -85,9 +87,9 @@ Works immediately, no setup required. Stored in your local database.
 - **Transaction list** — log income and expenses; filter and search.
 - **Investment portfolio** — track holdings (manually entered or imported).
 
-### Market Intelligence
+### Market Intelligence  🖥 Local install only
 
-Live market data via the optional OpenBB sidecar (see `INSTALL.md` Step 5). When OpenBB is not running, the page shows a connection banner instead of widgets.
+Live market data via the optional OpenBB sidecar (see `INSTALL.md` Step 5). When OpenBB is not running, the page shows a connection banner instead of widgets. **In the hosted version this tab is hidden** — OpenBB binds to `127.0.0.1:6900` on your own machine, so it can't be reached from a serverless cloud. Run the local install if you want it.
 
 The page is organised as a customizable grid of widgets:
 
@@ -145,7 +147,7 @@ Click the **Customize** drawer to choose which widgets appear and in what order.
 
 ## Vault
 
-**What it is.** An encrypted, local-only password / secret store. Think of it as a tiny offline Bitwarden that lives in `data/vault.db`.
+**What it is.** An encrypted password / secret store. In the **local install** it's a tiny offline Bitwarden that lives in `data/vault.db`. In the **hosted version** the encryption happens in your browser — the server only ever sees ciphertext + nonce — and the rows live in Postgres scoped to your account.
 
 **Core actions.**
 
@@ -184,6 +186,8 @@ Click the **Customize** drawer to choose which widgets appear and in what order.
 
 **What it is.** The dashboard's built-in agent. It can chat with you, run tools that read and write your dashboard data (todos, finance, plans, settings, etc.), execute CLI tools, and host its own panels.
 
+> **Cloud users:** Claw doesn't ship a built-in LLM in the hosted version. Instead, you pair your own machine ("lobster") via `npx lobsterd pair <code>` and Claw routes everything through it over an end-to-end encrypted relay. See [`README.md`](./README.md#connecting-your-own-lobster-cloud-claw) for the pairing flow.
+
 The Claw page has a basic chat **DM panel** and a much richer **advanced view** with sub-panels for everything Claw can do.
 
 **DM panel (chat).**
@@ -211,9 +215,11 @@ The Claw page has a basic chat **DM panel** and a much richer **advanced view** 
 - **Connection form** — quickly switch between providers.
 - **Gateway control** — enable/disable the local agent gateway.
 - **Logs viewer** — debug what the agent did and when.
-- **Terminal** — an embedded `xterm.js` terminal for issuing shell commands the agent can see.
+- **Terminal**  🖥 Local install only — an embedded `xterm.js` terminal for issuing shell commands the agent can see. Hidden in the hosted version because Vercel cannot keep long-lived SSH shells open; pair a lobster instead and SSH from your own machine.
 
-**You need an API key first.** Go to **Settings → Claw Access** and paste your OpenRouter API key (the dashboard talks to OpenRouter using the OpenAI SDK). Until you do, Claw responses will fail with an auth error.
+**Local install — you need an API key first.** Go to **Settings → Claw Access** and paste your OpenRouter API key (the dashboard talks to OpenRouter using the OpenAI SDK). Until you do, Claw responses will fail with an auth error.
+
+**Hosted version — pair a lobster instead.** The cloud build ships no LLM credentials. Click **Add lobster** in the Claw page, copy the 6-digit code, then on your own machine run `npx lobsterd pair <code> && npx lobsterd serve`. From then on, the cloud UI talks to your local agent over an encrypted relay.
 
 **Tips.**
 
@@ -228,10 +234,10 @@ The settings page is divided into tabs:
 
 - **Appearance** — light / dark / system theme, language (English / 简体中文), accent color.
 - **Finance Display** — pick which currency you see, decimal precision, default time range.
-- **Finance Data Providers** — paste API keys for BizToc, Benzinga, Financial Modeling Prep, Tradier, Polygon.io, Alpha Vantage, FRED. Each row links to the provider's free signup page.
-- **OpenBB** — host and port for your local OpenBB API (defaults to `127.0.0.1:6900`).
+- **Finance Data Providers**  🖥 Local install only — paste API keys for BizToc, Benzinga, Financial Modeling Prep, Tradier, Polygon.io, Alpha Vantage, FRED. Each row links to the provider's free signup page. The hosted version doesn't show this section because OpenBB doesn't run on Vercel.
+- **OpenBB**  🖥 Local install only — host and port for your local OpenBB API (defaults to `127.0.0.1:6900`). Hidden in the hosted version.
 - **Invoice** — your business name, logo, address, tax rate, currency, payment details. These pre-fill every new invoice.
-- **Claw Access** — OpenRouter API key, model selection, per-tool approval defaults.
+- **Claw Access**  🖥 Local install only — OpenRouter API key, model selection, per-tool approval defaults. The hosted version doesn't ship a bundled LLM, so this tab is hidden — pair a lobster from the Claw page instead.
 - **Data Management** — export everything to JSON, import a previous export, or wipe the database.
 
 **Tips.**
@@ -242,6 +248,8 @@ The settings page is divided into tabs:
 ---
 
 ## Where your data lives
+
+### Local install
 
 Everything is on your machine, in two SQLite files:
 
@@ -256,6 +264,14 @@ To **wipe everything**: stop the dashboard (`Ctrl+C` in the terminal), delete th
 
 To **migrate to another machine**: copy the entire project folder, including `data/`, to the new machine and run `npm install && npm run dev`.
 
+### Hosted version
+
+Your data lives in Supabase Postgres, partitioned per user by `user_id` and enforced by Row-Level Security policies (`auth.uid() = user_id`). Vault secrets are encrypted in your browser before they're sent — the server only sees ciphertext + nonce, so even a database leak wouldn't expose them.
+
+To **export everything**: use **Settings → Data Management → Export** for a JSON snapshot you can re-import locally or back into another cloud account.
+
+To **delete your account**: also under **Settings → Data Management**. This drops every row scoped to your `user_id` from every table.
+
 ---
 
 ## Power users — the agent API
@@ -263,7 +279,7 @@ To **migrate to another machine**: copy the entire project folder, including `da
 Every feature is also exposed as a JSON tool over HTTP at `/api/agent`. This makes it easy to wire the dashboard into your own scripts, browser extensions, or external AI agents.
 
 ```bash
-# List every tool the dashboard exposes
+# Local install — list every tool the dashboard exposes
 curl http://localhost:3000/api/agent
 
 # Run a specific tool
@@ -271,6 +287,8 @@ curl -X POST http://localhost:3000/api/agent \
   -H "Content-Type: application/json" \
   -d '{"name": "createTodo", "arguments": {"title": "Buy groceries"}}'
 ```
+
+In the hosted version the same endpoint is auth-gated to the calling user — pass your Supabase access token as a `Bearer` header.
 
 See [README.md](./README.md) for a deeper architectural overview.
 

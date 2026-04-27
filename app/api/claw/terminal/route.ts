@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
+import { isLocal } from "@/lib/core/runtime";
+import { requireUserId } from "@/lib/core/route-helpers";
 import {
   getSSHClient,
   isSSHConnected,
@@ -21,9 +23,20 @@ function getOrCreateSessionId(connectionId: string): string {
 
 export async function POST(req: NextRequest) {
   bootApp();
+  if (!isLocal()) {
+    return NextResponse.json(
+      {
+        error:
+          "Interactive terminal is only available in local installs. Cloud users should pair a lobsterd agent and use the relay terminal once it ships.",
+      },
+      { status: 501 },
+    );
+  }
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
     const { connectionId: cid, action, input, cols, rows } = await req.json();
-    const connectionId = cid ?? getDefaultConnection()?.id;
+    const connectionId = cid ?? getDefaultConnection(auth.userId)?.id;
 
     if (!connectionId) {
       return NextResponse.json({ error: "No connection configured" }, { status: 400 });

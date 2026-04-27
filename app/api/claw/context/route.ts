@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
+import { requireUserId } from "@/lib/core/route-helpers";
 import { getSetting } from "@/lib/modules/settings/actions";
 import { listWishlist, listUserSkills } from "@/lib/modules/dashboard/actions";
 import { getAllPlans } from "@/lib/modules/plans/actions";
@@ -14,19 +15,21 @@ export interface ClawContext {
   availableTools: { name: string; description: string }[];
 }
 
-function isModuleEnabled(mod: string): boolean {
-  return getSetting(`claw_access_${mod}`) === "true";
+function isModuleEnabled(mod: string, userId: string): boolean {
+  return getSetting(`claw_access_${mod}`, userId) === "true";
 }
 
-async function gatherModuleContext(): Promise<Record<string, unknown>> {
+async function gatherModuleContext(
+  userId: string,
+): Promise<Record<string, unknown>> {
   const ctx: Record<string, unknown> = {};
 
   for (const mod of CLAW_ACCESS_MODULES) {
-    if (!isModuleEnabled(mod)) continue;
+    if (!isModuleEnabled(mod, userId)) continue;
 
     switch (mod) {
       case "todos": {
-        const scene = getTodoSourceScene();
+        const scene = getTodoSourceScene(userId);
         if (scene) {
           let elements: unknown[] = [];
           try {
@@ -83,7 +86,7 @@ async function gatherModuleContext(): Promise<Record<string, unknown>> {
         break;
       }
       case "plans": {
-        const plans = getAllPlans();
+        const plans = getAllPlans(userId);
         ctx.plans = plans.map((p) => ({
           id: p.id,
           title: p.title,
@@ -92,11 +95,11 @@ async function gatherModuleContext(): Promise<Record<string, unknown>> {
         break;
       }
       case "wishlist": {
-        ctx.wishlist = listWishlist();
+        ctx.wishlist = listWishlist(userId);
         break;
       }
       case "mindmap": {
-        const scenes = getAllScenes("mind");
+        const scenes = getAllScenes("mind", userId);
         ctx.mindmap = scenes.map((s) => ({
           id: s.id,
           name: s.name,
@@ -104,7 +107,7 @@ async function gatherModuleContext(): Promise<Record<string, unknown>> {
         break;
       }
       case "skills": {
-        ctx.skills = listUserSkills();
+        ctx.skills = listUserSkills(userId);
         break;
       }
     }
@@ -113,8 +116,8 @@ async function gatherModuleContext(): Promise<Record<string, unknown>> {
   return ctx;
 }
 
-export async function buildClawContext(): Promise<ClawContext> {
-  const modules = await gatherModuleContext();
+export async function buildClawContext(userId: string): Promise<ClawContext> {
+  const modules = await gatherModuleContext(userId);
   const tools = toolRegistry.getAll().map((t) => ({
     name: t.name,
     description: t.description,
@@ -152,8 +155,10 @@ export function formatContextForPrompt(ctx: ClawContext): string {
 
 export async function GET() {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
-    const ctx = await buildClawContext();
+    const ctx = await buildClawContext(auth.userId);
     return NextResponse.json(ctx);
   } catch (err) {
     return NextResponse.json(

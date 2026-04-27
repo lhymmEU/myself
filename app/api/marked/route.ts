@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
+import { requireUserId } from "@/lib/core/route-helpers";
 import {
   listCollections,
   getCollection,
@@ -19,6 +20,9 @@ import {
 
 export async function GET(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
+  const { userId } = auth;
   try {
     const entity = req.nextUrl.searchParams.get("entity");
     const id = req.nextUrl.searchParams.get("id");
@@ -26,7 +30,7 @@ export async function GET(req: NextRequest) {
 
     if (entity === "collection") {
       if (id) {
-        const c = getCollection(id);
+        const c = getCollection(id, userId);
         if (!c)
           return NextResponse.json(
             { error: "Collection not found" },
@@ -34,12 +38,12 @@ export async function GET(req: NextRequest) {
           );
         return NextResponse.json(c);
       }
-      return NextResponse.json(listCollections());
+      return NextResponse.json(listCollections(userId));
     }
 
     if (entity === "item") {
       if (id) {
-        const item = getItem(id);
+        const item = getItem(id, userId);
         if (!item)
           return NextResponse.json(
             { error: "Item not found" },
@@ -47,7 +51,7 @@ export async function GET(req: NextRequest) {
           );
         return NextResponse.json(item);
       }
-      return NextResponse.json(listItems(collectionId));
+      return NextResponse.json(listItems(collectionId, userId));
     }
 
     return NextResponse.json({ error: "Missing entity param" }, { status: 400 });
@@ -61,26 +65,32 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
+  const { userId } = auth;
   try {
     const body = await req.json();
     const entity = body.entity;
 
     if (entity === "collection") {
-      const c = createCollection({ name: body.name, notes: body.notes });
+      const c = createCollection({ name: body.name, notes: body.notes }, userId);
       return NextResponse.json(c);
     }
 
     if (entity === "item") {
-      const item = createItem({
-        url: body.url,
-        title: body.title,
-        sourceTag: body.sourceTag ?? generateSourceTag(body.url, body.title),
-        notes: body.notes,
-        favicon: body.favicon,
-        ogImage: body.ogImage,
-        ogDescription: body.ogDescription,
-        collectionId: body.collectionId,
-      });
+      const item = createItem(
+        {
+          url: body.url,
+          title: body.title,
+          sourceTag: body.sourceTag ?? generateSourceTag(body.url, body.title),
+          notes: body.notes,
+          favicon: body.favicon,
+          ogImage: body.ogImage,
+          ogDescription: body.ogDescription,
+          collectionId: body.collectionId,
+        },
+        userId,
+      );
       return NextResponse.json(item);
     }
 
@@ -95,45 +105,54 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
+  const { userId } = auth;
   try {
     const body = await req.json();
     const entity = body.entity;
 
     if (body.action === "reorder") {
       if (entity === "collection") {
-        reorderCollections(body.ids);
+        reorderCollections(body.ids, userId);
       } else {
-        reorderItems(body.ids);
+        reorderItems(body.ids, userId);
       }
       return NextResponse.json({ success: true });
     }
 
     if (body.action === "move") {
-      moveItemToCollection(body.id, body.collectionId ?? null);
+      moveItemToCollection(body.id, body.collectionId ?? null, userId);
       return NextResponse.json({ success: true });
     }
 
     if (entity === "collection") {
-      const c = updateCollection({
-        id: body.id,
-        name: body.name,
-        notes: body.notes,
-      });
+      const c = updateCollection(
+        {
+          id: body.id,
+          name: body.name,
+          notes: body.notes,
+        },
+        userId,
+      );
       return NextResponse.json(c);
     }
 
     if (entity === "item") {
-      const item = updateItem({
-        id: body.id,
-        url: body.url,
-        title: body.title,
-        sourceTag: body.sourceTag,
-        notes: body.notes,
-        favicon: body.favicon,
-        ogImage: body.ogImage,
-        ogDescription: body.ogDescription,
-        collectionId: body.collectionId,
-      });
+      const item = updateItem(
+        {
+          id: body.id,
+          url: body.url,
+          title: body.title,
+          sourceTag: body.sourceTag,
+          notes: body.notes,
+          favicon: body.favicon,
+          ogImage: body.ogImage,
+          ogDescription: body.ogDescription,
+          collectionId: body.collectionId,
+        },
+        userId,
+      );
       return NextResponse.json(item);
     }
 
@@ -148,6 +167,9 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   bootApp();
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
+  const { userId } = auth;
   try {
     const id = req.nextUrl.searchParams.get("id");
     const entity = req.nextUrl.searchParams.get("entity");
@@ -155,9 +177,9 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
     if (entity === "collection") {
-      deleteCollection(id);
+      deleteCollection(id, userId);
     } else {
-      deleteItem(id);
+      deleteItem(id, userId);
     }
     return NextResponse.json({ success: true });
   } catch (err) {

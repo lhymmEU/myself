@@ -10,6 +10,9 @@ import { ClawAccessConfig } from "./claw-access-config";
 import { DataManagement } from "./data-management";
 import { Loader2 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
+import { isLocal } from "@/lib/core/runtime";
+
+const SHOW_LOCAL_ONLY_SETTINGS = isLocal();
 
 export function SettingsForm() {
   const t = useT();
@@ -70,10 +73,14 @@ export function SettingsForm() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="md:col-span-2">
-        <FinanceProvidersConfig settings={settings} onUpdate={handleUpdate} />
-      </div>
-      <OpenBBConfig settings={settings} onUpdate={handleUpdate} />
+      {SHOW_LOCAL_ONLY_SETTINGS && (
+        <div className="md:col-span-2">
+          <FinanceProvidersConfig settings={settings} onUpdate={handleUpdate} />
+        </div>
+      )}
+      {SHOW_LOCAL_ONLY_SETTINGS && (
+        <OpenBBConfig settings={settings} onUpdate={handleUpdate} />
+      )}
       <AppearanceConfig settings={settings} onUpdate={handleUpdate} />
       <div className="md:col-span-2">
         <InvoiceConfig settings={settings} onUpdate={handleUpdateSilent} />

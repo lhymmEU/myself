@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireUserId } from "@/lib/core/route-helpers";
 import {
   executeOpenClawCommand,
   executeCommand,
@@ -61,6 +62,8 @@ function normalizeJob(raw: OpenClawCronJob) {
 }
 
 export async function GET(req: NextRequest) {
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
     const connectionId = req.nextUrl.searchParams.get("connectionId");
     if (!connectionId || !isSSHConnected(connectionId)) {
@@ -104,6 +107,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
   try {
     const body = await req.json();
     const { connectionId, name, expression, command, sessionTarget, enabled, timezone, channel, deliveryTo } = body;

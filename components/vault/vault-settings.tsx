@@ -22,6 +22,11 @@ import {
 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
 import type { VaultStatus } from "@/lib/modules/vault/types";
+import { isLocal } from "@/lib/core/runtime";
+import {
+  changeVaultPasswordUi,
+  changeVaultStoragePathUi,
+} from "@/lib/modules/vault/api";
 
 interface VaultSettingsProps {
   open: boolean;
@@ -44,11 +49,15 @@ export function VaultSettings({
           <DialogTitle>{t("vault.settings.dialogTitle")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-6">
-          <StoragePathSection
-            currentPath={status.storagePath}
-            onChanged={onStatusChange}
-          />
-          <Separator />
+          {isLocal() && (
+            <>
+              <StoragePathSection
+                currentPath={status.storagePath}
+                onChanged={onStatusChange}
+              />
+              <Separator />
+            </>
+          )}
           <ChangePasswordSection />
         </div>
       </DialogContent>
@@ -78,24 +87,15 @@ function StoragePathSection({
     setSuccess(false);
 
     try {
-      const res = await fetch("/api/vault?action=change-path", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newPath: newPath.trim() }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error ?? t("vault.settings.failedChangePath"));
-        return;
-      }
-
+      await changeVaultStoragePathUi(newPath.trim());
       setSuccess(true);
       setNewPath("");
       onChanged();
       setTimeout(() => setSuccess(false), 3000);
-    } catch {
-      setError(t("vault.settings.errorNetwork"));
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : t("vault.settings.errorNetwork"),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -179,15 +179,9 @@ function ChangePasswordSection() {
     setSubmitting(true);
 
     try {
-      const res = await fetch("/api/vault?action=change-password", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error ?? t("vault.settings.failedChangePassword"));
+      const ok = await changeVaultPasswordUi(currentPassword, newPassword);
+      if (!ok) {
+        setError(t("vault.settings.failedChangePassword"));
         return;
       }
 
@@ -196,8 +190,10 @@ function ChangePasswordSection() {
       setNewPassword("");
       setConfirmPassword("");
       setTimeout(() => setSuccess(false), 3000);
-    } catch {
-      setError(t("vault.settings.errorNetwork"));
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : t("vault.settings.errorNetwork"),
+      );
     } finally {
       setSubmitting(false);
     }
