@@ -1,29 +1,30 @@
 import type { NextConfig } from "next";
 
 /**
- * Native modules that must be left as runtime requires (not bundled).
- * - `better-sqlite3` and `ssh2` are local-only; in cloud builds we omit
- *   them so the bundle doesn't try to resolve them at all.
- * - `nodemailer` is local-only too; cloud uses Resend.
+ * Packages that must be left as runtime `require()`s rather than bundled.
+ *
+ * `serverExternalPackages` is an opt-OUT from bundling: anything listed
+ * here is loaded at runtime via Node's resolver, not inlined into the
+ * server chunks. Packages NOT listed are followed by Turbopack's static
+ * analysis and inlined — which fails for any package containing native
+ * `.node` bindings or other non-ESM-placeable assets.
+ *
+ * Local-only natives (`better-sqlite3`, `ssh2`, `nodemailer`) MUST stay
+ * external in cloud builds too: even though their `require()` is gated
+ * by `isLocal()` at runtime, Turbopack still walks the `require()` chain
+ * statically and tries to inline them. Listing them here breaks that
+ * walk; the runtime guards (in transport-ssh.ts, mailer.ts, db/index.ts)
+ * ensure they're never actually loaded in cloud execution.
  */
-const LOCAL_ONLY_NATIVE: string[] = ["better-sqlite3", "ssh2", "nodemailer"];
-
-/**
- * Postgres driver only matters in cloud mode but it's pure JS, so it's
- * cheap to keep in both bundles.
- */
-const SHARED_NATIVE: string[] = ["postgres"];
-
-const isCloud =
-  process.env.NEXT_PUBLIC_DEPLOYMENT_MODE === "cloud" ||
-  process.env.DEPLOYMENT_MODE === "cloud";
-
-const externals = isCloud
-  ? SHARED_NATIVE
-  : [...SHARED_NATIVE, ...LOCAL_ONLY_NATIVE];
+const EXTERNAL_NATIVE: string[] = [
+  "better-sqlite3",
+  "ssh2",
+  "nodemailer",
+  "postgres",
+];
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: externals,
+  serverExternalPackages: EXTERNAL_NATIVE,
 };
 
 export default nextConfig;
