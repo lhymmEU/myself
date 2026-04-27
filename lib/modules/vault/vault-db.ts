@@ -126,18 +126,24 @@ export function getVaultDb(): AppDb {
   const sqlite = new Database(configuredPath);
   sqlite.pragma("journal_mode = WAL");
   sqlite.exec(VAULT_SCHEMA_SQL);
-  // Bring legacy vault DBs (pre-user_id) up to current shape.
-  try {
-    const info = sqlite
-      .prepare(`PRAGMA table_info(vault_secrets)`)
-      .all() as { name: string }[];
-    if (info.length > 0 && !info.some((c) => c.name === "user_id")) {
-      sqlite.exec(
-        `ALTER TABLE vault_secrets ADD COLUMN user_id TEXT NOT NULL DEFAULT 'local-user'`,
-      );
+  // Bring legacy vault DBs (pre-user_id) up to current shape. CREATE TABLE
+  // IF NOT EXISTS above won't add columns to a table that already exists, so
+  // older DBs need the column added in-place. Both tables originally lacked
+  // user_id; patch each independently so a partially-migrated DB still
+  // self-heals.
+  for (const table of ["vault_secrets", "vault_meta"] as const) {
+    try {
+      const info = sqlite
+        .prepare(`PRAGMA table_info(${table})`)
+        .all() as { name: string }[];
+      if (info.length > 0 && !info.some((c) => c.name === "user_id")) {
+        sqlite.exec(
+          `ALTER TABLE ${table} ADD COLUMN user_id TEXT NOT NULL DEFAULT 'local-user'`,
+        );
+      }
+    } catch {
+      // ignore — table not present yet (will be created by VAULT_SCHEMA_SQL)
     }
-  } catch {
-    // ignore
   }
 
   _vaultSqlite = sqlite;

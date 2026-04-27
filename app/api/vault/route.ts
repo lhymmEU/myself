@@ -89,6 +89,7 @@ export async function GET(req: NextRequest) {
     const secrets = await getAllSecrets(userId);
     return NextResponse.json(secrets);
   } catch (err) {
+    console.error("[vault GET]", err);
     const message = err instanceof Error ? err.message : "Unknown error";
     const status = message === "Vault is locked" ? 403 : 500;
     return NextResponse.json({ error: message }, { status });
