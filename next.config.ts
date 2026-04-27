@@ -23,8 +23,50 @@ const EXTERNAL_NATIVE: string[] = [
   "postgres",
 ];
 
+/**
+ * Cloud builds must use the Postgres-flavored Drizzle schemas (e.g.
+ * `user_id uuid` instead of `text`). The codebase imports the SQLite
+ * variants by default so TypeScript and `npm run dev` (local) work
+ * without env juggling; this alias swaps each sqlite schema file for
+ * its postgres counterpart at module-resolution time when building for
+ * cloud. Keeps every action-code import unchanged.
+ *
+ * The schema-parity test (`scripts/schema-parity.ts`) guarantees the two
+ * directories export the exact same names, so the aliases are 1:1.
+ */
+const CLOUD_SCHEMA_FILES = [
+  "mind-map",
+  "todos",
+  "plans",
+  "settings",
+  "dashboard",
+  "invoice",
+  "marked",
+  "claw",
+  "finance",
+  "vault",
+] as const;
+
+const isCloudBuild = process.env.DEPLOYMENT_MODE === "cloud";
+
+const cloudSchemaAliases: Record<string, string> = isCloudBuild
+  ? Object.fromEntries([
+      ["@/lib/db/schema", "@/lib/db/schema/postgres"],
+      ["@/lib/db/schema/sqlite", "@/lib/db/schema/postgres"],
+      ...CLOUD_SCHEMA_FILES.map((name) => [
+        `@/lib/db/schema/sqlite/${name}`,
+        `@/lib/db/schema/postgres/${name}`,
+      ]),
+    ])
+  : {};
+
 const nextConfig: NextConfig = {
   serverExternalPackages: EXTERNAL_NATIVE,
+  ...(isCloudBuild && {
+    turbopack: {
+      resolveAlias: cloudSchemaAliases,
+    },
+  }),
 };
 
 export default nextConfig;
