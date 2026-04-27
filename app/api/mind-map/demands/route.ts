@@ -17,14 +17,14 @@ export async function GET(req: NextRequest) {
   const id = searchParams.get("id");
 
   if (id) {
-    const demand = getDemand(id, auth.userId);
+    const demand = await getDemand(id, auth.userId);
     if (!demand) {
       return NextResponse.json({ error: "Demand not found" }, { status: 404 });
     }
     return NextResponse.json(demand);
   }
 
-  return NextResponse.json(getAllDemands(auth.userId));
+  return NextResponse.json(await getAllDemands(auth.userId));
 }
 
 export async function POST(req: NextRequest) {
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   if (!body.title) {
     return NextResponse.json({ error: "Missing title" }, { status: 400 });
   }
-  const demand = createDemand(body, auth.userId);
+  const demand = await createDemand(body, auth.userId);
   return NextResponse.json(demand, { status: 201 });
 }
 
@@ -47,7 +47,7 @@ export async function PUT(req: NextRequest) {
   if (!body.id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
-  const demand = updateDemand(body, auth.userId);
+  const demand = await updateDemand(body, auth.userId);
   return NextResponse.json(demand);
 }
 
@@ -60,6 +60,6 @@ export async function DELETE(req: NextRequest) {
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
-  deleteDemand(id, auth.userId);
+  await deleteDemand(id, auth.userId);
   return NextResponse.json({ success: true });
 }

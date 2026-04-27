@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { getSetting } from "@/lib/modules/settings/actions";
+import { getSettingSync } from "@/lib/modules/settings/actions";
 import { isLocal } from "@/lib/core/runtime";
 
 let _client: OpenAI | null = null;
@@ -12,7 +12,7 @@ function getClient(): OpenAI {
   if (!isLocal()) {
     throw new Error(CLOUD_DISABLED_MESSAGE);
   }
-  const key = getSettingSync("openrouter_api_key");
+  const key = safeGetSetting("openrouter_api_key");
   if (!key) {
     throw new Error(
       "OpenRouter API key not configured. Go to Settings to add your API key."
@@ -35,20 +35,20 @@ export function isLlmAvailable(): boolean {
   return isLocal();
 }
 
-function getSettingSync(key: string): string | null {
+function safeGetSetting(key: string): string | null {
   try {
-    return getSetting(key);
+    return getSettingSync(key);
   } catch {
     return null;
   }
 }
 
 function getModel(): string {
-  return getSettingSync("llm_model") || "anthropic/claude-sonnet-4";
+  return safeGetSetting("llm_model") || "anthropic/claude-sonnet-4";
 }
 
 function getTemperature(): number {
-  const temp = getSettingSync("llm_temperature");
+  const temp = safeGetSetting("llm_temperature");
   return temp ? parseFloat(temp) : 0.7;
 }
 

@@ -26,54 +26,53 @@ const rowToConnection = (
   id: row.id,
   name: row.name,
   host: row.host,
-  port: row.port,
+  port: Number(row.port),
   username: row.username,
   authMethod: row.authMethod as "password" | "key",
   password: row.password ?? undefined,
   privateKey: row.privateKey ?? undefined,
   passphrase: row.passphrase ?? undefined,
-  gatewayPort: row.gatewayPort,
+  gatewayPort: Number(row.gatewayPort),
   isDefault: Boolean(row.isDefault),
   transport: normaliseTransport(row.transport),
   credentialSecretId: row.credentialSecretId ?? undefined,
   hostKeyFingerprint: row.hostKeyFingerprint ?? undefined,
-  createdAt: row.createdAt,
-  updatedAt: row.updatedAt,
+  createdAt: Number(row.createdAt),
+  updatedAt: Number(row.updatedAt),
 });
 
-export function getAllConnections(
+export async function getAllConnections(
   userId: string = LOCAL_USER_ID,
-): ClawConnection[] {
+): Promise<ClawConnection[]> {
   const db = getDb();
-  const rows = db
+  const rows = await db
     .select()
     .from(clawConnections)
     .where(eq(clawConnections.userId, userId))
-    .orderBy(desc(clawConnections.isDefault), desc(clawConnections.updatedAt))
-    .all();
+    .orderBy(desc(clawConnections.isDefault), desc(clawConnections.updatedAt));
   return rows.map(rowToConnection);
 }
 
-export function getConnection(
+export async function getConnection(
   id: string,
   userId: string = LOCAL_USER_ID,
-): ClawConnection | null {
+): Promise<ClawConnection | null> {
   const db = getDb();
-  const row = db
+  const rows = await db
     .select()
     .from(clawConnections)
     .where(
       and(eq(clawConnections.id, id), eq(clawConnections.userId, userId)),
     )
-    .get();
-  return row ? rowToConnection(row) : null;
+    .limit(1);
+  return rows[0] ? rowToConnection(rows[0]) : null;
 }
 
-export function getDefaultConnection(
+export async function getDefaultConnection(
   userId: string = LOCAL_USER_ID,
-): ClawConnection | null {
+): Promise<ClawConnection | null> {
   const db = getDb();
-  const row = db
+  const rows = await db
     .select()
     .from(clawConnections)
     .where(
@@ -82,57 +81,52 @@ export function getDefaultConnection(
         eq(clawConnections.isDefault, true),
       ),
     )
-    .limit(1)
-    .get();
-  if (row) return rowToConnection(row);
+    .limit(1);
+  if (rows[0]) return rowToConnection(rows[0]);
 
-  const fallback = db
+  const fallback = await db
     .select()
     .from(clawConnections)
     .where(eq(clawConnections.userId, userId))
     .orderBy(desc(clawConnections.updatedAt))
-    .limit(1)
-    .get();
-  return fallback ? rowToConnection(fallback) : null;
+    .limit(1);
+  return fallback[0] ? rowToConnection(fallback[0]) : null;
 }
 
-export function createConnection(
+export async function createConnection(
   input: CreateConnectionInput,
   userId: string = LOCAL_USER_ID,
-): ClawConnection {
+): Promise<ClawConnection> {
   const db = getDb();
   const now = Date.now();
   const id = nanoid();
 
-  const existing = db
+  const existingRows = await db
     .select({ count: sql<number>`COUNT(*)` })
     .from(clawConnections)
-    .where(eq(clawConnections.userId, userId))
-    .get();
-  const isDefault = Number(existing?.count ?? 0) === 0;
+    .where(eq(clawConnections.userId, userId));
+  const isDefault = Number(existingRows[0]?.count ?? 0) === 0;
 
   const transport = normaliseTransport(input.transport);
 
-  db.insert(clawConnections)
-    .values({
-      id,
-      userId,
-      name: input.name,
-      host: input.host,
-      port: input.port ?? 22,
-      username: input.username,
-      authMethod: input.authMethod,
-      password: input.password ?? null,
-      privateKey: input.privateKey ?? null,
-      passphrase: input.passphrase ?? null,
-      gatewayPort: input.gatewayPort ?? 18789,
-      isDefault,
-      transport,
-      credentialSecretId: input.credentialSecretId ?? null,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .run();
+  await db.insert(clawConnections).values({
+    id,
+    userId,
+    name: input.name,
+    host: input.host,
+    port: input.port ?? 22,
+    username: input.username,
+    authMethod: input.authMethod,
+    password: input.password ?? null,
+    privateKey: input.privateKey ?? null,
+    passphrase: input.passphrase ?? null,
+    gatewayPort: input.gatewayPort ?? 18789,
+    isDefault,
+    transport,
+    credentialSecretId: input.credentialSecretId ?? null,
+    createdAt: now,
+    updatedAt: now,
+  });
 
   return {
     id,
@@ -153,12 +147,12 @@ export function createConnection(
   };
 }
 
-export function updateConnection(
+export async function updateConnection(
   input: UpdateConnectionInput,
   userId: string = LOCAL_USER_ID,
-): ClawConnection | null {
+): Promise<ClawConnection | null> {
   const db = getDb();
-  const existing = db
+  const existingRows = await db
     .select()
     .from(clawConnections)
     .where(
@@ -167,7 +161,8 @@ export function updateConnection(
         eq(clawConnections.userId, userId),
       ),
     )
-    .get();
+    .limit(1);
+  const existing = existingRows[0];
   if (!existing) return null;
 
   const now = Date.now();
@@ -193,15 +188,15 @@ export function updateConnection(
     patch.hostKeyFingerprint = input.hostKeyFingerprint;
   }
 
-  db.update(clawConnections)
+  await db
+    .update(clawConnections)
     .set(patch)
     .where(
       and(
         eq(clawConnections.id, input.id),
         eq(clawConnections.userId, userId),
       ),
-    )
-    .run();
+    );
 
   return rowToConnection({
     ...existing,
@@ -227,31 +222,31 @@ export function updateConnection(
   });
 }
 
-export function deleteConnection(
+export async function deleteConnection(
   id: string,
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   const db = getDb();
-  db.delete(clawConnections)
+  await db
+    .delete(clawConnections)
     .where(
       and(eq(clawConnections.id, id), eq(clawConnections.userId, userId)),
-    )
-    .run();
+    );
 }
 
-export function setDefaultConnection(
+export async function setDefaultConnection(
   id: string,
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   const db = getDb();
-  db.update(clawConnections)
+  await db
+    .update(clawConnections)
     .set({ isDefault: false })
-    .where(eq(clawConnections.userId, userId))
-    .run();
-  db.update(clawConnections)
+    .where(eq(clawConnections.userId, userId));
+  await db
+    .update(clawConnections)
     .set({ isDefault: true })
     .where(
       and(eq(clawConnections.id, id), eq(clawConnections.userId, userId)),
-    )
-    .run();
+    );
 }

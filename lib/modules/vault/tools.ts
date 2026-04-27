@@ -14,7 +14,7 @@ export const vaultTools: AgentTool[] = [
     description: "Check if the vault is initialized, locked/unlocked, and how many secrets it holds",
     parameters: z.object({}),
     handler: async () => {
-      return getVaultStatus();
+      return await getVaultStatus();
     },
   },
   {
@@ -22,7 +22,7 @@ export const vaultTools: AgentTool[] = [
     description: "List all secrets in the vault (names and categories only, no values)",
     parameters: z.object({}),
     handler: async () => {
-      return getAllSecrets();
+      return await getAllSecrets();
     },
   },
   {
@@ -33,7 +33,7 @@ export const vaultTools: AgentTool[] = [
     }),
     handler: async (params) => {
       const { id } = params as { id: string };
-      return getSecret(id);
+      return await getSecret(id);
     },
   },
   {
@@ -65,7 +65,7 @@ export const vaultTools: AgentTool[] = [
         notes?: string;
         tags?: string[];
       };
-      return createSecret({
+      return await createSecret({
         name,
         value,
         category: category as Parameters<typeof createSecret>[0]["category"],
@@ -82,7 +82,7 @@ export const vaultTools: AgentTool[] = [
     }),
     handler: async (params) => {
       const { id } = params as { id: string };
-      deleteSecret(id);
+      await deleteSecret(id);
       return { success: true };
     },
   },

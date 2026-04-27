@@ -48,7 +48,7 @@ export async function GET(
     const { id: sessionKey } = await params;
     const cid = req.nextUrl.searchParams.get("connectionId");
     const agentId = req.nextUrl.searchParams.get("agentId");
-    const connectionId = cid ?? getDefaultConnection(auth.userId)?.id;
+    const connectionId = cid ?? (await getDefaultConnection(auth.userId))?.id;
 
     if (!connectionId) {
       return NextResponse.json({ error: "No connection configured" }, { status: 400 });

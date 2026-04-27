@@ -47,7 +47,7 @@ export async function PUT() {
 
   const credentials: Record<string, string> = {};
   for (const key of PROVIDER_KEYS) {
-    const val = getSetting(key, userId);
+    const val = await getSetting(key, userId);
     if (val) {
       credentials[key] = val;
     }

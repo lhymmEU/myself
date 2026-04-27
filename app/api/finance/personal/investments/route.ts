@@ -12,7 +12,7 @@ export async function GET() {
   bootApp();
   const auth = await requireUserId();
   if ("response" in auth) return auth.response;
-  const result = getInvestments(auth.userId);
+  const result = await getInvestments(auth.userId);
   return NextResponse.json(result);
 }
 
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   const auth = await requireUserId();
   if ("response" in auth) return auth.response;
   const body = await req.json();
-  const result = createInvestment(body, auth.userId);
+  const result = await createInvestment(body, auth.userId);
   return NextResponse.json(result);
 }
 
@@ -34,7 +34,7 @@ export async function PUT(req: NextRequest) {
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
-  updateInvestment(id, data, auth.userId);
+  await updateInvestment(id, data, auth.userId);
   return NextResponse.json({ success: true });
 }
 
@@ -46,6 +46,6 @@ export async function DELETE(req: NextRequest) {
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
-  deleteInvestment(id, auth.userId);
+  await deleteInvestment(id, auth.userId);
   return NextResponse.json({ success: true });
 }

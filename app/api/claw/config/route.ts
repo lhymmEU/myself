@@ -13,7 +13,8 @@ export async function GET(req: NextRequest) {
   if ("response" in auth) return auth.response;
   try {
     const connectionId =
-      req.nextUrl.searchParams.get("connectionId") ?? getDefaultConnection(auth.userId)?.id;
+      req.nextUrl.searchParams.get("connectionId") ??
+      (await getDefaultConnection(auth.userId))?.id;
 
     if (!connectionId) {
       return NextResponse.json({ error: "No connection configured" }, { status: 400 });
@@ -43,7 +44,7 @@ export async function PUT(req: NextRequest) {
   if ("response" in auth) return auth.response;
   try {
     const { connectionId: cid, config } = await req.json();
-    const connectionId = cid ?? getDefaultConnection(auth.userId)?.id;
+    const connectionId = cid ?? (await getDefaultConnection(auth.userId))?.id;
 
     if (!connectionId) {
       return NextResponse.json({ error: "No connection configured" }, { status: 400 });

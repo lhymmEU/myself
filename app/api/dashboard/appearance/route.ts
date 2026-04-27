@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   if ("response" in auth) return auth.response;
   try {
     const characterType = req.nextUrl.searchParams.get("type") ?? "user";
-    const appearance = getCharacterAppearance(characterType, auth.userId);
+    const appearance = await getCharacterAppearance(characterType, auth.userId);
     return NextResponse.json({ appearance });
   } catch (err) {
     return NextResponse.json(
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     if (!characterType) {
       return NextResponse.json({ error: "characterType required" }, { status: 400 });
     }
-    upsertCharacterAppearance(characterType, colors, auth.userId);
+    await upsertCharacterAppearance(characterType, colors, auth.userId);
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json(

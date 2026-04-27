@@ -22,7 +22,7 @@ export const markedTools: AgentTool[] = [
     }),
     handler: async (params) => {
       const { name, notes } = params as { name: string; notes?: string };
-      return createCollection({ name, notes });
+      return await createCollection({ name, notes });
     },
   },
   {
@@ -39,7 +39,7 @@ export const markedTools: AgentTool[] = [
         name?: string;
         notes?: string | null;
       };
-      return updateCollection({ id, name, notes });
+      return await updateCollection({ id, name, notes });
     },
   },
   {
@@ -51,10 +51,10 @@ export const markedTools: AgentTool[] = [
     handler: async (params) => {
       const { id } = params as { id?: string };
       if (id) {
-        const c = getCollection(id);
+        const c = await getCollection(id);
         return c ?? { error: "Collection not found" };
       }
-      return listCollections();
+      return await listCollections();
     },
   },
   {
@@ -80,7 +80,7 @@ export const markedTools: AgentTool[] = [
         meta = await fetchUrlMeta(url);
         finalTitle = meta.title || url;
       }
-      return createItem({
+      return await createItem({
         url,
         title: finalTitle,
         notes,
@@ -108,7 +108,7 @@ export const markedTools: AgentTool[] = [
         notes?: string | null;
         collectionId?: string | null;
       };
-      return updateItem({ id, title, notes, collectionId });
+      return await updateItem({ id, title, notes, collectionId });
     },
   },
   {
@@ -125,10 +125,10 @@ export const markedTools: AgentTool[] = [
         id?: string;
       };
       if (id) {
-        const item = getItem(id);
+        const item = await getItem(id);
         return item ?? { error: "Item not found" };
       }
-      return listItems(collectionId);
+      return await listItems(collectionId);
     },
   },
 ];

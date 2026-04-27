@@ -6,6 +6,12 @@
  *
  * All key derivation and encryption/decryption happens in the browser.
  * See `lib/modules/vault/client.ts` for the browser-side counterpart.
+ *
+ * Driver portability: every query goes through `await` against a Drizzle
+ * chain. Both better-sqlite3 (sync underneath) and postgres-js (async)
+ * support `await db.select()...` via the QueryPromise mixin, so this
+ * single shape works in both modes. The sqlite-only `.get()/.all()/.run()`
+ * methods do NOT exist on the postgres-js builder and must be avoided.
  */
 
 import { nanoid } from "nanoid";
@@ -69,14 +75,16 @@ export interface CloudReencryptSecret {
   notesNonce?: string | null;
 }
 
-export function getCloudVaultInfo(userId: string): CloudVaultInfo {
+export async function getCloudVaultInfo(
+  userId: string,
+): Promise<CloudVaultInfo> {
   const db = getVaultDb();
-  const saltRow = db
+  const saltRows = await db
     .select()
     .from(vaultMeta)
     .where(and(eq(vaultMeta.userId, userId), eq(vaultMeta.key, "salt")))
-    .get();
-  const hashRow = db
+    .limit(1);
+  const hashRows = await db
     .select()
     .from(vaultMeta)
     .where(
@@ -85,7 +93,9 @@ export function getCloudVaultInfo(userId: string): CloudVaultInfo {
         eq(vaultMeta.key, "verification_hash"),
       ),
     )
-    .get();
+    .limit(1);
+  const saltRow = saltRows[0];
+  const hashRow = hashRows[0];
   return {
     initialized: !!saltRow && !!hashRow,
     salt: saltRow?.value ?? null,
@@ -93,17 +103,18 @@ export function getCloudVaultInfo(userId: string): CloudVaultInfo {
   };
 }
 
-export function getCloudVaultStatus(userId: string): VaultStatus {
-  const info = getCloudVaultInfo(userId);
+export async function getCloudVaultStatus(
+  userId: string,
+): Promise<VaultStatus> {
+  const info = await getCloudVaultInfo(userId);
   let secretCount = 0;
   if (info.initialized) {
     const db = getVaultDb();
-    const row = db
+    const rows = await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(vaultSecrets)
-      .where(eq(vaultSecrets.userId, userId))
-      .get();
-    secretCount = Number(row?.count ?? 0);
+      .where(eq(vaultSecrets.userId, userId));
+    secretCount = Number(rows[0]?.count ?? 0);
   }
   return {
     initialized: info.initialized,
@@ -117,23 +128,23 @@ export function getCloudVaultStatus(userId: string): VaultStatus {
   };
 }
 
-export function setupCloudVault(
+export async function setupCloudVault(
   userId: string,
   salt: string,
   verificationHash: string,
-): void {
+): Promise<void> {
   const db = getVaultDb();
-  const existing = db
+  const existing = await db
     .select()
     .from(vaultMeta)
     .where(and(eq(vaultMeta.userId, userId), eq(vaultMeta.key, "salt")))
-    .get();
-  if (existing) throw new Error("Vault is already initialized");
+    .limit(1);
+  if (existing[0]) throw new Error("Vault is already initialized");
 
-  db.insert(vaultMeta).values({ userId, key: "salt", value: salt }).run();
-  db.insert(vaultMeta)
-    .values({ userId, key: "verification_hash", value: verificationHash })
-    .run();
+  await db.insert(vaultMeta).values({ userId, key: "salt", value: salt });
+  await db
+    .insert(vaultMeta)
+    .values({ userId, key: "verification_hash", value: verificationHash });
   eventBus.emit("vault", VAULT_EVENTS.VAULT_UNLOCKED, {});
 }
 
@@ -155,8 +166,8 @@ function rowToCipher(row: SecretRow): CloudSecretCipher {
     nonce: row.nonce,
     encryptedNotes: row.encryptedNotes,
     notesNonce: row.notesNonce,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt),
   };
 }
 
@@ -172,59 +183,59 @@ function rowToMeta(row: SecretRow): VaultSecretMeta {
     name: row.name,
     category: row.category as SecretCategory,
     tags,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt),
   };
 }
 
-export function listCloudSecretMeta(userId: string): VaultSecretMeta[] {
+export async function listCloudSecretMeta(
+  userId: string,
+): Promise<VaultSecretMeta[]> {
   const db = getVaultDb();
-  const rows = db
+  const rows = await db
     .select()
     .from(vaultSecrets)
     .where(eq(vaultSecrets.userId, userId))
-    .orderBy(desc(vaultSecrets.updatedAt))
-    .all();
+    .orderBy(desc(vaultSecrets.updatedAt));
   return rows.map(rowToMeta);
 }
 
-export function getCloudSecretCipher(
+export async function getCloudSecretCipher(
   id: string,
   userId: string,
-): CloudSecretCipher | null {
+): Promise<CloudSecretCipher | null> {
   const db = getVaultDb();
-  const row = db
+  const rows = await db
     .select()
     .from(vaultSecrets)
     .where(and(eq(vaultSecrets.id, id), eq(vaultSecrets.userId, userId)))
-    .get();
+    .limit(1);
+  const row = rows[0];
   if (!row) return null;
   return rowToCipher(row);
 }
 
-export function createCloudSecret(
+export async function createCloudSecret(
   input: CloudCreateSecretInput,
   userId: string,
-): VaultSecretMeta {
+): Promise<VaultSecretMeta> {
   const db = getVaultDb();
   const now = Date.now();
   const id = nanoid();
 
-  db.insert(vaultSecrets)
-    .values({
-      id,
-      userId,
-      name: input.name,
-      category: input.category ?? "other",
-      encryptedValue: input.encryptedValue,
-      nonce: input.nonce,
-      encryptedNotes: input.encryptedNotes ?? null,
-      notesNonce: input.notesNonce ?? null,
-      tags: JSON.stringify(input.tags ?? []),
-      createdAt: now,
-      updatedAt: now,
-    })
-    .run();
+  await db.insert(vaultSecrets).values({
+    id,
+    userId,
+    name: input.name,
+    category: input.category ?? "other",
+    encryptedValue: input.encryptedValue,
+    nonce: input.nonce,
+    encryptedNotes: input.encryptedNotes ?? null,
+    notesNonce: input.notesNonce ?? null,
+    tags: JSON.stringify(input.tags ?? []),
+    createdAt: now,
+    updatedAt: now,
+  });
 
   eventBus.emit("vault", VAULT_EVENTS.SECRET_CREATED, { id });
   return {
@@ -237,16 +248,17 @@ export function createCloudSecret(
   };
 }
 
-export function updateCloudSecret(
+export async function updateCloudSecret(
   input: CloudUpdateSecretInput,
   userId: string,
-): VaultSecretMeta {
+): Promise<VaultSecretMeta> {
   const db = getVaultDb();
-  const existing = db
+  const existingRows = await db
     .select()
     .from(vaultSecrets)
     .where(and(eq(vaultSecrets.id, input.id), eq(vaultSecrets.userId, userId)))
-    .get();
+    .limit(1);
+  const existing = existingRows[0];
   if (!existing) throw new Error(`Secret not found: ${input.id}`);
 
   const now = Date.now();
@@ -261,7 +273,8 @@ export function updateCloudSecret(
       }
     })();
 
-  db.update(vaultSecrets)
+  await db
+    .update(vaultSecrets)
     .set({
       name,
       category,
@@ -278,8 +291,7 @@ export function updateCloudSecret(
       tags: JSON.stringify(tags),
       updatedAt: now,
     })
-    .where(and(eq(vaultSecrets.id, input.id), eq(vaultSecrets.userId, userId)))
-    .run();
+    .where(and(eq(vaultSecrets.id, input.id), eq(vaultSecrets.userId, userId)));
 
   eventBus.emit("vault", VAULT_EVENTS.SECRET_UPDATED, { id: input.id });
   return {
@@ -287,16 +299,19 @@ export function updateCloudSecret(
     name,
     category: category as SecretCategory,
     tags,
-    createdAt: existing.createdAt,
+    createdAt: Number(existing.createdAt),
     updatedAt: now,
   };
 }
 
-export function deleteCloudSecret(id: string, userId: string): void {
+export async function deleteCloudSecret(
+  id: string,
+  userId: string,
+): Promise<void> {
   const db = getVaultDb();
-  db.delete(vaultSecrets)
-    .where(and(eq(vaultSecrets.id, id), eq(vaultSecrets.userId, userId)))
-    .run();
+  await db
+    .delete(vaultSecrets)
+    .where(and(eq(vaultSecrets.id, id), eq(vaultSecrets.userId, userId)));
   eventBus.emit("vault", VAULT_EVENTS.SECRET_DELETED, { id });
 }
 
@@ -308,30 +323,31 @@ export function deleteCloudSecret(id: string, userId: string): void {
  * new key, then ships the entire batch in one request. The server never sees
  * any plaintext.
  */
-export function rotateCloudVault(
+export async function rotateCloudVault(
   userId: string,
   newSalt: string,
   newVerificationHash: string,
   reencrypted: CloudReencryptSecret[],
-): void {
+): Promise<void> {
   const db = getVaultDb();
 
-  db.update(vaultMeta)
+  await db
+    .update(vaultMeta)
     .set({ value: newSalt })
-    .where(and(eq(vaultMeta.userId, userId), eq(vaultMeta.key, "salt")))
-    .run();
-  db.update(vaultMeta)
+    .where(and(eq(vaultMeta.userId, userId), eq(vaultMeta.key, "salt")));
+  await db
+    .update(vaultMeta)
     .set({ value: newVerificationHash })
     .where(
       and(
         eq(vaultMeta.userId, userId),
         eq(vaultMeta.key, "verification_hash"),
       ),
-    )
-    .run();
+    );
 
   for (const s of reencrypted) {
-    db.update(vaultSecrets)
+    await db
+      .update(vaultSecrets)
       .set({
         encryptedValue: s.encryptedValue,
         nonce: s.nonce,
@@ -339,7 +355,6 @@ export function rotateCloudVault(
         notesNonce: s.notesNonce ?? null,
         updatedAt: Date.now(),
       })
-      .where(and(eq(vaultSecrets.id, s.id), eq(vaultSecrets.userId, userId)))
-      .run();
+      .where(and(eq(vaultSecrets.id, s.id), eq(vaultSecrets.userId, userId)));
   }
 }

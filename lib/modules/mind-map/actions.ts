@@ -31,42 +31,44 @@ function parseRow(row: typeof lifeNodes.$inferSelect): LifeNode {
     type: row.type as "category" | "item",
     parentId: row.parentId,
     color: row.color,
-    positionX: row.positionX,
-    positionY: row.positionY,
+    positionX: Number(row.positionX),
+    positionY: Number(row.positionY),
     connections,
     metadata,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt),
   };
 }
 
-export function getAllNodes(userId: string = LOCAL_USER_ID): LifeNode[] {
+export async function getAllNodes(
+  userId: string = LOCAL_USER_ID,
+): Promise<LifeNode[]> {
   const db = getDb();
-  const rows = db
+  const rows = await db
     .select()
     .from(lifeNodes)
-    .where(eq(lifeNodes.userId, userId))
-    .all();
+    .where(eq(lifeNodes.userId, userId));
   return rows.map(parseRow);
 }
 
-export function getNode(
+export async function getNode(
   id: string,
   userId: string = LOCAL_USER_ID,
-): LifeNode | null {
+): Promise<LifeNode | null> {
   const db = getDb();
-  const row = db
+  const rows = await db
     .select()
     .from(lifeNodes)
     .where(and(eq(lifeNodes.id, id), eq(lifeNodes.userId, userId)))
-    .get();
+    .limit(1);
+  const row = rows[0];
   return row ? parseRow(row) : null;
 }
 
-export function createNode(
+export async function createNode(
   input: CreateNodeInput,
   userId: string = LOCAL_USER_ID,
-): LifeNode {
+): Promise<LifeNode> {
   const db = getDb();
   const now = Date.now();
   const id = nanoid();
@@ -84,21 +86,21 @@ export function createNode(
     createdAt: now,
     updatedAt: now,
   };
-  db.insert(lifeNodes).values(node).run();
+  await db.insert(lifeNodes).values(node);
   return parseRow(node as typeof lifeNodes.$inferSelect);
 }
 
-export function updateNode(
+export async function updateNode(
   input: UpdateNodeInput,
   userId: string = LOCAL_USER_ID,
-): LifeNode {
+): Promise<LifeNode> {
   const db = getDb();
-  const existing = db
+  const existing = await db
     .select()
     .from(lifeNodes)
     .where(and(eq(lifeNodes.id, input.id), eq(lifeNodes.userId, userId)))
-    .get();
-  if (!existing) {
+    .limit(1);
+  if (!existing[0]) {
     throw new Error(`Node not found: ${input.id}`);
   }
   const updates: Partial<typeof lifeNodes.$inferInsert> = {
@@ -113,45 +115,48 @@ export function updateNode(
     updates.connections = JSON.stringify(input.connections);
   if (input.metadata !== undefined)
     updates.metadata = JSON.stringify(input.metadata);
-  db.update(lifeNodes)
+  await db
+    .update(lifeNodes)
     .set(updates)
-    .where(and(eq(lifeNodes.id, input.id), eq(lifeNodes.userId, userId)))
-    .run();
-  const row = db
+    .where(and(eq(lifeNodes.id, input.id), eq(lifeNodes.userId, userId)));
+  const rows = await db
     .select()
     .from(lifeNodes)
     .where(and(eq(lifeNodes.id, input.id), eq(lifeNodes.userId, userId)))
-    .get();
-  return parseRow(row!);
+    .limit(1);
+  return parseRow(rows[0]!);
 }
 
-export function deleteNode(id: string, userId: string = LOCAL_USER_ID): void {
+export async function deleteNode(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): Promise<void> {
   const db = getDb();
-  db.delete(lifeNodes)
-    .where(and(eq(lifeNodes.id, id), eq(lifeNodes.userId, userId)))
-    .run();
+  await db
+    .delete(lifeNodes)
+    .where(and(eq(lifeNodes.id, id), eq(lifeNodes.userId, userId)));
 }
 
-export function connectNodes(
+export async function connectNodes(
   sourceId: string,
   targetId: string,
   userId: string = LOCAL_USER_ID,
-): LifeNode {
-  const node = getNode(sourceId, userId);
+): Promise<LifeNode> {
+  const node = await getNode(sourceId, userId);
   if (!node) throw new Error(`Node not found: ${sourceId}`);
-  if (getNode(targetId, userId) === null)
+  if ((await getNode(targetId, userId)) === null)
     throw new Error(`Node not found: ${targetId}`);
   if (node.connections.includes(targetId)) return node;
   const connections = [...node.connections, targetId];
   return updateNode({ id: sourceId, connections }, userId);
 }
 
-export function disconnectNodes(
+export async function disconnectNodes(
   sourceId: string,
   targetId: string,
   userId: string = LOCAL_USER_ID,
-): LifeNode {
-  const node = getNode(sourceId, userId);
+): Promise<LifeNode> {
+  const node = await getNode(sourceId, userId);
   if (!node) throw new Error(`Node not found: ${sourceId}`);
   const connections = node.connections.filter((c) => c !== targetId);
   return updateNode({ id: sourceId, connections }, userId);
@@ -171,64 +176,60 @@ function parseSceneRow(
     appState: row.appState,
     files: row.files,
     mode: (row.mode as "mind" | "product") ?? "mind",
-    isTodoSource: row.isTodoSource === 1,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    isTodoSource: Number(row.isTodoSource) === 1,
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt),
   };
 }
 
-export function getScene(
+export async function getScene(
   id: string,
   userId: string = LOCAL_USER_ID,
-): MindMapScene | null {
+): Promise<MindMapScene | null> {
   const db = getDb();
-  const row = db
+  const rows = await db
     .select()
     .from(mindMapScenes)
     .where(and(eq(mindMapScenes.id, id), eq(mindMapScenes.userId, userId)))
-    .get();
+    .limit(1);
+  const row = rows[0];
   return row ? parseSceneRow(row) : null;
 }
 
-export function getOrCreateDefaultScene(
+export async function getOrCreateDefaultScene(
   userId: string = LOCAL_USER_ID,
-): MindMapScene {
-  const existing = getScene(DEFAULT_SCENE_ID, userId);
+): Promise<MindMapScene> {
+  const existing = await getScene(DEFAULT_SCENE_ID, userId);
   if (existing) return existing;
   return createScene({ name: "Mind Map" }, DEFAULT_SCENE_ID, userId);
 }
 
-export function getAllScenes(
+export async function getAllScenes(
   mode?: "mind" | "product",
   userId: string = LOCAL_USER_ID,
-): MindMapScene[] {
+): Promise<MindMapScene[]> {
   const db = getDb();
   if (mode) {
-    const rows = db
+    const rows = await db
       .select()
       .from(mindMapScenes)
       .where(
-        and(
-          eq(mindMapScenes.userId, userId),
-          eq(mindMapScenes.mode, mode),
-        ),
-      )
-      .all();
+        and(eq(mindMapScenes.userId, userId), eq(mindMapScenes.mode, mode)),
+      );
     return rows.map(parseSceneRow);
   }
-  const rows = db
+  const rows = await db
     .select()
     .from(mindMapScenes)
-    .where(eq(mindMapScenes.userId, userId))
-    .all();
+    .where(eq(mindMapScenes.userId, userId));
   return rows.map(parseSceneRow);
 }
 
-export function createScene(
+export async function createScene(
   input: CreateSceneInput,
   id?: string,
   userId: string = LOCAL_USER_ID,
-): MindMapScene {
+): Promise<MindMapScene> {
   const db = getDb();
   const now = Date.now();
   const sceneId = id ?? nanoid();
@@ -244,23 +245,23 @@ export function createScene(
     createdAt: now,
     updatedAt: now,
   };
-  db.insert(mindMapScenes).values(scene).run();
+  await db.insert(mindMapScenes).values(scene);
   return parseSceneRow(scene as typeof mindMapScenes.$inferSelect);
 }
 
-export function updateScene(
+export async function updateScene(
   input: UpdateSceneInput,
   userId: string = LOCAL_USER_ID,
-): MindMapScene {
+): Promise<MindMapScene> {
   const db = getDb();
-  const existing = db
+  const existing = await db
     .select()
     .from(mindMapScenes)
     .where(
       and(eq(mindMapScenes.id, input.id), eq(mindMapScenes.userId, userId)),
     )
-    .get();
-  if (!existing) {
+    .limit(1);
+  if (!existing[0]) {
     throw new Error(`Scene not found: ${input.id}`);
   }
   const updates: Partial<typeof mindMapScenes.$inferInsert> = {
@@ -270,34 +271,37 @@ export function updateScene(
   if (input.elements !== undefined) updates.elements = input.elements;
   if (input.appState !== undefined) updates.appState = input.appState;
   if (input.files !== undefined) updates.files = input.files;
-  db.update(mindMapScenes)
+  await db
+    .update(mindMapScenes)
     .set(updates)
     .where(
       and(eq(mindMapScenes.id, input.id), eq(mindMapScenes.userId, userId)),
-    )
-    .run();
-  const row = db
+    );
+  const rows = await db
     .select()
     .from(mindMapScenes)
     .where(
       and(eq(mindMapScenes.id, input.id), eq(mindMapScenes.userId, userId)),
     )
-    .get();
-  return parseSceneRow(row!);
+    .limit(1);
+  return parseSceneRow(rows[0]!);
 }
 
-export function deleteScene(id: string, userId: string = LOCAL_USER_ID): void {
-  const db = getDb();
-  db.delete(mindMapScenes)
-    .where(and(eq(mindMapScenes.id, id), eq(mindMapScenes.userId, userId)))
-    .run();
-}
-
-export function getTodoSourceScene(
+export async function deleteScene(
+  id: string,
   userId: string = LOCAL_USER_ID,
-): MindMapScene | null {
+): Promise<void> {
   const db = getDb();
-  const row = db
+  await db
+    .delete(mindMapScenes)
+    .where(and(eq(mindMapScenes.id, id), eq(mindMapScenes.userId, userId)));
+}
+
+export async function getTodoSourceScene(
+  userId: string = LOCAL_USER_ID,
+): Promise<MindMapScene | null> {
+  const db = getDb();
+  const rows = await db
     .select()
     .from(mindMapScenes)
     .where(
@@ -306,35 +310,36 @@ export function getTodoSourceScene(
         eq(mindMapScenes.isTodoSource, 1),
       ),
     )
-    .get();
+    .limit(1);
+  const row = rows[0];
   return row ? parseSceneRow(row) : null;
 }
 
-export function setTodoSource(
+export async function setTodoSource(
   id: string,
   enabled: boolean,
   userId: string = LOCAL_USER_ID,
-): MindMapScene {
+): Promise<MindMapScene> {
   const db = getDb();
   if (enabled) {
-    db.update(mindMapScenes)
+    await db
+      .update(mindMapScenes)
       .set({ isTodoSource: 0 })
       .where(
         and(
           eq(mindMapScenes.userId, userId),
           eq(mindMapScenes.isTodoSource, 1),
         ),
-      )
-      .run();
+      );
   }
-  db.update(mindMapScenes)
+  await db
+    .update(mindMapScenes)
     .set({ isTodoSource: enabled ? 1 : 0 })
-    .where(and(eq(mindMapScenes.id, id), eq(mindMapScenes.userId, userId)))
-    .run();
-  const row = db
+    .where(and(eq(mindMapScenes.id, id), eq(mindMapScenes.userId, userId)));
+  const rows = await db
     .select()
     .from(mindMapScenes)
     .where(and(eq(mindMapScenes.id, id), eq(mindMapScenes.userId, userId)))
-    .get();
-  return parseSceneRow(row!);
+    .limit(1);
+  return parseSceneRow(rows[0]!);
 }

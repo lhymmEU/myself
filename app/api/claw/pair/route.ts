@@ -54,12 +54,12 @@ export async function POST(_req: NextRequest) {
   let code: string | null = null;
   for (let attempt = 0; attempt < 5 && !code; attempt++) {
     const candidate = generateCode();
-    const exists = db
+    const existsRows = await db
       .select({ code: clawPairings.code })
       .from(clawPairings)
       .where(eq(clawPairings.code, candidate))
-      .get();
-    if (!exists) {
+      .limit(1);
+    if (!existsRows[0]) {
       code = candidate;
     }
   }
@@ -70,15 +70,13 @@ export async function POST(_req: NextRequest) {
     );
   }
 
-  db.insert(clawPairings)
-    .values({
-      code,
-      userId: auth.userId,
-      lobsterId: "",
-      expiresAt,
-      createdAt: now,
-    })
-    .run();
+  await db.insert(clawPairings).values({
+    code,
+    userId: auth.userId,
+    lobsterId: "",
+    expiresAt,
+    createdAt: now,
+  });
 
   return NextResponse.json({ code, expiresAt });
 }
@@ -95,22 +93,17 @@ export async function GET(_req: NextRequest) {
 
   const db = getDb();
   const now = Date.now();
-  const rows = db
+  const rows = await db
     .select()
     .from(clawPairings)
-    .where(
-      and(
-        eq(clawPairings.userId, auth.userId),
-      ),
-    )
-    .all();
+    .where(and(eq(clawPairings.userId, auth.userId)));
 
   return NextResponse.json({
     pairings: rows
-      .filter((r) => r.expiresAt > now && !r.consumedAt)
+      .filter((r) => Number(r.expiresAt) > now && !r.consumedAt)
       .map((r) => ({
         code: r.code,
-        expiresAt: r.expiresAt,
+        expiresAt: Number(r.expiresAt),
       })),
   });
 }

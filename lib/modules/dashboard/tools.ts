@@ -21,7 +21,7 @@ export const dashboardTools: AgentTool[] = [
     name: "listWishlist",
     description: "List all items in the user's skill wishlist",
     parameters: z.object({}),
-    handler: async () => listWishlist(),
+    handler: async () => await listWishlist(),
   },
   {
     name: "createWish",
@@ -41,7 +41,7 @@ export const dashboardTools: AgentTool[] = [
         notes?: string;
       };
       try {
-        return createWish({ name, targetLevel, priority, notes });
+        return await createWish({ name, targetLevel, priority, notes });
       } catch (e) {
         if (e instanceof Error && e.message === "wishlist_full") {
           return { error: "wishlist_full", message: "The wishlist already has 3 items. The user must complete or remove existing skills before adding new ones." };
@@ -68,7 +68,7 @@ export const dashboardTools: AgentTool[] = [
         priority?: string;
         notes?: string;
       };
-      updateWish(id, data);
+      await updateWish(id, data);
       return { success: true };
     },
   },
@@ -78,7 +78,7 @@ export const dashboardTools: AgentTool[] = [
     parameters: z.object({ id: z.string() }),
     handler: async (params) => {
       const { id } = params as { id: string };
-      deleteWish(id);
+      await deleteWish(id);
       return { success: true };
     },
   },
@@ -86,7 +86,7 @@ export const dashboardTools: AgentTool[] = [
     name: "listUserSkills",
     description: "List all of the user's skills with names, levels (familiar/fluent/mastering), and categories",
     parameters: z.object({}),
-    handler: async () => listUserSkills(),
+    handler: async () => await listUserSkills(),
   },
   {
     name: "createUserSkill",
@@ -102,7 +102,7 @@ export const dashboardTools: AgentTool[] = [
         level?: SkillLevel;
         category?: string;
       };
-      return createUserSkill({ name, level, category });
+      return await createUserSkill({ name, level, category });
     },
   },
   {
@@ -115,7 +115,7 @@ export const dashboardTools: AgentTool[] = [
     }),
     handler: async (params) => {
       const { wishId, todos } = params as { wishId: string; todos: string[] };
-      return bulkCreateWishTodos(wishId, todos);
+      return await bulkCreateWishTodos(wishId, todos);
     },
   },
   {
@@ -124,14 +124,14 @@ export const dashboardTools: AgentTool[] = [
     parameters: z.object({ wishId: z.string() }),
     handler: async (params) => {
       const { wishId } = params as { wishId: string };
-      return listWishTodos(wishId);
+      return await listWishTodos(wishId);
     },
   },
   {
     name: "listAssignedJobs",
     description: "List all jobs assigned to the Claw agent",
     parameters: z.object({}),
-    handler: async () => listAssignedJobs(),
+    handler: async () => await listAssignedJobs(),
   },
   {
     name: "createAssignedJob",
@@ -145,7 +145,7 @@ export const dashboardTools: AgentTool[] = [
         name: string;
         description?: string;
       };
-      return createAssignedJob({ name, description });
+      return await createAssignedJob({ name, description });
     },
   },
 ];

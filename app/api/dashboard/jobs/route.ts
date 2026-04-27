@@ -11,7 +11,7 @@ export async function GET() {
   const auth = await requireUserId();
   if ("response" in auth) return auth.response;
   try {
-    const jobs = listAssignedJobs(auth.userId);
+    const jobs = await listAssignedJobs(auth.userId);
     return NextResponse.json({ jobs });
   } catch (err) {
     return NextResponse.json(
@@ -29,17 +29,17 @@ export async function POST(req: NextRequest) {
     const { action } = body;
 
     if (action === "create") {
-      const result = createAssignedJob(body, auth.userId);
+      const result = await createAssignedJob(body, auth.userId);
       return NextResponse.json(result);
     }
 
     if (action === "update") {
-      updateAssignedJob(body.id, body.data, auth.userId);
+      await updateAssignedJob(body.id, body.data, auth.userId);
       return NextResponse.json({ success: true });
     }
 
     if (action === "delete") {
-      deleteAssignedJob(body.id, auth.userId);
+      await deleteAssignedJob(body.id, auth.userId);
       return NextResponse.json({ success: true });
     }
 

@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   const id = searchParams.get("id");
 
   if (id) {
-    const scene = getScene(id, userId);
+    const scene = await getScene(id, userId);
     if (!scene) {
       return NextResponse.json({ error: "Scene not found" }, { status: 404 });
     }
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
 
   const todoSource = searchParams.get("todoSource");
   if (todoSource === "true") {
-    const scene = getTodoSourceScene(userId);
+    const scene = await getTodoSourceScene(userId);
     if (!scene) {
       return NextResponse.json({ error: "No todo source set" }, { status: 404 });
     }
@@ -40,10 +40,10 @@ export async function GET(req: NextRequest) {
   const listAll = searchParams.get("all");
   if (listAll === "true") {
     const mode = searchParams.get("mode") as "mind" | "product" | null;
-    return NextResponse.json(getAllScenes(mode ?? undefined, userId));
+    return NextResponse.json(await getAllScenes(mode ?? undefined, userId));
   }
 
-  const scene = getOrCreateDefaultScene(userId);
+  const scene = await getOrCreateDefaultScene(userId);
   return NextResponse.json(scene);
 }
 
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   const auth = await requireUserId();
   if ("response" in auth) return auth.response;
   const body = await req.json();
-  const scene = createScene(
+  const scene = await createScene(
     {
       name: body.name,
       elements: body.elements,
@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
       files: body.files,
       mode: body.mode,
     },
+    undefined,
     auth.userId,
   );
   return NextResponse.json(scene, { status: 201 });
@@ -77,11 +78,11 @@ export async function PUT(req: NextRequest) {
   }
 
   if (body.isTodoSource !== undefined) {
-    const scene = setTodoSource(body.id, body.isTodoSource, userId);
+    const scene = await setTodoSource(body.id, body.isTodoSource, userId);
     return NextResponse.json(scene);
   }
 
-  const scene = updateScene(
+  const scene = await updateScene(
     {
       id: body.id,
       name: body.name,
@@ -103,6 +104,6 @@ export async function DELETE(req: NextRequest) {
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
-  deleteScene(id, auth.userId);
+  await deleteScene(id, auth.userId);
   return NextResponse.json({ success: true });
 }

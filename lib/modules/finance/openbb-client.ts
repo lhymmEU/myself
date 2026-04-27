@@ -1,4 +1,4 @@
-import { getSetting } from "@/lib/modules/settings/actions";
+import { getSettingSync } from "@/lib/modules/settings/actions";
 import { isLocal } from "@/lib/core/runtime";
 
 // Use 127.0.0.1 instead of localhost: on Windows (and some Linux configs)
@@ -16,7 +16,7 @@ function ensureLocal(): void {
 }
 
 function getBaseUrl(): string {
-  return getSetting("openbb_api_url") || DEFAULT_URL;
+  return getSettingSync("openbb_api_url") || DEFAULT_URL;
 }
 
 export async function fetchOpenBB<T = unknown>(

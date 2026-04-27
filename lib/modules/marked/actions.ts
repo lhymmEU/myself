@@ -32,56 +32,72 @@ function makeSlug(name: string): string {
   return `${slugify(name)}-${nanoid(4)}`;
 }
 
+function normalizeCollection(
+  row: typeof markedCollections.$inferSelect,
+): MarkedCollection {
+  return {
+    ...row,
+    sortOrder: Number(row.sortOrder),
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt),
+  };
+}
+
+function normalizeItem(row: typeof markedItems.$inferSelect): MarkedItem {
+  return {
+    ...row,
+    sortOrder: Number(row.sortOrder),
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Collections
 // ---------------------------------------------------------------------------
 
-export function listCollections(
+export async function listCollections(
   userId: string = LOCAL_USER_ID,
-): MarkedCollection[] {
+): Promise<MarkedCollection[]> {
   const db = getDb();
-  return db
+  const rows = await db
     .select()
     .from(markedCollections)
     .where(eq(markedCollections.userId, userId))
-    .orderBy(asc(markedCollections.sortOrder))
-    .all();
+    .orderBy(asc(markedCollections.sortOrder));
+  return rows.map(normalizeCollection);
 }
 
-export function getCollection(
+export async function getCollection(
   id: string,
   userId: string = LOCAL_USER_ID,
-): MarkedCollection | null {
+): Promise<MarkedCollection | null> {
   const db = getDb();
-  return (
-    db
-      .select()
-      .from(markedCollections)
-      .where(
-        and(
-          eq(markedCollections.id, id),
-          eq(markedCollections.userId, userId),
-        ),
-      )
-      .get() ?? null
-  );
+  const rows = await db
+    .select()
+    .from(markedCollections)
+    .where(
+      and(eq(markedCollections.id, id), eq(markedCollections.userId, userId)),
+    )
+    .limit(1);
+  const row = rows[0];
+  return row ? normalizeCollection(row) : null;
 }
 
-export function createCollection(
+export async function createCollection(
   input: CreateCollectionInput,
   userId: string = LOCAL_USER_ID,
-): MarkedCollection {
+): Promise<MarkedCollection> {
   const db = getDb();
   const now = Date.now();
   const id = nanoid();
-  const maxRow = db
+  const maxRows = await db
     .select({
       max: sql<number>`COALESCE(MAX(${markedCollections.sortOrder}), -1)`,
     })
     .from(markedCollections)
-    .where(eq(markedCollections.userId, userId))
-    .get();
-  const sortOrder = (maxRow?.max ?? -1) + 1;
+    .where(eq(markedCollections.userId, userId));
+  const sortOrder = Number(maxRows[0]?.max ?? -1) + 1;
   const row = {
     id,
     userId,
@@ -92,17 +108,18 @@ export function createCollection(
     createdAt: now,
     updatedAt: now,
   };
-  db.insert(markedCollections).values(row).run();
-  eventBus.emit("marked", MARKED_EVENTS.COLLECTION_CREATED, row);
-  return row;
+  await db.insert(markedCollections).values(row);
+  const result = normalizeCollection(row as typeof markedCollections.$inferSelect);
+  eventBus.emit("marked", MARKED_EVENTS.COLLECTION_CREATED, result);
+  return result;
 }
 
-export function updateCollection(
+export async function updateCollection(
   input: UpdateCollectionInput,
   userId: string = LOCAL_USER_ID,
-): MarkedCollection {
+): Promise<MarkedCollection> {
   const db = getDb();
-  const existing = db
+  const existingRows = await db
     .select()
     .from(markedCollections)
     .where(
@@ -111,8 +128,8 @@ export function updateCollection(
         eq(markedCollections.userId, userId),
       ),
     )
-    .get();
-  if (!existing) throw new Error(`Collection not found: ${input.id}`);
+    .limit(1);
+  if (!existingRows[0]) throw new Error(`Collection not found: ${input.id}`);
 
   const updates: Partial<typeof markedCollections.$inferInsert> = {
     updatedAt: Date.now(),
@@ -123,16 +140,16 @@ export function updateCollection(
   }
   if (input.notes !== undefined) updates.notes = input.notes;
 
-  db.update(markedCollections)
+  await db
+    .update(markedCollections)
     .set(updates)
     .where(
       and(
         eq(markedCollections.id, input.id),
         eq(markedCollections.userId, userId),
       ),
-    )
-    .run();
-  const row = db
+    );
+  const rows = await db
     .select()
     .from(markedCollections)
     .where(
@@ -141,75 +158,77 @@ export function updateCollection(
         eq(markedCollections.userId, userId),
       ),
     )
-    .get()!;
-  eventBus.emit("marked", MARKED_EVENTS.COLLECTION_UPDATED, row);
-  return row;
+    .limit(1);
+  const result = normalizeCollection(rows[0]!);
+  eventBus.emit("marked", MARKED_EVENTS.COLLECTION_UPDATED, result);
+  return result;
 }
 
-export function deleteCollection(
+export async function deleteCollection(
   id: string,
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   const db = getDb();
-  db.update(markedItems)
+  await db
+    .update(markedItems)
     .set({ collectionId: null })
     .where(
       and(
         eq(markedItems.collectionId, id),
         eq(markedItems.userId, userId),
       ),
-    )
-    .run();
-  db.delete(markedCollections)
+    );
+  await db
+    .delete(markedCollections)
     .where(
       and(
         eq(markedCollections.id, id),
         eq(markedCollections.userId, userId),
       ),
-    )
-    .run();
+    );
   eventBus.emit("marked", MARKED_EVENTS.COLLECTION_DELETED, { id });
 }
 
-export function reorderCollections(
+export async function reorderCollections(
   ids: string[],
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   const db = getDb();
-  ids.forEach((id, index) => {
-    db.update(markedCollections)
+  for (let index = 0; index < ids.length; index++) {
+    const id = ids[index];
+    await db
+      .update(markedCollections)
       .set({ sortOrder: index })
       .where(
         and(
           eq(markedCollections.id, id),
           eq(markedCollections.userId, userId),
         ),
-      )
-      .run();
-  });
+      );
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Items
 // ---------------------------------------------------------------------------
 
-export function listItems(
+export async function listItems(
   collectionId?: string | null,
   userId: string = LOCAL_USER_ID,
-): MarkedItem[] {
+): Promise<MarkedItem[]> {
   const db = getDb();
   if (collectionId === "__uncollected__") {
-    return db
+    const rows = await db
       .select()
       .from(markedItems)
       .where(
         and(eq(markedItems.userId, userId), isNull(markedItems.collectionId)),
       )
-      .orderBy(asc(markedItems.sortOrder))
-      .all();
+      .orderBy(asc(markedItems.sortOrder));
+    return rows.map(normalizeItem);
   }
   if (collectionId) {
-    return db
+    const rows = await db
       .select()
       .from(markedItems)
       .where(
@@ -218,46 +237,45 @@ export function listItems(
           eq(markedItems.collectionId, collectionId),
         ),
       )
-      .orderBy(asc(markedItems.sortOrder))
-      .all();
+      .orderBy(asc(markedItems.sortOrder));
+    return rows.map(normalizeItem);
   }
-  return db
+  const rows = await db
     .select()
     .from(markedItems)
     .where(eq(markedItems.userId, userId))
-    .orderBy(asc(markedItems.sortOrder))
-    .all();
+    .orderBy(asc(markedItems.sortOrder));
+  return rows.map(normalizeItem);
 }
 
-export function getItem(
+export async function getItem(
   id: string,
   userId: string = LOCAL_USER_ID,
-): MarkedItem | null {
+): Promise<MarkedItem | null> {
   const db = getDb();
-  return (
-    db
-      .select()
-      .from(markedItems)
-      .where(and(eq(markedItems.id, id), eq(markedItems.userId, userId)))
-      .get() ?? null
-  );
+  const rows = await db
+    .select()
+    .from(markedItems)
+    .where(and(eq(markedItems.id, id), eq(markedItems.userId, userId)))
+    .limit(1);
+  const row = rows[0];
+  return row ? normalizeItem(row) : null;
 }
 
-export function createItem(
+export async function createItem(
   input: CreateItemInput,
   userId: string = LOCAL_USER_ID,
-): MarkedItem {
+): Promise<MarkedItem> {
   const db = getDb();
   const now = Date.now();
   const id = nanoid();
-  const maxRow = db
+  const maxRows = await db
     .select({
       max: sql<number>`COALESCE(MAX(${markedItems.sortOrder}), -1)`,
     })
     .from(markedItems)
-    .where(eq(markedItems.userId, userId))
-    .get();
-  const sortOrder = (maxRow?.max ?? -1) + 1;
+    .where(eq(markedItems.userId, userId));
+  const sortOrder = Number(maxRows[0]?.max ?? -1) + 1;
   const row = {
     id,
     userId,
@@ -273,24 +291,23 @@ export function createItem(
     createdAt: now,
     updatedAt: now,
   };
-  db.insert(markedItems).values(row).run();
-  eventBus.emit("marked", MARKED_EVENTS.ITEM_CREATED, row);
-  return row;
+  await db.insert(markedItems).values(row);
+  const result = normalizeItem(row as typeof markedItems.$inferSelect);
+  eventBus.emit("marked", MARKED_EVENTS.ITEM_CREATED, result);
+  return result;
 }
 
-export function updateItem(
+export async function updateItem(
   input: UpdateItemInput,
   userId: string = LOCAL_USER_ID,
-): MarkedItem {
+): Promise<MarkedItem> {
   const db = getDb();
-  const existing = db
+  const existingRows = await db
     .select()
     .from(markedItems)
-    .where(
-      and(eq(markedItems.id, input.id), eq(markedItems.userId, userId)),
-    )
-    .get();
-  if (!existing) throw new Error(`Item not found: ${input.id}`);
+    .where(and(eq(markedItems.id, input.id), eq(markedItems.userId, userId)))
+    .limit(1);
+  if (!existingRows[0]) throw new Error(`Item not found: ${input.id}`);
 
   const updates: Partial<typeof markedItems.$inferInsert> = {
     updatedAt: Date.now(),
@@ -306,54 +323,55 @@ export function updateItem(
   if (input.collectionId !== undefined)
     updates.collectionId = input.collectionId;
 
-  db.update(markedItems)
+  await db
+    .update(markedItems)
     .set(updates)
-    .where(
-      and(eq(markedItems.id, input.id), eq(markedItems.userId, userId)),
-    )
-    .run();
-  const row = db
+    .where(and(eq(markedItems.id, input.id), eq(markedItems.userId, userId)));
+  const rows = await db
     .select()
     .from(markedItems)
-    .where(
-      and(eq(markedItems.id, input.id), eq(markedItems.userId, userId)),
-    )
-    .get()!;
-  eventBus.emit("marked", MARKED_EVENTS.ITEM_UPDATED, row);
-  return row;
+    .where(and(eq(markedItems.id, input.id), eq(markedItems.userId, userId)))
+    .limit(1);
+  const result = normalizeItem(rows[0]!);
+  eventBus.emit("marked", MARKED_EVENTS.ITEM_UPDATED, result);
+  return result;
 }
 
-export function deleteItem(id: string, userId: string = LOCAL_USER_ID): void {
+export async function deleteItem(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): Promise<void> {
   const db = getDb();
-  db.delete(markedItems)
-    .where(and(eq(markedItems.id, id), eq(markedItems.userId, userId)))
-    .run();
+  await db
+    .delete(markedItems)
+    .where(and(eq(markedItems.id, id), eq(markedItems.userId, userId)));
   eventBus.emit("marked", MARKED_EVENTS.ITEM_DELETED, { id });
 }
 
-export function moveItemToCollection(
+export async function moveItemToCollection(
   itemId: string,
   collectionId: string | null,
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   const db = getDb();
-  db.update(markedItems)
+  await db
+    .update(markedItems)
     .set({ collectionId, updatedAt: Date.now() })
-    .where(and(eq(markedItems.id, itemId), eq(markedItems.userId, userId)))
-    .run();
+    .where(and(eq(markedItems.id, itemId), eq(markedItems.userId, userId)));
 }
 
-export function reorderItems(
+export async function reorderItems(
   ids: string[],
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   const db = getDb();
-  ids.forEach((id, index) => {
-    db.update(markedItems)
+  for (let index = 0; index < ids.length; index++) {
+    const id = ids[index];
+    await db
+      .update(markedItems)
       .set({ sortOrder: index })
-      .where(and(eq(markedItems.id, id), eq(markedItems.userId, userId)))
-      .run();
-  });
+      .where(and(eq(markedItems.id, id), eq(markedItems.userId, userId)));
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -431,7 +449,6 @@ export function generateSourceTag(url: string, title: string): string {
       return brand;
     }
 
-    // Unknown domain: capitalize and clean
     const domain = host.replace(/^www\./, "");
     const parts = domain.split(".");
     const name = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);

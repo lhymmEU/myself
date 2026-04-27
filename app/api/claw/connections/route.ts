@@ -65,7 +65,7 @@ export async function GET() {
   const auth = await requireUserId();
   if ("response" in auth) return auth.response;
   try {
-    const connections = getAllConnections(auth.userId);
+    const connections = await getAllConnections(auth.userId);
     return NextResponse.json(connections.map(maskSecrets));
   } catch (err) {
     return NextResponse.json(
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
       credentialSecretId,
     };
 
-    const conn = createConnection(input, auth.userId);
+    const conn = await createConnection(input, auth.userId);
     return NextResponse.json(maskSecrets(conn));
   } catch (err) {
     return NextResponse.json(
@@ -147,7 +147,7 @@ export async function PUT(req: NextRequest) {
       | { id: string; setDefault: true };
 
     if ("setDefault" in body && body.setDefault) {
-      setDefaultConnection(body.id, auth.userId);
+      await setDefaultConnection(body.id, auth.userId);
       return NextResponse.json({ success: true });
     }
 
@@ -200,7 +200,7 @@ export async function PUT(req: NextRequest) {
       ).hostKeyFingerprint,
     };
 
-    const updated = updateConnection(update, auth.userId);
+    const updated = await updateConnection(update, auth.userId);
     if (!updated) {
       return NextResponse.json(
         { error: "Connection not found" },
@@ -222,7 +222,7 @@ export async function DELETE(req: NextRequest) {
   if ("response" in auth) return auth.response;
   try {
     const { id } = await req.json();
-    deleteConnection(id, auth.userId);
+    await deleteConnection(id, auth.userId);
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json(

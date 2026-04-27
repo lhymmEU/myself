@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   try {
     const { connectionId, command, raw } = await req.json();
 
-    const id = connectionId ?? getDefaultConnection(auth.userId)?.id;
+    const id = connectionId ?? (await getDefaultConnection(auth.userId))?.id;
     if (!id) {
       return NextResponse.json({ error: "No connection configured" }, { status: 400 });
     }

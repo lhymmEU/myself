@@ -133,7 +133,9 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const connectionId =
-      body.connectionId ?? getDefaultConnection(auth.userId)?.id ?? null;
+      body.connectionId ??
+      (await getDefaultConnection(auth.userId))?.id ??
+      null;
 
     if (!connectionId) {
       return NextResponse.json(

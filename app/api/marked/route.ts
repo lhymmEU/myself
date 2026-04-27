@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
 
     if (entity === "collection") {
       if (id) {
-        const c = getCollection(id, userId);
+        const c = await getCollection(id, userId);
         if (!c)
           return NextResponse.json(
             { error: "Collection not found" },
@@ -38,12 +38,12 @@ export async function GET(req: NextRequest) {
           );
         return NextResponse.json(c);
       }
-      return NextResponse.json(listCollections(userId));
+      return NextResponse.json(await listCollections(userId));
     }
 
     if (entity === "item") {
       if (id) {
-        const item = getItem(id, userId);
+        const item = await getItem(id, userId);
         if (!item)
           return NextResponse.json(
             { error: "Item not found" },
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
           );
         return NextResponse.json(item);
       }
-      return NextResponse.json(listItems(collectionId, userId));
+      return NextResponse.json(await listItems(collectionId, userId));
     }
 
     return NextResponse.json({ error: "Missing entity param" }, { status: 400 });
@@ -73,12 +73,12 @@ export async function POST(req: NextRequest) {
     const entity = body.entity;
 
     if (entity === "collection") {
-      const c = createCollection({ name: body.name, notes: body.notes }, userId);
+      const c = await createCollection({ name: body.name, notes: body.notes }, userId);
       return NextResponse.json(c);
     }
 
     if (entity === "item") {
-      const item = createItem(
+      const item = await createItem(
         {
           url: body.url,
           title: body.title,
@@ -114,20 +114,20 @@ export async function PUT(req: NextRequest) {
 
     if (body.action === "reorder") {
       if (entity === "collection") {
-        reorderCollections(body.ids, userId);
+        await reorderCollections(body.ids, userId);
       } else {
-        reorderItems(body.ids, userId);
+        await reorderItems(body.ids, userId);
       }
       return NextResponse.json({ success: true });
     }
 
     if (body.action === "move") {
-      moveItemToCollection(body.id, body.collectionId ?? null, userId);
+      await moveItemToCollection(body.id, body.collectionId ?? null, userId);
       return NextResponse.json({ success: true });
     }
 
     if (entity === "collection") {
-      const c = updateCollection(
+      const c = await updateCollection(
         {
           id: body.id,
           name: body.name,
@@ -139,7 +139,7 @@ export async function PUT(req: NextRequest) {
     }
 
     if (entity === "item") {
-      const item = updateItem(
+      const item = await updateItem(
         {
           id: body.id,
           url: body.url,
@@ -177,9 +177,9 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
     if (entity === "collection") {
-      deleteCollection(id, userId);
+      await deleteCollection(id, userId);
     } else {
-      deleteItem(id, userId);
+      await deleteItem(id, userId);
     }
     return NextResponse.json({ success: true });
   } catch (err) {

@@ -27,11 +27,11 @@ export async function GET(req: NextRequest) {
         { status: 400 }
       );
     }
-    const spending = getBudgetSpending(category, year, month, auth.userId);
+    const spending = await getBudgetSpending(category, year, month, auth.userId);
     return NextResponse.json({ category, year, month, spending });
   }
 
-  const result = getBudgets(auth.userId);
+  const result = await getBudgets(auth.userId);
   return NextResponse.json(result);
 }
 
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   const auth = await requireUserId();
   if ("response" in auth) return auth.response;
   const body = await req.json();
-  const result = createBudget(body, auth.userId);
+  const result = await createBudget(body, auth.userId);
   return NextResponse.json(result);
 }
 
@@ -53,7 +53,7 @@ export async function PUT(req: NextRequest) {
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
-  updateBudget(id, data, auth.userId);
+  await updateBudget(id, data, auth.userId);
   return NextResponse.json({ success: true });
 }
 
@@ -65,6 +65,6 @@ export async function DELETE(req: NextRequest) {
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
-  deleteBudget(id, auth.userId);
+  await deleteBudget(id, auth.userId);
   return NextResponse.json({ success: true });
 }

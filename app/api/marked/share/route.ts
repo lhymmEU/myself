@@ -20,14 +20,14 @@ export async function GET(req: NextRequest) {
         { status: 400 },
       );
 
-    const collection = getCollection(collectionId, userId);
+    const collection = await getCollection(collectionId, userId);
     if (!collection)
       return NextResponse.json(
         { error: "Collection not found" },
         { status: 404 },
       );
 
-    const items = listItems(collectionId, userId);
+    const items = await listItems(collectionId, userId);
     const payload = encodeCollectionPayload(collection, items);
 
     return NextResponse.json({ collection, items, payload });

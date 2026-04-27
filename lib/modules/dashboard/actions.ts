@@ -25,11 +25,11 @@ export interface CharacterColors {
   eyeColor?: string | null;
 }
 
-export function getCharacterAppearance(
+export async function getCharacterAppearance(
   characterType: string,
   userId: string = LOCAL_USER_ID,
-): CharacterColors | null {
-  const rows = getDb()
+): Promise<CharacterColors | null> {
+  const rows = await getDb()
     .select()
     .from(characterAppearance)
     .where(
@@ -38,18 +38,18 @@ export function getCharacterAppearance(
         eq(characterAppearance.characterType, characterType),
       ),
     )
-    .all();
+    .limit(1);
   return rows[0] ?? null;
 }
 
-export function upsertCharacterAppearance(
+export async function upsertCharacterAppearance(
   characterType: string,
   colors: CharacterColors,
   userId: string = LOCAL_USER_ID,
-) {
-  const existing = getCharacterAppearance(characterType, userId);
+): Promise<void> {
+  const existing = await getCharacterAppearance(characterType, userId);
   if (existing) {
-    getDb()
+    await getDb()
       .update(characterAppearance)
       .set(colors)
       .where(
@@ -57,27 +57,29 @@ export function upsertCharacterAppearance(
           eq(characterAppearance.userId, userId),
           eq(characterAppearance.characterType, characterType),
         ),
-      )
-      .run();
+      );
   } else {
-    getDb()
+    await getDb()
       .insert(characterAppearance)
-      .values({ id: nanoid(), userId, characterType, ...colors })
-      .run();
+      .values({ id: nanoid(), userId, characterType, ...colors });
   }
 }
 
 // --- User Skills ---
 
-export function listUserSkills(userId: string = LOCAL_USER_ID) {
-  return getDb()
-    .select()
-    .from(userSkills)
-    .where(eq(userSkills.userId, userId))
-    .all();
+function normalizeSkill<T extends { createdAt: number | string }>(row: T): T {
+  return { ...row, createdAt: Number(row.createdAt) };
 }
 
-export function createUserSkill(
+export async function listUserSkills(userId: string = LOCAL_USER_ID) {
+  const rows = await getDb()
+    .select()
+    .from(userSkills)
+    .where(eq(userSkills.userId, userId));
+  return rows.map(normalizeSkill);
+}
+
+export async function createUserSkill(
   data: {
     name: string;
     level?: SkillLevel;
@@ -86,7 +88,7 @@ export function createUserSkill(
   userId: string = LOCAL_USER_ID,
 ) {
   const id = nanoid();
-  getDb()
+  await getDb()
     .insert(userSkills)
     .values({
       id,
@@ -95,50 +97,55 @@ export function createUserSkill(
       level: data.level ?? "familiar",
       category: data.category ?? "",
       createdAt: Date.now(),
-    })
-    .run();
+    });
   return { id };
 }
 
-export function updateUserSkill(
+export async function updateUserSkill(
   id: string,
   data: Partial<{ name: string; level: SkillLevel; category: string }>,
   userId: string = LOCAL_USER_ID,
-) {
-  getDb()
+): Promise<void> {
+  await getDb()
     .update(userSkills)
     .set(data)
-    .where(and(eq(userSkills.id, id), eq(userSkills.userId, userId)))
-    .run();
+    .where(and(eq(userSkills.id, id), eq(userSkills.userId, userId)));
 }
 
-export function deleteUserSkill(id: string, userId: string = LOCAL_USER_ID) {
-  getDb()
+export async function deleteUserSkill(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): Promise<void> {
+  await getDb()
     .delete(userSkills)
-    .where(and(eq(userSkills.id, id), eq(userSkills.userId, userId)))
-    .run();
+    .where(and(eq(userSkills.id, id), eq(userSkills.userId, userId)));
 }
 
 // --- Skill Wishlist ---
 
-export function listWishlist(userId: string = LOCAL_USER_ID) {
-  return getDb()
+function normalizeWish<T extends { createdAt: number | string }>(row: T): T {
+  return { ...row, createdAt: Number(row.createdAt) };
+}
+
+export async function listWishlist(userId: string = LOCAL_USER_ID) {
+  const rows = await getDb()
     .select()
     .from(skillWishlist)
-    .where(eq(skillWishlist.userId, userId))
-    .all();
+    .where(eq(skillWishlist.userId, userId));
+  return rows.map(normalizeWish);
 }
 
-export function countWishlist(userId: string = LOCAL_USER_ID): number {
-  const result = getDb()
+export async function countWishlist(
+  userId: string = LOCAL_USER_ID,
+): Promise<number> {
+  const result = await getDb()
     .select({ value: count() })
     .from(skillWishlist)
-    .where(eq(skillWishlist.userId, userId))
-    .all();
-  return result[0]?.value ?? 0;
+    .where(eq(skillWishlist.userId, userId));
+  return Number(result[0]?.value ?? 0);
 }
 
-export function createWish(
+export async function createWish(
   data: {
     name: string;
     targetLevel?: SkillLevel;
@@ -147,12 +154,12 @@ export function createWish(
   },
   userId: string = LOCAL_USER_ID,
 ) {
-  const current = countWishlist(userId);
+  const current = await countWishlist(userId);
   if (current >= 3) {
     throw new Error("wishlist_full");
   }
   const id = nanoid();
-  getDb()
+  await getDb()
     .insert(skillWishlist)
     .values({
       id,
@@ -162,12 +169,11 @@ export function createWish(
       priority: data.priority ?? "medium",
       notes: data.notes ?? "",
       createdAt: Date.now(),
-    })
-    .run();
+    });
   return { id };
 }
 
-export function updateWish(
+export async function updateWish(
   id: string,
   data: Partial<{
     name: string;
@@ -176,34 +182,49 @@ export function updateWish(
     notes: string;
   }>,
   userId: string = LOCAL_USER_ID,
-) {
-  getDb()
+): Promise<void> {
+  await getDb()
     .update(skillWishlist)
     .set(data)
-    .where(and(eq(skillWishlist.id, id), eq(skillWishlist.userId, userId)))
-    .run();
+    .where(and(eq(skillWishlist.id, id), eq(skillWishlist.userId, userId)));
 }
 
-export function deleteWish(id: string, userId: string = LOCAL_USER_ID) {
-  getDb()
+export async function deleteWish(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): Promise<void> {
+  await getDb()
     .delete(wishlistTodos)
     .where(
       and(eq(wishlistTodos.wishId, id), eq(wishlistTodos.userId, userId)),
-    )
-    .run();
-  getDb()
+    );
+  await getDb()
     .delete(skillWishlist)
-    .where(and(eq(skillWishlist.id, id), eq(skillWishlist.userId, userId)))
-    .run();
+    .where(and(eq(skillWishlist.id, id), eq(skillWishlist.userId, userId)));
 }
 
 // --- Wishlist Todos ---
 
-export function listWishTodos(
+function normalizeWishTodo<
+  T extends {
+    completed: number | string;
+    sortOrder: number | string;
+    createdAt: number | string;
+  },
+>(row: T): T {
+  return {
+    ...row,
+    completed: Number(row.completed),
+    sortOrder: Number(row.sortOrder),
+    createdAt: Number(row.createdAt),
+  };
+}
+
+export async function listWishTodos(
   wishId: string,
   userId: string = LOCAL_USER_ID,
 ) {
-  return getDb()
+  const rows = await getDb()
     .select()
     .from(wishlistTodos)
     .where(
@@ -211,20 +232,20 @@ export function listWishTodos(
         eq(wishlistTodos.userId, userId),
         eq(wishlistTodos.wishId, wishId),
       ),
-    )
-    .all();
+    );
+  return rows.map(normalizeWishTodo);
 }
 
-export function createWishTodo(
+export async function createWishTodo(
   data: { wishId: string; content: string; sortOrder?: number },
   userId: string = LOCAL_USER_ID,
 ) {
-  const existing = listWishTodos(data.wishId, userId);
+  const existing = await listWishTodos(data.wishId, userId);
   if (existing.length >= 5) {
     throw new Error("wish_todos_full");
   }
   const id = nanoid();
-  getDb()
+  await getDb()
     .insert(wishlistTodos)
     .values({
       id,
@@ -233,75 +254,76 @@ export function createWishTodo(
       content: data.content,
       sortOrder: data.sortOrder ?? existing.length,
       createdAt: Date.now(),
-    })
-    .run();
+    });
   return { id };
 }
 
-export function updateWishTodo(
+export async function updateWishTodo(
   id: string,
   data: Partial<{ content: string; completed: number; sortOrder: number }>,
   userId: string = LOCAL_USER_ID,
-) {
-  getDb()
+): Promise<void> {
+  await getDb()
     .update(wishlistTodos)
     .set(data)
-    .where(and(eq(wishlistTodos.id, id), eq(wishlistTodos.userId, userId)))
-    .run();
+    .where(and(eq(wishlistTodos.id, id), eq(wishlistTodos.userId, userId)));
 }
 
-export function deleteWishTodo(id: string, userId: string = LOCAL_USER_ID) {
-  getDb()
+export async function deleteWishTodo(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): Promise<void> {
+  await getDb()
     .delete(wishlistTodos)
-    .where(and(eq(wishlistTodos.id, id), eq(wishlistTodos.userId, userId)))
-    .run();
+    .where(and(eq(wishlistTodos.id, id), eq(wishlistTodos.userId, userId)));
 }
 
-export function bulkCreateWishTodos(
+export async function bulkCreateWishTodos(
   wishId: string,
   contents: string[],
   userId: string = LOCAL_USER_ID,
 ) {
-  const existing = listWishTodos(wishId, userId);
+  const existing = await listWishTodos(wishId, userId);
   if (existing.length > 0) {
-    getDb()
+    await getDb()
       .delete(wishlistTodos)
       .where(
         and(
           eq(wishlistTodos.wishId, wishId),
           eq(wishlistTodos.userId, userId),
         ),
-      )
-      .run();
+      );
   }
   const capped = contents.slice(0, 5);
   const db = getDb();
   for (let i = 0; i < capped.length; i++) {
-    db.insert(wishlistTodos)
-      .values({
-        id: nanoid(),
-        userId,
-        wishId,
-        content: capped[i],
-        sortOrder: i,
-        createdAt: Date.now(),
-      })
-      .run();
+    await db.insert(wishlistTodos).values({
+      id: nanoid(),
+      userId,
+      wishId,
+      content: capped[i],
+      sortOrder: i,
+      createdAt: Date.now(),
+    });
   }
   return { count: capped.length };
 }
 
 // --- Assigned Jobs ---
 
-export function listAssignedJobs(userId: string = LOCAL_USER_ID) {
-  return getDb()
-    .select()
-    .from(clawAssignedJobs)
-    .where(eq(clawAssignedJobs.userId, userId))
-    .all();
+function normalizeJob<T extends { createdAt: number | string }>(row: T): T {
+  return { ...row, createdAt: Number(row.createdAt) };
 }
 
-export function createAssignedJob(
+export async function listAssignedJobs(userId: string = LOCAL_USER_ID) {
+  const rows = await getDb()
+    .select()
+    .from(clawAssignedJobs)
+    .where(eq(clawAssignedJobs.userId, userId));
+  return rows.map(normalizeJob);
+}
+
+export async function createAssignedJob(
   data: {
     name: string;
     description?: string;
@@ -311,7 +333,7 @@ export function createAssignedJob(
   userId: string = LOCAL_USER_ID,
 ) {
   const id = nanoid();
-  getDb()
+  await getDb()
     .insert(clawAssignedJobs)
     .values({
       id,
@@ -321,12 +343,11 @@ export function createAssignedJob(
       status: data.status ?? "active",
       cronJobId: data.cronJobId ?? null,
       createdAt: Date.now(),
-    })
-    .run();
+    });
   return { id };
 }
 
-export function updateAssignedJob(
+export async function updateAssignedJob(
   id: string,
   data: Partial<{
     name: string;
@@ -335,8 +356,8 @@ export function updateAssignedJob(
     cronJobId: string | null;
   }>,
   userId: string = LOCAL_USER_ID,
-) {
-  getDb()
+): Promise<void> {
+  await getDb()
     .update(clawAssignedJobs)
     .set(data)
     .where(
@@ -344,21 +365,19 @@ export function updateAssignedJob(
         eq(clawAssignedJobs.id, id),
         eq(clawAssignedJobs.userId, userId),
       ),
-    )
-    .run();
+    );
 }
 
-export function deleteAssignedJob(
+export async function deleteAssignedJob(
   id: string,
   userId: string = LOCAL_USER_ID,
-) {
-  getDb()
+): Promise<void> {
+  await getDb()
     .delete(clawAssignedJobs)
     .where(
       and(
         eq(clawAssignedJobs.id, id),
         eq(clawAssignedJobs.userId, userId),
       ),
-    )
-    .run();
+    );
 }

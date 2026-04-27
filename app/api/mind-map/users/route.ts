@@ -17,14 +17,14 @@ export async function GET(req: NextRequest) {
   const id = searchParams.get("id");
 
   if (id) {
-    const profile = getUserProfile(id, auth.userId);
+    const profile = await getUserProfile(id, auth.userId);
     if (!profile) {
       return NextResponse.json({ error: "User profile not found" }, { status: 404 });
     }
     return NextResponse.json(profile);
   }
 
-  return NextResponse.json(getAllUserProfiles(auth.userId));
+  return NextResponse.json(await getAllUserProfiles(auth.userId));
 }
 
 export async function POST(req: NextRequest) {
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   if (!body.name) {
     return NextResponse.json({ error: "Missing name" }, { status: 400 });
   }
-  const profile = createUserProfile(body, auth.userId);
+  const profile = await createUserProfile(body, auth.userId);
   return NextResponse.json(profile, { status: 201 });
 }
 
@@ -47,7 +47,7 @@ export async function PUT(req: NextRequest) {
   if (!body.id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
-  const profile = updateUserProfile(body, auth.userId);
+  const profile = await updateUserProfile(body, auth.userId);
   return NextResponse.json(profile);
 }
 
@@ -60,6 +60,6 @@ export async function DELETE(req: NextRequest) {
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
-  deleteUserProfile(id, auth.userId);
+  await deleteUserProfile(id, auth.userId);
   return NextResponse.json({ success: true });
 }

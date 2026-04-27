@@ -11,7 +11,7 @@ export async function GET() {
   const auth = await requireUserId();
   if ("response" in auth) return auth.response;
   try {
-    const wishes = listWishlist(auth.userId);
+    const wishes = await listWishlist(auth.userId);
     return NextResponse.json({ wishes });
   } catch (err) {
     return NextResponse.json(
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     if (action === "create") {
       try {
-        const result = createWish(body, auth.userId);
+        const result = await createWish(body, auth.userId);
         return NextResponse.json(result);
       } catch (e) {
         if (e instanceof Error && e.message === "wishlist_full") {
@@ -41,12 +41,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "update") {
-      updateWish(body.id, body.data, auth.userId);
+      await updateWish(body.id, body.data, auth.userId);
       return NextResponse.json({ success: true });
     }
 
     if (action === "delete") {
-      deleteWish(body.id, auth.userId);
+      await deleteWish(body.id, auth.userId);
       return NextResponse.json({ success: true });
     }
 

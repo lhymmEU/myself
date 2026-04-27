@@ -16,8 +16,8 @@ export async function GET(req: NextRequest) {
   const summary = req.nextUrl.searchParams.get("summary");
   const result =
     summary === "true"
-      ? getFinanceSummary(auth.userId)
-      : getAccounts(auth.userId);
+      ? await getFinanceSummary(auth.userId)
+      : await getAccounts(auth.userId);
   return NextResponse.json(result);
 }
 
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   const auth = await requireUserId();
   if ("response" in auth) return auth.response;
   const body = await req.json();
-  const result = createAccount(body, auth.userId);
+  const result = await createAccount(body, auth.userId);
   return NextResponse.json(result);
 }
 
@@ -39,7 +39,7 @@ export async function PUT(req: NextRequest) {
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
-  updateAccount(id, data, auth.userId);
+  await   await updateAccount(id, data, auth.userId);
   return NextResponse.json({ success: true });
 }
 
@@ -51,6 +51,6 @@ export async function DELETE(req: NextRequest) {
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
-  deleteAccount(id, auth.userId);
+  await   await deleteAccount(id, auth.userId);
   return NextResponse.json({ success: true });
 }

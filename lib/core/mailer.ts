@@ -13,7 +13,7 @@
  */
 
 import { isLocal } from "@/lib/core/runtime";
-import { getSetting } from "@/lib/modules/settings/actions";
+import { getSettingSync } from "@/lib/modules/settings/actions";
 
 export interface MailAttachment {
   filename: string;
@@ -38,16 +38,16 @@ class NodemailerMailer implements Mailer {
   constructor(private userId: string) {}
 
   async send(input: SendMailInput): Promise<void> {
-    const smtpHost = getSetting("smtp_host", this.userId);
-    const smtpUser = getSetting("smtp_user", this.userId);
-    const smtpPass = getSetting("smtp_pass", this.userId);
+    const smtpHost = getSettingSync("smtp_host", this.userId);
+    const smtpUser = getSettingSync("smtp_user", this.userId);
+    const smtpPass = getSettingSync("smtp_pass", this.userId);
     if (!smtpHost || !smtpUser || !smtpPass) {
       throw new Error(
         "SMTP not configured. Go to Settings → SMTP to set up email.",
       );
     }
-    const smtpPort = getSetting("smtp_port", this.userId);
-    const smtpSecure = getSetting("smtp_secure", this.userId);
+    const smtpPort = getSettingSync("smtp_port", this.userId);
+    const smtpSecure = getSettingSync("smtp_secure", this.userId);
 
     /* eslint-disable @typescript-eslint/no-require-imports */
     const nodemailer = require("nodemailer") as typeof import("nodemailer");

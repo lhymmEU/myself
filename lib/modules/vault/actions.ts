@@ -34,31 +34,34 @@ function requireUnlocked(userId: string = LOCAL_USER_ID): Uint8Array {
   return key;
 }
 
-export function isVaultInitialized(userId: string = LOCAL_USER_ID): boolean {
+export async function isVaultInitialized(
+  userId: string = LOCAL_USER_ID,
+): Promise<boolean> {
   const db = getVaultDb();
-  const row = db
+  const rows = await db
     .select()
     .from(vaultMeta)
     .where(and(eq(vaultMeta.userId, userId), eq(vaultMeta.key, "salt")))
-    .get();
-  return !!row;
+    .limit(1);
+  return !!rows[0];
 }
 
 export function isVaultUnlocked(userId: string = LOCAL_USER_ID): boolean {
   return _masterKeys.has(userId);
 }
 
-export function getVaultStatus(userId: string = LOCAL_USER_ID): VaultStatus {
-  const initialized = isVaultInitialized(userId);
+export async function getVaultStatus(
+  userId: string = LOCAL_USER_ID,
+): Promise<VaultStatus> {
+  const initialized = await isVaultInitialized(userId);
   let secretCount = 0;
   if (initialized) {
     const db = getVaultDb();
-    const row = db
+    const rows = await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(vaultSecrets)
-      .where(eq(vaultSecrets.userId, userId))
-      .get();
-    secretCount = Number(row?.count ?? 0);
+      .where(eq(vaultSecrets.userId, userId));
+    secretCount = Number(rows[0]?.count ?? 0);
   }
   return {
     initialized,
@@ -68,47 +71,47 @@ export function getVaultStatus(userId: string = LOCAL_USER_ID): VaultStatus {
   };
 }
 
-export function setupVault(
+export async function setupVault(
   password: string,
   storagePath?: string,
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   if (storagePath && !isCloud()) {
     moveVaultDb(storagePath);
   }
 
   const db = getVaultDb();
-  const existing = db
+  const existing = await db
     .select()
     .from(vaultMeta)
     .where(and(eq(vaultMeta.userId, userId), eq(vaultMeta.key, "salt")))
-    .get();
-  if (existing) throw new Error("Vault is already initialized");
+    .limit(1);
+  if (existing[0]) throw new Error("Vault is already initialized");
 
   const salt = generateSalt();
   const key = deriveKey(password, salt);
   const hash = createVerificationHash(key);
 
-  db.insert(vaultMeta).values({ userId, key: "salt", value: salt }).run();
-  db.insert(vaultMeta)
-    .values({ userId, key: "verification_hash", value: hash })
-    .run();
+  await db.insert(vaultMeta).values({ userId, key: "salt", value: salt });
+  await db
+    .insert(vaultMeta)
+    .values({ userId, key: "verification_hash", value: hash });
 
   _masterKeys.set(userId, key);
   eventBus.emit("vault", VAULT_EVENTS.VAULT_UNLOCKED, {});
 }
 
-export function unlockVault(
+export async function unlockVault(
   password: string,
   userId: string = LOCAL_USER_ID,
-): boolean {
+): Promise<boolean> {
   const db = getVaultDb();
-  const saltRow = db
+  const saltRows = await db
     .select()
     .from(vaultMeta)
     .where(and(eq(vaultMeta.userId, userId), eq(vaultMeta.key, "salt")))
-    .get();
-  const hashRow = db
+    .limit(1);
+  const hashRows = await db
     .select()
     .from(vaultMeta)
     .where(
@@ -117,8 +120,10 @@ export function unlockVault(
         eq(vaultMeta.key, "verification_hash"),
       ),
     )
-    .get();
+    .limit(1);
 
+  const saltRow = saltRows[0];
+  const hashRow = hashRows[0];
   if (!saltRow || !hashRow) throw new Error("Vault not initialized");
 
   const key = deriveKey(password, saltRow.value);
@@ -153,8 +158,8 @@ function rowToMeta(row: SecretRow): VaultSecretMeta {
     name: row.name,
     category: row.category as SecretCategory,
     tags,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt),
   };
 }
 
@@ -172,37 +177,39 @@ function rowToFull(row: SecretRow, key: Uint8Array): VaultSecretWithValue {
   return { ...meta, value, notes };
 }
 
-export function getAllSecrets(userId: string = LOCAL_USER_ID): VaultSecretMeta[] {
+export async function getAllSecrets(
+  userId: string = LOCAL_USER_ID,
+): Promise<VaultSecretMeta[]> {
   requireUnlocked(userId);
   const db = getVaultDb();
-  const rows = db
+  const rows = await db
     .select()
     .from(vaultSecrets)
     .where(eq(vaultSecrets.userId, userId))
-    .orderBy(desc(vaultSecrets.updatedAt))
-    .all();
+    .orderBy(desc(vaultSecrets.updatedAt));
   return rows.map(rowToMeta);
 }
 
-export function getSecret(
+export async function getSecret(
   id: string,
   userId: string = LOCAL_USER_ID,
-): VaultSecretWithValue | null {
+): Promise<VaultSecretWithValue | null> {
   const key = requireUnlocked(userId);
   const db = getVaultDb();
-  const row = db
+  const rows = await db
     .select()
     .from(vaultSecrets)
     .where(and(eq(vaultSecrets.id, id), eq(vaultSecrets.userId, userId)))
-    .get();
+    .limit(1);
+  const row = rows[0];
   if (!row) return null;
   return rowToFull(row, key);
 }
 
-export function createSecret(
+export async function createSecret(
   input: CreateSecretInput,
   userId: string = LOCAL_USER_ID,
-): VaultSecretMeta {
+): Promise<VaultSecretMeta> {
   const key = requireUnlocked(userId);
   const db = getVaultDb();
   const now = Date.now();
@@ -217,21 +224,19 @@ export function createSecret(
     notesNonce = enc.nonce;
   }
 
-  db.insert(vaultSecrets)
-    .values({
-      id,
-      userId,
-      name: input.name,
-      category: input.category ?? "other",
-      encryptedValue: ciphertext,
-      nonce,
-      encryptedNotes,
-      notesNonce,
-      tags: JSON.stringify(input.tags ?? []),
-      createdAt: now,
-      updatedAt: now,
-    })
-    .run();
+  await db.insert(vaultSecrets).values({
+    id,
+    userId,
+    name: input.name,
+    category: input.category ?? "other",
+    encryptedValue: ciphertext,
+    nonce,
+    encryptedNotes,
+    notesNonce,
+    tags: JSON.stringify(input.tags ?? []),
+    createdAt: now,
+    updatedAt: now,
+  });
 
   const result: VaultSecretMeta = {
     id,
@@ -246,19 +251,20 @@ export function createSecret(
   return result;
 }
 
-export function updateSecret(
+export async function updateSecret(
   input: UpdateSecretInput,
   userId: string = LOCAL_USER_ID,
-): VaultSecretMeta {
+): Promise<VaultSecretMeta> {
   const key = requireUnlocked(userId);
   const db = getVaultDb();
   const now = Date.now();
 
-  const existing = db
+  const existingRows = await db
     .select()
     .from(vaultSecrets)
     .where(and(eq(vaultSecrets.id, input.id), eq(vaultSecrets.userId, userId)))
-    .get();
+    .limit(1);
+  const existing = existingRows[0];
   if (!existing) throw new Error(`Secret not found: ${input.id}`);
 
   const name = input.name ?? existing.name;
@@ -286,7 +292,8 @@ export function updateSecret(
     }
   }
 
-  db.update(vaultSecrets)
+  await db
+    .update(vaultSecrets)
     .set({
       name,
       category,
@@ -297,15 +304,14 @@ export function updateSecret(
       tags: JSON.stringify(tags),
       updatedAt: now,
     })
-    .where(and(eq(vaultSecrets.id, input.id), eq(vaultSecrets.userId, userId)))
-    .run();
+    .where(and(eq(vaultSecrets.id, input.id), eq(vaultSecrets.userId, userId)));
 
   const result: VaultSecretMeta = {
     id: input.id,
     name,
     category: category as SecretCategory,
     tags,
-    createdAt: existing.createdAt,
+    createdAt: Number(existing.createdAt),
     updatedAt: now,
   };
 
@@ -313,27 +319,30 @@ export function updateSecret(
   return result;
 }
 
-export function deleteSecret(id: string, userId: string = LOCAL_USER_ID): void {
+export async function deleteSecret(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): Promise<void> {
   requireUnlocked(userId);
   const db = getVaultDb();
-  db.delete(vaultSecrets)
-    .where(and(eq(vaultSecrets.id, id), eq(vaultSecrets.userId, userId)))
-    .run();
+  await db
+    .delete(vaultSecrets)
+    .where(and(eq(vaultSecrets.id, id), eq(vaultSecrets.userId, userId)));
   eventBus.emit("vault", VAULT_EVENTS.SECRET_DELETED, { id });
 }
 
-export function changePassword(
+export async function changePassword(
   currentPassword: string,
   newPassword: string,
   userId: string = LOCAL_USER_ID,
-): boolean {
+): Promise<boolean> {
   const db = getVaultDb();
-  const saltRow = db
+  const saltRows = await db
     .select()
     .from(vaultMeta)
     .where(and(eq(vaultMeta.userId, userId), eq(vaultMeta.key, "salt")))
-    .get();
-  const hashRow = db
+    .limit(1);
+  const hashRows = await db
     .select()
     .from(vaultMeta)
     .where(
@@ -342,37 +351,38 @@ export function changePassword(
         eq(vaultMeta.key, "verification_hash"),
       ),
     )
-    .get();
+    .limit(1);
 
+  const saltRow = saltRows[0];
+  const hashRow = hashRows[0];
   if (!saltRow || !hashRow) throw new Error("Vault not initialized");
 
   const oldKey = deriveKey(currentPassword, saltRow.value);
   if (createVerificationHash(oldKey) !== hashRow.value) return false;
 
-  const rows = db
+  const rows = await db
     .select()
     .from(vaultSecrets)
-    .where(eq(vaultSecrets.userId, userId))
-    .all();
+    .where(eq(vaultSecrets.userId, userId));
   const decrypted = rows.map((row: SecretRow) => rowToFull(row, oldKey));
 
   const newSalt = generateSalt();
   const newKey = deriveKey(newPassword, newSalt);
   const newHash = createVerificationHash(newKey);
 
-  db.update(vaultMeta)
+  await db
+    .update(vaultMeta)
     .set({ value: newSalt })
-    .where(and(eq(vaultMeta.userId, userId), eq(vaultMeta.key, "salt")))
-    .run();
-  db.update(vaultMeta)
+    .where(and(eq(vaultMeta.userId, userId), eq(vaultMeta.key, "salt")));
+  await db
+    .update(vaultMeta)
     .set({ value: newHash })
     .where(
       and(
         eq(vaultMeta.userId, userId),
         eq(vaultMeta.key, "verification_hash"),
       ),
-    )
-    .run();
+    );
 
   for (const secret of decrypted) {
     const enc = encrypt(newKey, secret.value);
@@ -383,7 +393,8 @@ export function changePassword(
       encNotes = ne.ciphertext;
       notesNonce = ne.nonce;
     }
-    db.update(vaultSecrets)
+    await db
+      .update(vaultSecrets)
       .set({
         encryptedValue: enc.ciphertext,
         nonce: enc.nonce,
@@ -392,8 +403,7 @@ export function changePassword(
       })
       .where(
         and(eq(vaultSecrets.id, secret.id), eq(vaultSecrets.userId, userId)),
-      )
-      .run();
+      );
   }
 
   _masterKeys.set(userId, newKey);

@@ -11,7 +11,7 @@ export async function GET() {
   const auth = await requireUserId();
   if ("response" in auth) return auth.response;
   try {
-    const skills = listUserSkills(auth.userId);
+    const skills = await listUserSkills(auth.userId);
     return NextResponse.json({ skills });
   } catch (err) {
     return NextResponse.json(
@@ -29,17 +29,17 @@ export async function POST(req: NextRequest) {
     const { action } = body;
 
     if (action === "create") {
-      const result = createUserSkill(body, auth.userId);
+      const result = await createUserSkill(body, auth.userId);
       return NextResponse.json(result);
     }
 
     if (action === "update") {
-      updateUserSkill(body.id, body.data, auth.userId);
+      await updateUserSkill(body.id, body.data, auth.userId);
       return NextResponse.json({ success: true });
     }
 
     if (action === "delete") {
-      deleteUserSkill(body.id, auth.userId);
+      await deleteUserSkill(body.id, auth.userId);
       return NextResponse.json({ success: true });
     }
 

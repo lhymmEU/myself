@@ -54,7 +54,7 @@ export function getSSHClient(connectionId: string): Client | undefined {
 export async function connectSSH(
   connectionId: string,
 ): Promise<{ success: boolean; error?: string }> {
-  const conn = getConnection(connectionId);
+  const conn = await getConnection(connectionId);
   if (!conn) return { success: false, error: "Connection not found" };
 
   const conns = getActiveConnections();

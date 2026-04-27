@@ -17,14 +17,14 @@ export async function GET(req: NextRequest) {
   const id = searchParams.get("id");
 
   if (id) {
-    const stakeholder = getStakeholder(id, auth.userId);
+    const stakeholder = await getStakeholder(id, auth.userId);
     if (!stakeholder) {
       return NextResponse.json({ error: "Stakeholder not found" }, { status: 404 });
     }
     return NextResponse.json(stakeholder);
   }
 
-  return NextResponse.json(getAllStakeholders(auth.userId));
+  return NextResponse.json(await getAllStakeholders(auth.userId));
 }
 
 export async function POST(req: NextRequest) {
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   if (!body.name) {
     return NextResponse.json({ error: "Missing name" }, { status: 400 });
   }
-  const stakeholder = createStakeholder(body, auth.userId);
+  const stakeholder = await createStakeholder(body, auth.userId);
   return NextResponse.json(stakeholder, { status: 201 });
 }
 
@@ -47,7 +47,7 @@ export async function PUT(req: NextRequest) {
   if (!body.id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
-  const stakeholder = updateStakeholder(body, auth.userId);
+  const stakeholder = await updateStakeholder(body, auth.userId);
   return NextResponse.json(stakeholder);
 }
 
@@ -60,6 +60,6 @@ export async function DELETE(req: NextRequest) {
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
-  deleteStakeholder(id, auth.userId);
+  await deleteStakeholder(id, auth.userId);
   return NextResponse.json({ success: true });
 }

@@ -18,11 +18,11 @@ export const mindMapTools: AgentTool[] = [
       const { id } = params as { id?: string };
       if (id) {
         const { getScene } = await import("./actions");
-        const scene = getScene(id);
+        const scene = await getScene(id);
         if (!scene) throw new Error(`Scene not found: ${id}`);
         return scene;
       }
-      return getOrCreateDefaultScene();
+      return await getOrCreateDefaultScene();
     },
   },
   {
@@ -30,7 +30,7 @@ export const mindMapTools: AgentTool[] = [
     description: "List all mind map scenes",
     parameters: z.object({}),
     handler: async () => {
-      return getAllScenes();
+      return await getAllScenes();
     },
   },
   {
@@ -49,7 +49,7 @@ export const mindMapTools: AgentTool[] = [
         elements?: string;
         appState?: string;
       };
-      return updateScene({ id, name, elements, appState });
+      return await updateScene({ id, name, elements, appState });
     },
   },
 ];

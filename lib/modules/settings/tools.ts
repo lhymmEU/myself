@@ -9,7 +9,7 @@ export const settingsTools: AgentTool[] = [
     parameters: z.object({ key: z.string() }),
     handler: async (params) => {
       const { key } = params as { key: string };
-      return { key, value: getSetting(key) };
+      return { key, value: await getSetting(key) };
     },
   },
   {

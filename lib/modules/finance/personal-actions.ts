@@ -60,10 +60,10 @@ const accountToApi = (
   name: row.name,
   type: row.type,
   currency: row.currency,
-  balance: row.balance,
+  balance: Number(row.balance),
   color: row.color,
   icon: row.icon,
-  created_at: row.createdAt,
+  created_at: Number(row.createdAt),
 });
 
 const transactionToApi = (
@@ -73,13 +73,13 @@ const transactionToApi = (
   account_id: row.accountId,
   type: row.type,
   category: row.category,
-  amount: row.amount,
+  amount: Number(row.amount),
   currency: row.currency,
   date: row.date,
   description: row.description,
-  recurring: row.recurring,
+  recurring: Number(row.recurring),
   recurring_interval: row.recurringInterval ?? null,
-  created_at: row.createdAt,
+  created_at: Number(row.createdAt),
 });
 
 const budgetToApi = (
@@ -87,9 +87,9 @@ const budgetToApi = (
 ): FinanceBudget => ({
   id: row.id,
   category: row.category,
-  monthly_limit: row.monthlyLimit,
+  monthly_limit: Number(row.monthlyLimit),
   currency: row.currency,
-  created_at: row.createdAt,
+  created_at: Number(row.createdAt),
 });
 
 const investmentToApi = (
@@ -98,68 +98,67 @@ const investmentToApi = (
   id: row.id,
   account_id: row.accountId,
   symbol: row.symbol,
-  shares: row.shares,
-  avg_cost_basis: row.avgCostBasis,
+  shares: Number(row.shares),
+  avg_cost_basis: Number(row.avgCostBasis),
   currency: row.currency,
-  created_at: row.createdAt,
+  created_at: Number(row.createdAt),
 });
 
 // --- Accounts ---
 
-export function getAccounts(userId: string = LOCAL_USER_ID): FinanceAccount[] {
+export async function getAccounts(
+  userId: string = LOCAL_USER_ID,
+): Promise<FinanceAccount[]> {
   const db = getDb();
-  const rows = db
+  const rows = await db
     .select()
     .from(financeAccounts)
     .where(eq(financeAccounts.userId, userId))
-    .orderBy(desc(financeAccounts.createdAt))
-    .all();
+    .orderBy(desc(financeAccounts.createdAt));
   return rows.map(accountToApi);
 }
 
-export function getAccount(
+export async function getAccount(
   id: string,
   userId: string = LOCAL_USER_ID,
-): FinanceAccount | undefined {
+): Promise<FinanceAccount | undefined> {
   const db = getDb();
-  const row = db
+  const rows = await db
     .select()
     .from(financeAccounts)
     .where(
       and(eq(financeAccounts.id, id), eq(financeAccounts.userId, userId)),
     )
-    .get();
-  return row ? accountToApi(row) : undefined;
+    .limit(1);
+  return rows[0] ? accountToApi(rows[0]) : undefined;
 }
 
-export function createAccount(
+export async function createAccount(
   data: Omit<FinanceAccount, "id" | "created_at">,
   userId: string = LOCAL_USER_ID,
-): FinanceAccount {
+): Promise<FinanceAccount> {
   const db = getDb();
   const id = randomUUID();
   const now = Date.now();
-  db.insert(financeAccounts)
-    .values({
-      id,
-      userId,
-      name: data.name,
-      type: data.type,
-      currency: data.currency,
-      balance: data.balance,
-      color: data.color,
-      icon: data.icon,
-      createdAt: now,
-    })
-    .run();
+  await db.insert(financeAccounts).values({
+    id,
+    userId,
+    name: data.name,
+    type: data.type,
+    currency: data.currency,
+    balance: data.balance,
+    color: data.color,
+    icon: data.icon,
+    createdAt: now,
+  });
   return { id, ...data, created_at: now };
 }
 
-export function updateAccount(
+export async function updateAccount(
   id: string,
   data: Partial<FinanceAccount>,
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   const updates: Partial<typeof financeAccounts.$inferInsert> = {};
   if (data.name !== undefined) updates.name = data.name;
   if (data.type !== undefined) updates.type = data.type;
@@ -170,29 +169,29 @@ export function updateAccount(
   if (Object.keys(updates).length === 0) return;
 
   const db = getDb();
-  db.update(financeAccounts)
+  await db
+    .update(financeAccounts)
     .set(updates)
     .where(
       and(eq(financeAccounts.id, id), eq(financeAccounts.userId, userId)),
-    )
-    .run();
+    );
 }
 
-export function deleteAccount(
+export async function deleteAccount(
   id: string,
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   const db = getDb();
-  db.delete(financeAccounts)
+  await db
+    .delete(financeAccounts)
     .where(
       and(eq(financeAccounts.id, id), eq(financeAccounts.userId, userId)),
-    )
-    .run();
+    );
 }
 
 // --- Transactions ---
 
-export function getTransactions(
+export async function getTransactions(
   filters?: {
     account_id?: string;
     type?: string;
@@ -202,7 +201,7 @@ export function getTransactions(
     limit?: number;
   },
   userId: string = LOCAL_USER_ID,
-): FinanceTransaction[] {
+): Promise<FinanceTransaction[]> {
   const db = getDb();
   const where = [eq(financeTransactions.userId, userId)];
   if (filters?.account_id)
@@ -221,61 +220,58 @@ export function getTransactions(
   if (filters?.to_date)
     where.push(lt(financeTransactions.date, filters.to_date));
 
-  const rows = db
+  const rows = await db
     .select()
     .from(financeTransactions)
     .where(and(...where))
     .orderBy(desc(financeTransactions.date), desc(financeTransactions.createdAt))
-    .limit(filters?.limit ?? 200)
-    .all();
+    .limit(filters?.limit ?? 200);
   return rows.map(transactionToApi);
 }
 
-export function createTransaction(
+export async function createTransaction(
   data: Omit<FinanceTransaction, "id" | "created_at">,
   userId: string = LOCAL_USER_ID,
-): FinanceTransaction {
+): Promise<FinanceTransaction> {
   const db = getDb();
   const id = randomUUID();
   const now = Date.now();
 
-  db.insert(financeTransactions)
-    .values({
-      id,
-      userId,
-      accountId: data.account_id,
-      type: data.type,
-      category: data.category,
-      amount: data.amount,
-      currency: data.currency,
-      date: data.date,
-      description: data.description,
-      recurring: data.recurring,
-      recurringInterval: data.recurring_interval ?? null,
-      createdAt: now,
-    })
-    .run();
+  await db.insert(financeTransactions).values({
+    id,
+    userId,
+    accountId: data.account_id,
+    type: data.type,
+    category: data.category,
+    amount: data.amount,
+    currency: data.currency,
+    date: data.date,
+    description: data.description,
+    recurring: data.recurring,
+    recurringInterval: data.recurring_interval ?? null,
+    createdAt: now,
+  });
 
   const sign = data.type === "income" ? 1 : -1;
-  db.update(financeAccounts)
+  await db
+    .update(financeAccounts)
     .set({ balance: sql`${financeAccounts.balance} + ${sign * data.amount}` })
     .where(
       and(
         eq(financeAccounts.id, data.account_id),
         eq(financeAccounts.userId, userId),
       ),
-    )
-    .run();
+    );
 
   return { id, ...data, created_at: now };
 }
 
-export function deleteTransaction(
+export async function deleteTransaction(
   id: string,
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   const db = getDb();
-  const tx = db
+  const txRows = await db
     .select()
     .from(financeTransactions)
     .where(
@@ -284,103 +280,108 @@ export function deleteTransaction(
         eq(financeTransactions.userId, userId),
       ),
     )
-    .get();
+    .limit(1);
+  const tx = txRows[0];
   if (!tx) return;
 
   const sign = tx.type === "income" ? -1 : 1;
-  db.update(financeAccounts)
-    .set({ balance: sql`${financeAccounts.balance} + ${sign * tx.amount}` })
+  await db
+    .update(financeAccounts)
+    .set({
+      balance: sql`${financeAccounts.balance} + ${sign * Number(tx.amount)}`,
+    })
     .where(
       and(
         eq(financeAccounts.id, tx.accountId),
         eq(financeAccounts.userId, userId),
       ),
-    )
-    .run();
-  db.delete(financeTransactions)
+    );
+  await db
+    .delete(financeTransactions)
     .where(
       and(
         eq(financeTransactions.id, id),
         eq(financeTransactions.userId, userId),
       ),
-    )
-    .run();
+    );
 }
 
 // --- Budgets ---
 
-export function getBudgets(userId: string = LOCAL_USER_ID): FinanceBudget[] {
+export async function getBudgets(
+  userId: string = LOCAL_USER_ID,
+): Promise<FinanceBudget[]> {
   const db = getDb();
-  const rows = db
+  const rows = await db
     .select()
     .from(financeBudgets)
     .where(eq(financeBudgets.userId, userId))
-    .orderBy(financeBudgets.category)
-    .all();
+    .orderBy(financeBudgets.category);
   return rows.map(budgetToApi);
 }
 
-export function createBudget(
+export async function createBudget(
   data: Omit<FinanceBudget, "id" | "created_at">,
   userId: string = LOCAL_USER_ID,
-): FinanceBudget {
+): Promise<FinanceBudget> {
   const db = getDb();
   const id = randomUUID();
   const now = Date.now();
-  db.insert(financeBudgets)
-    .values({
-      id,
-      userId,
-      category: data.category,
-      monthlyLimit: data.monthly_limit,
-      currency: data.currency,
-      createdAt: now,
-    })
-    .run();
+  await db.insert(financeBudgets).values({
+    id,
+    userId,
+    category: data.category,
+    monthlyLimit: data.monthly_limit,
+    currency: data.currency,
+    createdAt: now,
+  });
   return { id, ...data, created_at: now };
 }
 
-export function updateBudget(
+export async function updateBudget(
   id: string,
   data: Partial<FinanceBudget>,
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   const updates: Partial<typeof financeBudgets.$inferInsert> = {};
   if (data.category !== undefined) updates.category = data.category;
   if (data.monthly_limit !== undefined) updates.monthlyLimit = data.monthly_limit;
   if (data.currency !== undefined) updates.currency = data.currency;
   if (Object.keys(updates).length === 0) return;
   const db = getDb();
-  db.update(financeBudgets)
+  await db
+    .update(financeBudgets)
     .set(updates)
     .where(
       and(eq(financeBudgets.id, id), eq(financeBudgets.userId, userId)),
-    )
-    .run();
+    );
 }
 
-export function deleteBudget(id: string, userId: string = LOCAL_USER_ID): void {
+export async function deleteBudget(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): Promise<void> {
   const db = getDb();
-  db.delete(financeBudgets)
+  await db
+    .delete(financeBudgets)
     .where(
       and(eq(financeBudgets.id, id), eq(financeBudgets.userId, userId)),
-    )
-    .run();
+    );
 }
 
-export function getBudgetSpending(
+export async function getBudgetSpending(
   category: string,
   year: number,
   month: number,
   userId: string = LOCAL_USER_ID,
-): number {
+): Promise<number> {
   const db = getDb();
   const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
   const endMonth = month === 12 ? 1 : month + 1;
   const endYear = month === 12 ? year + 1 : year;
   const endDate = `${endYear}-${String(endMonth).padStart(2, "0")}-01`;
 
-  const result = db
+  const rows = await db
     .select({
       total: sql<number>`COALESCE(SUM(${financeTransactions.amount}), 0)`,
     })
@@ -394,52 +395,49 @@ export function getBudgetSpending(
         lt(financeTransactions.date, endDate),
       ),
     )
-    .get();
-  return Number(result?.total ?? 0);
+    .limit(1);
+  return Number(rows[0]?.total ?? 0);
 }
 
 // --- Investments ---
 
-export function getInvestments(
+export async function getInvestments(
   userId: string = LOCAL_USER_ID,
-): FinanceInvestment[] {
+): Promise<FinanceInvestment[]> {
   const db = getDb();
-  const rows = db
+  const rows = await db
     .select()
     .from(financeInvestments)
     .where(eq(financeInvestments.userId, userId))
-    .orderBy(financeInvestments.symbol)
-    .all();
+    .orderBy(financeInvestments.symbol);
   return rows.map(investmentToApi);
 }
 
-export function createInvestment(
+export async function createInvestment(
   data: Omit<FinanceInvestment, "id" | "created_at">,
   userId: string = LOCAL_USER_ID,
-): FinanceInvestment {
+): Promise<FinanceInvestment> {
   const db = getDb();
   const id = randomUUID();
   const now = Date.now();
-  db.insert(financeInvestments)
-    .values({
-      id,
-      userId,
-      accountId: data.account_id,
-      symbol: data.symbol,
-      shares: data.shares,
-      avgCostBasis: data.avg_cost_basis,
-      currency: data.currency,
-      createdAt: now,
-    })
-    .run();
+  await db.insert(financeInvestments).values({
+    id,
+    userId,
+    accountId: data.account_id,
+    symbol: data.symbol,
+    shares: data.shares,
+    avgCostBasis: data.avg_cost_basis,
+    currency: data.currency,
+    createdAt: now,
+  });
   return { id, ...data, created_at: now };
 }
 
-export function updateInvestment(
+export async function updateInvestment(
   id: string,
   data: Partial<FinanceInvestment>,
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   const updates: Partial<typeof financeInvestments.$inferInsert> = {};
   if (data.account_id !== undefined) updates.accountId = data.account_id;
   if (data.symbol !== undefined) updates.symbol = data.symbol;
@@ -449,37 +447,37 @@ export function updateInvestment(
   if (data.currency !== undefined) updates.currency = data.currency;
   if (Object.keys(updates).length === 0) return;
   const db = getDb();
-  db.update(financeInvestments)
+  await db
+    .update(financeInvestments)
     .set(updates)
     .where(
       and(
         eq(financeInvestments.id, id),
         eq(financeInvestments.userId, userId),
       ),
-    )
-    .run();
+    );
 }
 
-export function deleteInvestment(
+export async function deleteInvestment(
   id: string,
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   const db = getDb();
-  db.delete(financeInvestments)
+  await db
+    .delete(financeInvestments)
     .where(
       and(
         eq(financeInvestments.id, id),
         eq(financeInvestments.userId, userId),
       ),
-    )
-    .run();
+    );
 }
 
 // --- Summary ---
 
-export function getFinanceSummary(userId: string = LOCAL_USER_ID) {
+export async function getFinanceSummary(userId: string = LOCAL_USER_ID) {
   const db = getDb();
-  const accounts = getAccounts(userId);
+  const accounts = await getAccounts(userId);
   const netWorth = accounts.reduce(
     (sum, a) => sum + (a.type === "credit" ? -a.balance : a.balance),
     0,
@@ -493,41 +491,39 @@ export function getFinanceSummary(userId: string = LOCAL_USER_ID) {
   const endYear = month === 12 ? year + 1 : year;
   const endDate = `${endYear}-${String(endMonth).padStart(2, "0")}-01`;
 
-  const monthlyIncome = Number(
-    db
-      .select({
-        total: sql<number>`COALESCE(SUM(${financeTransactions.amount}), 0)`,
-      })
-      .from(financeTransactions)
-      .where(
-        and(
-          eq(financeTransactions.userId, userId),
-          eq(financeTransactions.type, "income"),
-          gte(financeTransactions.date, startDate),
-          lt(financeTransactions.date, endDate),
-        ),
-      )
-      .get()?.total ?? 0,
-  );
+  const incomeRows = await db
+    .select({
+      total: sql<number>`COALESCE(SUM(${financeTransactions.amount}), 0)`,
+    })
+    .from(financeTransactions)
+    .where(
+      and(
+        eq(financeTransactions.userId, userId),
+        eq(financeTransactions.type, "income"),
+        gte(financeTransactions.date, startDate),
+        lt(financeTransactions.date, endDate),
+      ),
+    )
+    .limit(1);
+  const monthlyIncome = Number(incomeRows[0]?.total ?? 0);
 
-  const monthlyExpense = Number(
-    db
-      .select({
-        total: sql<number>`COALESCE(SUM(${financeTransactions.amount}), 0)`,
-      })
-      .from(financeTransactions)
-      .where(
-        and(
-          eq(financeTransactions.userId, userId),
-          eq(financeTransactions.type, "expense"),
-          gte(financeTransactions.date, startDate),
-          lt(financeTransactions.date, endDate),
-        ),
-      )
-      .get()?.total ?? 0,
-  );
+  const expenseRows = await db
+    .select({
+      total: sql<number>`COALESCE(SUM(${financeTransactions.amount}), 0)`,
+    })
+    .from(financeTransactions)
+    .where(
+      and(
+        eq(financeTransactions.userId, userId),
+        eq(financeTransactions.type, "expense"),
+        gte(financeTransactions.date, startDate),
+        lt(financeTransactions.date, endDate),
+      ),
+    )
+    .limit(1);
+  const monthlyExpense = Number(expenseRows[0]?.total ?? 0);
 
-  const categoryBreakdown = db
+  const categoryRows = (await db
     .select({
       category: financeTransactions.category,
       total: sql<number>`SUM(${financeTransactions.amount})`,
@@ -542,8 +538,14 @@ export function getFinanceSummary(userId: string = LOCAL_USER_ID) {
       ),
     )
     .groupBy(financeTransactions.category)
-    .orderBy(desc(sql`SUM(${financeTransactions.amount})`))
-    .all() as { category: string; total: number }[];
+    .orderBy(desc(sql`SUM(${financeTransactions.amount})`))) as {
+    category: string;
+    total: number | string;
+  }[];
+  const categoryBreakdown = categoryRows.map((r) => ({
+    category: r.category,
+    total: Number(r.total),
+  }));
 
   return { netWorth, monthlyIncome, monthlyExpense, categoryBreakdown, accounts };
 }

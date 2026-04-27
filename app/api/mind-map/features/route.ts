@@ -17,14 +17,14 @@ export async function GET(req: NextRequest) {
   const id = searchParams.get("id");
 
   if (id) {
-    const feature = getFeature(id, auth.userId);
+    const feature = await getFeature(id, auth.userId);
     if (!feature) {
       return NextResponse.json({ error: "Feature not found" }, { status: 404 });
     }
     return NextResponse.json(feature);
   }
 
-  return NextResponse.json(getAllFeatures(auth.userId));
+  return NextResponse.json(await getAllFeatures(auth.userId));
 }
 
 export async function POST(req: NextRequest) {
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   if (!body.name) {
     return NextResponse.json({ error: "Missing name" }, { status: 400 });
   }
-  const feature = createFeature(body, auth.userId);
+  const feature = await createFeature(body, auth.userId);
   return NextResponse.json(feature, { status: 201 });
 }
 
@@ -47,7 +47,7 @@ export async function PUT(req: NextRequest) {
   if (!body.id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
-  const feature = updateFeature(body, auth.userId);
+  const feature = await updateFeature(body, auth.userId);
   return NextResponse.json(feature);
 }
 
@@ -60,6 +60,6 @@ export async function DELETE(req: NextRequest) {
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
-  deleteFeature(id, auth.userId);
+  await deleteFeature(id, auth.userId);
   return NextResponse.json({ success: true });
 }

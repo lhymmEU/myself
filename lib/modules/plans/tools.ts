@@ -22,7 +22,7 @@ export const planTools: AgentTool[] = [
         content?: unknown;
         linkedNodeId?: string;
       };
-      return createPlan({ title, content, linkedNodeId });
+      return await createPlan({ title, content, linkedNodeId });
     },
   },
   {
@@ -41,7 +41,7 @@ export const planTools: AgentTool[] = [
         content?: unknown;
         linkedNodeId?: string | null;
       };
-      return updatePlan({ id, title, content, linkedNodeId });
+      return await updatePlan({ id, title, content, linkedNodeId });
     },
   },
   {
@@ -53,10 +53,10 @@ export const planTools: AgentTool[] = [
     handler: async (params) => {
       const { id } = params as { id?: string };
       if (id) {
-        const plan = getPlan(id);
+        const plan = await getPlan(id);
         return plan ?? { error: "Plan not found" };
       }
-      return getAllPlans();
+      return await getAllPlans();
     },
   },
 ];

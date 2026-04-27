@@ -49,6 +49,10 @@ const LOCAL_ONLY_FILE_PATTERNS = [
   "lib/modules/claw/transport-ssh.ts",
   "lib/modules/vault/vault-db.ts",
   "lib/modules/vault/actions.ts",
+  // Hosts the local-only `getSettingSync` escape hatch used by mailer /
+  // OpenRouter / OpenBB clients that were never written async-aware. The
+  // sync read is gated by isLocal() inside the function itself.
+  "lib/modules/settings/actions.ts",
   // API routes that are themselves gated with isLocal() at the top
   // and only ship local features (terminal stream, file picker,
   // OpenBB credentials writer).
@@ -107,6 +111,9 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "workers/**",
     "lobsterd/**",
+    // Vendored Go WASM runtime — shipped with the Go toolchain. Don't lint
+    // or modify; replace by copying a fresh copy from $(go env GOROOT)/lib/wasm.
+    "public/wasm/wasm_exec.js",
   ]),
   {
     name: "dual-mode/local-isolation",

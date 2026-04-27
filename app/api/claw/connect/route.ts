@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   try {
     const { connectionId, action } = await req.json();
 
-    const id = connectionId ?? getDefaultConnection(userId)?.id;
+    const id = connectionId ?? (await getDefaultConnection(userId))?.id;
     if (!id) {
       return NextResponse.json(
         { error: "No connection configured" },
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "status") {
-      const conn = getConnection(id, userId);
+      const conn = await getConnection(id, userId);
       return NextResponse.json({
         connected: isSSHConnected(id),
         connectionId: id,
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const conn = getConnection(id, userId);
+    const conn = await getConnection(id, userId);
     return NextResponse.json({
       connected: true,
       connectionId: id,

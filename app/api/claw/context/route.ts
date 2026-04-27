@@ -15,8 +15,8 @@ export interface ClawContext {
   availableTools: { name: string; description: string }[];
 }
 
-function isModuleEnabled(mod: string, userId: string): boolean {
-  return getSetting(`claw_access_${mod}`, userId) === "true";
+async function isModuleEnabled(mod: string, userId: string): Promise<boolean> {
+  return (await getSetting(`claw_access_${mod}`, userId)) === "true";
 }
 
 async function gatherModuleContext(
@@ -25,11 +25,11 @@ async function gatherModuleContext(
   const ctx: Record<string, unknown> = {};
 
   for (const mod of CLAW_ACCESS_MODULES) {
-    if (!isModuleEnabled(mod, userId)) continue;
+    if (!(await isModuleEnabled(mod, userId))) continue;
 
     switch (mod) {
       case "todos": {
-        const scene = getTodoSourceScene(userId);
+        const scene = await getTodoSourceScene(userId);
         if (scene) {
           let elements: unknown[] = [];
           try {
@@ -86,7 +86,7 @@ async function gatherModuleContext(
         break;
       }
       case "plans": {
-        const plans = getAllPlans(userId);
+        const plans = await getAllPlans(userId);
         ctx.plans = plans.map((p) => ({
           id: p.id,
           title: p.title,
@@ -95,11 +95,11 @@ async function gatherModuleContext(
         break;
       }
       case "wishlist": {
-        ctx.wishlist = listWishlist(userId);
+        ctx.wishlist = await listWishlist(userId);
         break;
       }
       case "mindmap": {
-        const scenes = getAllScenes("mind", userId);
+        const scenes = await getAllScenes("mind", userId);
         ctx.mindmap = scenes.map((s) => ({
           id: s.id,
           name: s.name,
@@ -107,7 +107,7 @@ async function gatherModuleContext(
         break;
       }
       case "skills": {
-        ctx.skills = listUserSkills(userId);
+        ctx.skills = await listUserSkills(userId);
         break;
       }
     }

@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     if (!Number.isNaN(n)) filters.limit = n;
   }
 
-  const result = getTransactions(filters, auth.userId);
+  const result = await getTransactions(filters, auth.userId);
   return NextResponse.json(result);
 }
 
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   const auth = await requireUserId();
   if ("response" in auth) return auth.response;
   const body = await req.json();
-  const result = createTransaction(body, auth.userId);
+  const result = await createTransaction(body, auth.userId);
   return NextResponse.json(result);
 }
 
@@ -56,6 +56,6 @@ export async function DELETE(req: NextRequest) {
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
-  deleteTransaction(id, auth.userId);
+  await deleteTransaction(id, auth.userId);
   return NextResponse.json({ success: true });
 }

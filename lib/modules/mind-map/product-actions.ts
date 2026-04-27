@@ -29,40 +29,42 @@ import type {
 function parseUserRow(
   row: typeof pmUserProfiles.$inferSelect,
 ): PmUserProfile {
-  return { ...row };
+  return {
+    ...row,
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt),
+  };
 }
 
-export function getAllUserProfiles(
+export async function getAllUserProfiles(
   userId: string = LOCAL_USER_ID,
-): PmUserProfile[] {
+): Promise<PmUserProfile[]> {
   const db = getDb();
-  return db
+  const rows = await db
     .select()
     .from(pmUserProfiles)
-    .where(eq(pmUserProfiles.userId, userId))
-    .all()
-    .map(parseUserRow);
+    .where(eq(pmUserProfiles.userId, userId));
+  return rows.map(parseUserRow);
 }
 
-export function getUserProfile(
+export async function getUserProfile(
   id: string,
   userId: string = LOCAL_USER_ID,
-): PmUserProfile | null {
+): Promise<PmUserProfile | null> {
   const db = getDb();
-  const row = db
+  const rows = await db
     .select()
     .from(pmUserProfiles)
-    .where(
-      and(eq(pmUserProfiles.id, id), eq(pmUserProfiles.userId, userId)),
-    )
-    .get();
+    .where(and(eq(pmUserProfiles.id, id), eq(pmUserProfiles.userId, userId)))
+    .limit(1);
+  const row = rows[0];
   return row ? parseUserRow(row) : null;
 }
 
-export function createUserProfile(
+export async function createUserProfile(
   input: CreateUserProfileInput,
   userId: string = LOCAL_USER_ID,
-): PmUserProfile {
+): Promise<PmUserProfile> {
   const db = getDb();
   const now = Date.now();
   const row = {
@@ -76,23 +78,26 @@ export function createUserProfile(
     createdAt: now,
     updatedAt: now,
   };
-  db.insert(pmUserProfiles).values(row).run();
+  await db.insert(pmUserProfiles).values(row);
   return parseUserRow(row as typeof pmUserProfiles.$inferSelect);
 }
 
-export function updateUserProfile(
+export async function updateUserProfile(
   input: UpdateUserProfileInput,
   userId: string = LOCAL_USER_ID,
-): PmUserProfile {
+): Promise<PmUserProfile> {
   const db = getDb();
-  const existing = db
+  const existing = await db
     .select()
     .from(pmUserProfiles)
     .where(
-      and(eq(pmUserProfiles.id, input.id), eq(pmUserProfiles.userId, userId)),
+      and(
+        eq(pmUserProfiles.id, input.id),
+        eq(pmUserProfiles.userId, userId),
+      ),
     )
-    .get();
-  if (!existing) throw new Error(`User profile not found: ${input.id}`);
+    .limit(1);
+  if (!existing[0]) throw new Error(`User profile not found: ${input.id}`);
 
   const updates: Partial<typeof pmUserProfiles.$inferInsert> = {
     updatedAt: Date.now(),
@@ -103,32 +108,36 @@ export function updateUserProfile(
   if (input.contact !== undefined) updates.contact = input.contact;
   if (input.notes !== undefined) updates.notes = input.notes;
 
-  db.update(pmUserProfiles)
+  await db
+    .update(pmUserProfiles)
     .set(updates)
     .where(
-      and(eq(pmUserProfiles.id, input.id), eq(pmUserProfiles.userId, userId)),
-    )
-    .run();
-  const row = db
+      and(
+        eq(pmUserProfiles.id, input.id),
+        eq(pmUserProfiles.userId, userId),
+      ),
+    );
+  const rows = await db
     .select()
     .from(pmUserProfiles)
     .where(
-      and(eq(pmUserProfiles.id, input.id), eq(pmUserProfiles.userId, userId)),
+      and(
+        eq(pmUserProfiles.id, input.id),
+        eq(pmUserProfiles.userId, userId),
+      ),
     )
-    .get();
-  return parseUserRow(row!);
+    .limit(1);
+  return parseUserRow(rows[0]!);
 }
 
-export function deleteUserProfile(
+export async function deleteUserProfile(
   id: string,
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   const db = getDb();
-  db.delete(pmUserProfiles)
-    .where(
-      and(eq(pmUserProfiles.id, id), eq(pmUserProfiles.userId, userId)),
-    )
-    .run();
+  await db
+    .delete(pmUserProfiles)
+    .where(and(eq(pmUserProfiles.id, id), eq(pmUserProfiles.userId, userId)));
 }
 
 // ─── Features ───
@@ -138,38 +147,40 @@ function parseFeatureRow(row: typeof pmFeatures.$inferSelect): PmFeature {
     ...row,
     status: row.status as PmFeature["status"],
     priority: row.priority as PmFeature["priority"],
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt),
   };
 }
 
-export function getAllFeatures(
+export async function getAllFeatures(
   userId: string = LOCAL_USER_ID,
-): PmFeature[] {
+): Promise<PmFeature[]> {
   const db = getDb();
-  return db
+  const rows = await db
     .select()
     .from(pmFeatures)
-    .where(eq(pmFeatures.userId, userId))
-    .all()
-    .map(parseFeatureRow);
+    .where(eq(pmFeatures.userId, userId));
+  return rows.map(parseFeatureRow);
 }
 
-export function getFeature(
+export async function getFeature(
   id: string,
   userId: string = LOCAL_USER_ID,
-): PmFeature | null {
+): Promise<PmFeature | null> {
   const db = getDb();
-  const row = db
+  const rows = await db
     .select()
     .from(pmFeatures)
     .where(and(eq(pmFeatures.id, id), eq(pmFeatures.userId, userId)))
-    .get();
+    .limit(1);
+  const row = rows[0];
   return row ? parseFeatureRow(row) : null;
 }
 
-export function createFeature(
+export async function createFeature(
   input: CreateFeatureInput,
   userId: string = LOCAL_USER_ID,
-): PmFeature {
+): Promise<PmFeature> {
   const db = getDb();
   const now = Date.now();
   const row = {
@@ -183,21 +194,21 @@ export function createFeature(
     createdAt: now,
     updatedAt: now,
   };
-  db.insert(pmFeatures).values(row).run();
+  await db.insert(pmFeatures).values(row);
   return parseFeatureRow(row as typeof pmFeatures.$inferSelect);
 }
 
-export function updateFeature(
+export async function updateFeature(
   input: UpdateFeatureInput,
   userId: string = LOCAL_USER_ID,
-): PmFeature {
+): Promise<PmFeature> {
   const db = getDb();
-  const existing = db
+  const existing = await db
     .select()
     .from(pmFeatures)
     .where(and(eq(pmFeatures.id, input.id), eq(pmFeatures.userId, userId)))
-    .get();
-  if (!existing) throw new Error(`Feature not found: ${input.id}`);
+    .limit(1);
+  if (!existing[0]) throw new Error(`Feature not found: ${input.id}`);
 
   const updates: Partial<typeof pmFeatures.$inferInsert> = {
     updatedAt: Date.now(),
@@ -208,26 +219,26 @@ export function updateFeature(
   if (input.priority !== undefined) updates.priority = input.priority;
   if (input.notes !== undefined) updates.notes = input.notes;
 
-  db.update(pmFeatures)
+  await db
+    .update(pmFeatures)
     .set(updates)
-    .where(and(eq(pmFeatures.id, input.id), eq(pmFeatures.userId, userId)))
-    .run();
-  const row = db
+    .where(and(eq(pmFeatures.id, input.id), eq(pmFeatures.userId, userId)));
+  const rows = await db
     .select()
     .from(pmFeatures)
     .where(and(eq(pmFeatures.id, input.id), eq(pmFeatures.userId, userId)))
-    .get();
-  return parseFeatureRow(row!);
+    .limit(1);
+  return parseFeatureRow(rows[0]!);
 }
 
-export function deleteFeature(
+export async function deleteFeature(
   id: string,
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   const db = getDb();
-  db.delete(pmFeatures)
-    .where(and(eq(pmFeatures.id, id), eq(pmFeatures.userId, userId)))
-    .run();
+  await db
+    .delete(pmFeatures)
+    .where(and(eq(pmFeatures.id, id), eq(pmFeatures.userId, userId)));
 }
 
 // ─── Demands & Assumptions ───
@@ -237,36 +248,40 @@ function parseDemandRow(row: typeof pmDemands.$inferSelect): PmDemand {
     ...row,
     type: row.type as PmDemand["type"],
     status: row.status as PmDemand["status"],
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt),
   };
 }
 
-export function getAllDemands(userId: string = LOCAL_USER_ID): PmDemand[] {
+export async function getAllDemands(
+  userId: string = LOCAL_USER_ID,
+): Promise<PmDemand[]> {
   const db = getDb();
-  return db
+  const rows = await db
     .select()
     .from(pmDemands)
-    .where(eq(pmDemands.userId, userId))
-    .all()
-    .map(parseDemandRow);
+    .where(eq(pmDemands.userId, userId));
+  return rows.map(parseDemandRow);
 }
 
-export function getDemand(
+export async function getDemand(
   id: string,
   userId: string = LOCAL_USER_ID,
-): PmDemand | null {
+): Promise<PmDemand | null> {
   const db = getDb();
-  const row = db
+  const rows = await db
     .select()
     .from(pmDemands)
     .where(and(eq(pmDemands.id, id), eq(pmDemands.userId, userId)))
-    .get();
+    .limit(1);
+  const row = rows[0];
   return row ? parseDemandRow(row) : null;
 }
 
-export function createDemand(
+export async function createDemand(
   input: CreateDemandInput,
   userId: string = LOCAL_USER_ID,
-): PmDemand {
+): Promise<PmDemand> {
   const db = getDb();
   const now = Date.now();
   const row = {
@@ -280,21 +295,21 @@ export function createDemand(
     createdAt: now,
     updatedAt: now,
   };
-  db.insert(pmDemands).values(row).run();
+  await db.insert(pmDemands).values(row);
   return parseDemandRow(row as typeof pmDemands.$inferSelect);
 }
 
-export function updateDemand(
+export async function updateDemand(
   input: UpdateDemandInput,
   userId: string = LOCAL_USER_ID,
-): PmDemand {
+): Promise<PmDemand> {
   const db = getDb();
-  const existing = db
+  const existing = await db
     .select()
     .from(pmDemands)
     .where(and(eq(pmDemands.id, input.id), eq(pmDemands.userId, userId)))
-    .get();
-  if (!existing) throw new Error(`Demand not found: ${input.id}`);
+    .limit(1);
+  if (!existing[0]) throw new Error(`Demand not found: ${input.id}`);
 
   const updates: Partial<typeof pmDemands.$inferInsert> = {
     updatedAt: Date.now(),
@@ -305,26 +320,26 @@ export function updateDemand(
   if (input.status !== undefined) updates.status = input.status;
   if (input.evidence !== undefined) updates.evidence = input.evidence;
 
-  db.update(pmDemands)
+  await db
+    .update(pmDemands)
     .set(updates)
-    .where(and(eq(pmDemands.id, input.id), eq(pmDemands.userId, userId)))
-    .run();
-  const row = db
+    .where(and(eq(pmDemands.id, input.id), eq(pmDemands.userId, userId)));
+  const rows = await db
     .select()
     .from(pmDemands)
     .where(and(eq(pmDemands.id, input.id), eq(pmDemands.userId, userId)))
-    .get();
-  return parseDemandRow(row!);
+    .limit(1);
+  return parseDemandRow(rows[0]!);
 }
 
-export function deleteDemand(
+export async function deleteDemand(
   id: string,
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   const db = getDb();
-  db.delete(pmDemands)
-    .where(and(eq(pmDemands.id, id), eq(pmDemands.userId, userId)))
-    .run();
+  await db
+    .delete(pmDemands)
+    .where(and(eq(pmDemands.id, id), eq(pmDemands.userId, userId)));
 }
 
 // ─── Stakeholders ───
@@ -345,40 +360,43 @@ function parseStakeholderRow(
   } catch {
     details = { ...EMPTY_DETAILS };
   }
-  return { ...row, details };
+  return {
+    ...row,
+    details,
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt),
+  };
 }
 
-export function getAllStakeholders(
+export async function getAllStakeholders(
   userId: string = LOCAL_USER_ID,
-): PmStakeholder[] {
+): Promise<PmStakeholder[]> {
   const db = getDb();
-  return db
+  const rows = await db
     .select()
     .from(pmStakeholders)
-    .where(eq(pmStakeholders.userId, userId))
-    .all()
-    .map(parseStakeholderRow);
+    .where(eq(pmStakeholders.userId, userId));
+  return rows.map(parseStakeholderRow);
 }
 
-export function getStakeholder(
+export async function getStakeholder(
   id: string,
   userId: string = LOCAL_USER_ID,
-): PmStakeholder | null {
+): Promise<PmStakeholder | null> {
   const db = getDb();
-  const row = db
+  const rows = await db
     .select()
     .from(pmStakeholders)
-    .where(
-      and(eq(pmStakeholders.id, id), eq(pmStakeholders.userId, userId)),
-    )
-    .get();
+    .where(and(eq(pmStakeholders.id, id), eq(pmStakeholders.userId, userId)))
+    .limit(1);
+  const row = rows[0];
   return row ? parseStakeholderRow(row) : null;
 }
 
-export function createStakeholder(
+export async function createStakeholder(
   input: CreateStakeholderInput,
   userId: string = LOCAL_USER_ID,
-): PmStakeholder {
+): Promise<PmStakeholder> {
   const db = getDb();
   const now = Date.now();
   const details = { ...EMPTY_DETAILS, ...input.details };
@@ -393,16 +411,16 @@ export function createStakeholder(
     createdAt: now,
     updatedAt: now,
   };
-  db.insert(pmStakeholders).values(row).run();
+  await db.insert(pmStakeholders).values(row);
   return parseStakeholderRow(row as typeof pmStakeholders.$inferSelect);
 }
 
-export function updateStakeholder(
+export async function updateStakeholder(
   input: UpdateStakeholderInput,
   userId: string = LOCAL_USER_ID,
-): PmStakeholder {
+): Promise<PmStakeholder> {
   const db = getDb();
-  const existing = db
+  const existingRows = await db
     .select()
     .from(pmStakeholders)
     .where(
@@ -411,7 +429,8 @@ export function updateStakeholder(
         eq(pmStakeholders.userId, userId),
       ),
     )
-    .get();
+    .limit(1);
+  const existing = existingRows[0];
   if (!existing) throw new Error(`Stakeholder not found: ${input.id}`);
 
   const updates: Partial<typeof pmStakeholders.$inferInsert> = {
@@ -431,16 +450,16 @@ export function updateStakeholder(
     updates.details = JSON.stringify({ ...prev, ...input.details });
   }
 
-  db.update(pmStakeholders)
+  await db
+    .update(pmStakeholders)
     .set(updates)
     .where(
       and(
         eq(pmStakeholders.id, input.id),
         eq(pmStakeholders.userId, userId),
       ),
-    )
-    .run();
-  const row = db
+    );
+  const rows = await db
     .select()
     .from(pmStakeholders)
     .where(
@@ -449,18 +468,16 @@ export function updateStakeholder(
         eq(pmStakeholders.userId, userId),
       ),
     )
-    .get();
-  return parseStakeholderRow(row!);
+    .limit(1);
+  return parseStakeholderRow(rows[0]!);
 }
 
-export function deleteStakeholder(
+export async function deleteStakeholder(
   id: string,
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   const db = getDb();
-  db.delete(pmStakeholders)
-    .where(
-      and(eq(pmStakeholders.id, id), eq(pmStakeholders.userId, userId)),
-    )
-    .run();
+  await db
+    .delete(pmStakeholders)
+    .where(and(eq(pmStakeholders.id, id), eq(pmStakeholders.userId, userId)));
 }

@@ -7,10 +7,13 @@ import {
   getDefaultConnection,
 } from "@/lib/modules/claw/actions";
 
-function resolveConnectionId(req: NextRequest, userId: string): string | null {
+async function resolveConnectionId(
+  req: NextRequest,
+  userId: string,
+): Promise<string | null> {
   return (
     req.nextUrl.searchParams.get("connectionId") ??
-    getDefaultConnection(userId)?.id ??
+    (await getDefaultConnection(userId))?.id ??
     null
   );
 }
@@ -39,7 +42,7 @@ export async function GET(req: NextRequest) {
   const auth = await requireUserId();
   if ("response" in auth) return auth.response;
   try {
-    const connectionId = resolveConnectionId(req, auth.userId);
+    const connectionId = await resolveConnectionId(req, auth.userId);
     const err = guard(connectionId);
     if (err) return err;
 
@@ -122,7 +125,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const connectionId =
       (formData.get("connectionId") as string) ??
-      getDefaultConnection(auth.userId)?.id ??
+      (await getDefaultConnection(auth.userId))?.id ??
       null;
     const err = guard(connectionId);
     if (err) return err;

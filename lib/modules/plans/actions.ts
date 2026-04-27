@@ -25,55 +25,65 @@ function parseRow(row: typeof planPages.$inferSelect): PlanPage {
     content,
     linkedNodeId: row.linkedNodeId ?? undefined,
     folderId: row.folderId ?? null,
-    sortOrder: row.sortOrder,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    sortOrder: Number(row.sortOrder),
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt),
+  };
+}
+
+function parseFolderRow(row: typeof planFolders.$inferSelect): PlanFolder {
+  return {
+    ...row,
+    sortOrder: Number(row.sortOrder),
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt),
   };
 }
 
 // --- Plan Pages ---
 
-export function getAllPlans(userId: string = LOCAL_USER_ID): PlanPage[] {
+export async function getAllPlans(
+  userId: string = LOCAL_USER_ID,
+): Promise<PlanPage[]> {
   const db = getDb();
-  const rows = db
+  const rows = await db
     .select()
     .from(planPages)
     .where(eq(planPages.userId, userId))
-    .orderBy(asc(planPages.sortOrder))
-    .all();
+    .orderBy(asc(planPages.sortOrder));
   return rows.map(parseRow);
 }
 
-export function getPlan(
+export async function getPlan(
   id: string,
   userId: string = LOCAL_USER_ID,
-): PlanPage | null {
+): Promise<PlanPage | null> {
   const db = getDb();
-  const row = db
+  const rows = await db
     .select()
     .from(planPages)
     .where(and(eq(planPages.id, id), eq(planPages.userId, userId)))
-    .get();
+    .limit(1);
+  const row = rows[0];
   return row ? parseRow(row) : null;
 }
 
-export function createPlan(
+export async function createPlan(
   input: CreatePlanInput,
   userId: string = LOCAL_USER_ID,
-): PlanPage {
+): Promise<PlanPage> {
   const db = getDb();
   const now = Date.now();
   const id = nanoid();
   const content =
     input.content !== undefined ? JSON.stringify(input.content) : "{}";
-  const maxRow = db
+  const maxRows = await db
     .select({
       max: sql<number>`COALESCE(MAX(${planPages.sortOrder}), -1)`,
     })
     .from(planPages)
-    .where(eq(planPages.userId, userId))
-    .get();
-  const sortOrder = (maxRow?.max ?? -1) + 1;
+    .where(eq(planPages.userId, userId));
+  const sortOrder = Number(maxRows[0]?.max ?? -1) + 1;
   const row = {
     id,
     userId,
@@ -85,23 +95,23 @@ export function createPlan(
     createdAt: now,
     updatedAt: now,
   };
-  db.insert(planPages).values(row).run();
+  await db.insert(planPages).values(row);
   const result = parseRow(row as typeof planPages.$inferSelect);
   eventBus.emit("plans", PLAN_EVENTS.PLAN_CREATED, result);
   return result;
 }
 
-export function updatePlan(
+export async function updatePlan(
   input: UpdatePlanInput,
   userId: string = LOCAL_USER_ID,
-): PlanPage {
+): Promise<PlanPage> {
   const db = getDb();
-  const existing = db
+  const existingRows = await db
     .select()
     .from(planPages)
     .where(and(eq(planPages.id, input.id), eq(planPages.userId, userId)))
-    .get();
-  if (!existing) {
+    .limit(1);
+  if (!existingRows[0]) {
     throw new Error(`Plan not found: ${input.id}`);
   }
   const updates: Partial<typeof planPages.$inferInsert> = {
@@ -113,71 +123,76 @@ export function updatePlan(
   if (input.linkedNodeId !== undefined)
     updates.linkedNodeId = input.linkedNodeId ?? null;
   if (input.folderId !== undefined) updates.folderId = input.folderId ?? null;
-  db.update(planPages)
+  await db
+    .update(planPages)
     .set(updates)
-    .where(and(eq(planPages.id, input.id), eq(planPages.userId, userId)))
-    .run();
-  const row = db
+    .where(and(eq(planPages.id, input.id), eq(planPages.userId, userId)));
+  const rows = await db
     .select()
     .from(planPages)
     .where(and(eq(planPages.id, input.id), eq(planPages.userId, userId)))
-    .get();
-  const result = parseRow(row!);
+    .limit(1);
+  const result = parseRow(rows[0]!);
   eventBus.emit("plans", PLAN_EVENTS.PLAN_UPDATED, result);
   return result;
 }
 
-export function deletePlan(id: string, userId: string = LOCAL_USER_ID): void {
+export async function deletePlan(
+  id: string,
+  userId: string = LOCAL_USER_ID,
+): Promise<void> {
   const db = getDb();
-  const existing = getPlan(id, userId);
-  db.delete(planPages)
-    .where(and(eq(planPages.id, id), eq(planPages.userId, userId)))
-    .run();
+  const existing = await getPlan(id, userId);
+  await db
+    .delete(planPages)
+    .where(and(eq(planPages.id, id), eq(planPages.userId, userId)));
   if (existing) {
     eventBus.emit("plans", PLAN_EVENTS.PLAN_DELETED, { id });
   }
 }
 
-export function reorderPlans(
+export async function reorderPlans(
   ids: string[],
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   const db = getDb();
-  ids.forEach((id, index) => {
-    db.update(planPages)
+  for (let index = 0; index < ids.length; index++) {
+    const id = ids[index];
+    await db
+      .update(planPages)
       .set({ sortOrder: index })
-      .where(and(eq(planPages.id, id), eq(planPages.userId, userId)))
-      .run();
-  });
+      .where(and(eq(planPages.id, id), eq(planPages.userId, userId)));
+  }
 }
 
 // --- Plan Folders ---
 
-export function listFolders(userId: string = LOCAL_USER_ID): PlanFolder[] {
+export async function listFolders(
+  userId: string = LOCAL_USER_ID,
+): Promise<PlanFolder[]> {
   const db = getDb();
-  return db
+  const rows = await db
     .select()
     .from(planFolders)
     .where(eq(planFolders.userId, userId))
-    .orderBy(asc(planFolders.sortOrder))
-    .all();
+    .orderBy(asc(planFolders.sortOrder));
+  return rows.map(parseFolderRow);
 }
 
-export function createFolder(
+export async function createFolder(
   name: string,
   userId: string = LOCAL_USER_ID,
-): PlanFolder {
+): Promise<PlanFolder> {
   const db = getDb();
   const now = Date.now();
   const id = nanoid();
-  const maxRow = db
+  const maxRows = await db
     .select({
       max: sql<number>`COALESCE(MAX(${planFolders.sortOrder}), -1)`,
     })
     .from(planFolders)
-    .where(eq(planFolders.userId, userId))
-    .get();
-  const sortOrder = (maxRow?.max ?? -1) + 1;
+    .where(eq(planFolders.userId, userId));
+  const sortOrder = Number(maxRows[0]?.max ?? -1) + 1;
   const row = {
     id,
     userId,
@@ -186,45 +201,46 @@ export function createFolder(
     createdAt: now,
     updatedAt: now,
   };
-  db.insert(planFolders).values(row).run();
-  return row;
+  await db.insert(planFolders).values(row);
+  return parseFolderRow(row as typeof planFolders.$inferSelect);
 }
 
-export function renameFolder(
+export async function renameFolder(
   id: string,
   name: string,
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   const db = getDb();
-  db.update(planFolders)
+  await db
+    .update(planFolders)
     .set({ name, updatedAt: Date.now() })
-    .where(and(eq(planFolders.id, id), eq(planFolders.userId, userId)))
-    .run();
+    .where(and(eq(planFolders.id, id), eq(planFolders.userId, userId)));
 }
 
-export function deleteFolder(
+export async function deleteFolder(
   id: string,
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   const db = getDb();
-  db.update(planPages)
+  await db
+    .update(planPages)
     .set({ folderId: null })
-    .where(and(eq(planPages.folderId, id), eq(planPages.userId, userId)))
-    .run();
-  db.delete(planFolders)
-    .where(and(eq(planFolders.id, id), eq(planFolders.userId, userId)))
-    .run();
+    .where(and(eq(planPages.folderId, id), eq(planPages.userId, userId)));
+  await db
+    .delete(planFolders)
+    .where(and(eq(planFolders.id, id), eq(planFolders.userId, userId)));
 }
 
-export function reorderFolders(
+export async function reorderFolders(
   ids: string[],
   userId: string = LOCAL_USER_ID,
-): void {
+): Promise<void> {
   const db = getDb();
-  ids.forEach((id, index) => {
-    db.update(planFolders)
+  for (let index = 0; index < ids.length; index++) {
+    const id = ids[index];
+    await db
+      .update(planFolders)
       .set({ sortOrder: index })
-      .where(and(eq(planFolders.id, id), eq(planFolders.userId, userId)))
-      .run();
-  });
+      .where(and(eq(planFolders.id, id), eq(planFolders.userId, userId)));
+  }
 }

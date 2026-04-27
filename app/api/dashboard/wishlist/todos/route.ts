@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     if (!wishId) {
       return NextResponse.json({ error: "wishId required" }, { status: 400 });
     }
-    const todos = listWishTodos(wishId, auth.userId);
+    const todos = await listWishTodos(wishId, auth.userId);
     return NextResponse.json({ todos });
   } catch (err) {
     return NextResponse.json(
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     if (action === "create") {
       try {
-        const result = createWishTodo(body, auth.userId);
+        const result = await createWishTodo(body, auth.userId);
         return NextResponse.json(result);
       } catch (e) {
         if (e instanceof Error && e.message === "wish_todos_full") {
@@ -46,17 +46,17 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "update") {
-      updateWishTodo(body.id, body.data, auth.userId);
+      await updateWishTodo(body.id, body.data, auth.userId);
       return NextResponse.json({ success: true });
     }
 
     if (action === "delete") {
-      deleteWishTodo(body.id, auth.userId);
+      await deleteWishTodo(body.id, auth.userId);
       return NextResponse.json({ success: true });
     }
 
     if (action === "bulk-create") {
-      const result = bulkCreateWishTodos(body.wishId, body.contents, auth.userId);
+      const result = await bulkCreateWishTodos(body.wishId, body.contents, auth.userId);
       return NextResponse.json(result);
     }
 

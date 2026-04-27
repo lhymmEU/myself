@@ -38,17 +38,17 @@ export async function GET(req: NextRequest) {
 
     if (isCloud()) {
       if (action === "status") {
-        return NextResponse.json(getCloudVaultStatus(userId));
+        return NextResponse.json(await getCloudVaultStatus(userId));
       }
       if (action === "info") {
-        return NextResponse.json(getCloudVaultInfo(userId));
+        return NextResponse.json(await getCloudVaultInfo(userId));
       }
 
       const id = req.nextUrl.searchParams.get("id");
       const format = req.nextUrl.searchParams.get("format");
 
       if (id) {
-        const cipher = getCloudSecretCipher(id, userId);
+        const cipher = await getCloudSecretCipher(id, userId);
         if (!cipher) {
           return NextResponse.json(
             { error: "Secret not found" },
@@ -59,32 +59,34 @@ export async function GET(req: NextRequest) {
       }
 
       if (format === "cipher") {
-        const secrets: ReturnType<typeof getCloudSecretCipher>[] = [];
-        const metas = listCloudSecretMeta(userId);
+        const secrets: NonNullable<
+          Awaited<ReturnType<typeof getCloudSecretCipher>>
+        >[] = [];
+        const metas = await listCloudSecretMeta(userId);
         for (const meta of metas) {
-          const c = getCloudSecretCipher(meta.id, userId);
+          const c = await getCloudSecretCipher(meta.id, userId);
           if (c) secrets.push(c);
         }
         return NextResponse.json(secrets);
       }
 
-      return NextResponse.json(listCloudSecretMeta(userId));
+      return NextResponse.json(await listCloudSecretMeta(userId));
     }
 
     if (action === "status") {
-      return NextResponse.json(getVaultStatus(userId));
+      return NextResponse.json(await getVaultStatus(userId));
     }
 
     const id = req.nextUrl.searchParams.get("id");
     if (id) {
-      const secret = getSecret(id, userId);
+      const secret = await getSecret(id, userId);
       if (!secret) {
         return NextResponse.json({ error: "Secret not found" }, { status: 404 });
       }
       return NextResponse.json(secret);
     }
 
-    const secrets = getAllSecrets(userId);
+    const secrets = await getAllSecrets(userId);
     return NextResponse.json(secrets);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -113,7 +115,7 @@ export async function POST(req: NextRequest) {
             { status: 400 },
           );
         }
-        setupCloudVault(userId, body.salt, body.verificationHash);
+        await setupCloudVault(userId, body.salt, body.verificationHash);
         return NextResponse.json({ success: true });
       }
 
@@ -135,7 +137,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const created = createCloudSecret(
+      const created = await createCloudSecret(
         {
           name: body.name,
           category: body.category,
@@ -151,12 +153,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "setup") {
-      setupVault(body.password, body.storagePath, userId);
+      await setupVault(body.password, body.storagePath, userId);
       return NextResponse.json({ success: true });
     }
 
     if (action === "unlock") {
-      const success = unlockVault(body.password, userId);
+      const success = await unlockVault(body.password, userId);
       if (!success) {
         return NextResponse.json(
           { error: "Invalid password" },
@@ -171,7 +173,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    const secret = createSecret(
+    const secret = await createSecret(
       {
         name: body.name,
         value: body.value,
@@ -198,7 +200,7 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
 
     if (isCloud()) {
-      const result = updateCloudSecret(
+      const result = await updateCloudSecret(
         {
           id: body.id,
           name: body.name,
@@ -214,7 +216,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json(result);
     }
 
-    const result = updateSecret(
+    const result = await updateSecret(
       {
         id: body.id,
         name: body.name,
@@ -244,9 +246,9 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Missing id" }, { status: 400 });
     }
     if (isCloud()) {
-      deleteCloudSecret(id, userId);
+      await deleteCloudSecret(id, userId);
     } else {
-      deleteSecret(id, userId);
+      await deleteSecret(id, userId);
     }
     return NextResponse.json({ success: true });
   } catch (err) {
@@ -277,7 +279,7 @@ export async function PATCH(req: NextRequest) {
           );
         }
         const reencrypted = (body.reencrypted ?? []) as CloudReencryptSecret[];
-        rotateCloudVault(
+        await rotateCloudVault(
           userId,
           body.newSalt,
           body.newVerificationHash,
@@ -286,7 +288,7 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ success: true });
       }
 
-      const success = changePassword(
+      const success = await changePassword(
         body.currentPassword,
         body.newPassword,
         userId,

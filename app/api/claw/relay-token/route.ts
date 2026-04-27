@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
   }
 
   const db = getDb();
-  const conn = db
+  const connRows = await db
     .select({
       id: clawConnections.id,
       pairingCode: clawConnections.pairingCode,
@@ -90,7 +90,8 @@ export async function POST(req: NextRequest) {
         eq(clawConnections.userId, auth.userId),
       ),
     )
-    .get();
+    .limit(1);
+  const conn = connRows[0];
 
   if (!conn) {
     return NextResponse.json(

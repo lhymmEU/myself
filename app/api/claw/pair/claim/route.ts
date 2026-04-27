@@ -78,11 +78,12 @@ export async function POST(req: NextRequest) {
   }
 
   const db = getDb();
-  const pairing = db
+  const pairingRows = await db
     .select()
     .from(clawPairings)
     .where(eq(clawPairings.code, code))
-    .get();
+    .limit(1);
+  const pairing = pairingRows[0];
 
   const now = Date.now();
   if (!pairing) {
@@ -94,7 +95,7 @@ export async function POST(req: NextRequest) {
       { status: 409 },
     );
   }
-  if (pairing.expiresAt < now) {
+  if (Number(pairing.expiresAt) < now) {
     return NextResponse.json({ error: "Code expired" }, { status: 410 });
   }
 
@@ -119,38 +120,36 @@ export async function POST(req: NextRequest) {
   const relayUrl = `${relayBase.replace(/\/$/, "")}/pair/${pairingToken}`;
 
   // Mark code consumed.
-  db.update(clawPairings)
+  await db
+    .update(clawPairings)
     .set({ consumedAt: now, lobsterId, agentJwt })
     .where(
       and(
         eq(clawPairings.code, code),
         eq(clawPairings.userId, pairing.userId),
       ),
-    )
-    .run();
+    );
 
   // Provision the connection row pointing at the relay.
-  db.insert(clawConnections)
-    .values({
-      id: connectionId,
-      userId: pairing.userId,
-      name: body.hostname || lobsterId,
-      host: body.hostname || lobsterId,
-      port: body.port ?? 22,
-      username: "agent",
-      authMethod: "key",
-      gatewayPort: 18789,
-      isDefault: false,
-      transport: "relay",
-      pairingCode: pairingToken,
-      pairingExpiresAt: exp * 1000,
-      agentJwt,
-      relayUrl,
-      publicKey,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .run();
+  await db.insert(clawConnections).values({
+    id: connectionId,
+    userId: pairing.userId,
+    name: body.hostname || lobsterId,
+    host: body.hostname || lobsterId,
+    port: body.port ?? 22,
+    username: "agent",
+    authMethod: "key",
+    gatewayPort: 18789,
+    isDefault: false,
+    transport: "relay",
+    pairingCode: pairingToken,
+    pairingExpiresAt: exp * 1000,
+    agentJwt,
+    relayUrl,
+    publicKey,
+    createdAt: now,
+    updatedAt: now,
+  });
 
   return NextResponse.json({
     connectionId,

@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   if ("response" in auth) return auth.response;
   try {
     const cid = req.nextUrl.searchParams.get("connectionId");
-    const connectionId = cid ?? getDefaultConnection(auth.userId)?.id;
+    const connectionId = cid ?? (await getDefaultConnection(auth.userId))?.id;
 
     if (!connectionId) {
       return NextResponse.json(

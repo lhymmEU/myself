@@ -19,11 +19,11 @@ export async function GET(req: NextRequest) {
     const id = req.nextUrl.searchParams.get("id");
 
     if (action === "list" || (!action && !id)) {
-      return NextResponse.json(getAllPlans(auth.userId));
+      return NextResponse.json(await getAllPlans(auth.userId));
     }
 
     if (id) {
-      const plan = getPlan(id, auth.userId);
+      const plan = await getPlan(id, auth.userId);
       if (!plan) {
         return NextResponse.json({ error: "Plan not found" }, { status: 404 });
       }
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   if ("response" in auth) return auth.response;
   try {
     const body = await req.json();
-    const plan = createPlan(
+    const plan = await createPlan(
       {
         title: body.title,
         content: body.content,
@@ -70,10 +70,10 @@ export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
     if (body.action === "reorder" && Array.isArray(body.ids)) {
-      reorderPlans(body.ids, auth.userId);
+      await reorderPlans(body.ids, auth.userId);
       return NextResponse.json({ success: true });
     }
-    const plan = updatePlan(
+    const plan = await updatePlan(
       {
         id: body.id,
         title: body.title,
@@ -101,7 +101,7 @@ export async function DELETE(req: NextRequest) {
     if (!id) {
       return NextResponse.json({ error: "Missing id" }, { status: 400 });
     }
-    deletePlan(id, auth.userId);
+    await deletePlan(id, auth.userId);
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json(

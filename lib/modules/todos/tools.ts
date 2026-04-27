@@ -13,7 +13,7 @@ export const todoTools: AgentTool[] = [
     }),
     handler: async (params) => {
       const { urgentOnly } = params as { urgentOnly?: boolean };
-      const scene = getTodoSourceScene();
+      const scene = await getTodoSourceScene();
       if (!scene) return [];
       let elements: unknown[] = [];
       try {

@@ -28,7 +28,7 @@ export async function GET() {
 
   const status: Record<string, boolean> = {};
   for (const key of PROVIDER_KEYS) {
-    const val = getSetting(key, auth.userId);
+    const val = await getSetting(key, auth.userId);
     status[key] = !!val && val.length > 0;
   }
 
