@@ -113,6 +113,35 @@ function applyLegacyDataMigrations(sqlite: import("better-sqlite3").Database) {
     // shape already fine
   }
 
+  // Legacy: settings had `key` as the sole PRIMARY KEY before the table was
+  // user-scoped. ALTER TABLE can add the user_id column but cannot change the
+  // PK to (user_id, key), which updateSetting()'s onConflictDoUpdate relies on.
+  // Detect the old shape (no user_id column) and rebuild in place.
+  try {
+    const info = sqlite
+      .prepare(`PRAGMA table_info(settings)`)
+      .all() as { name: string }[];
+    if (info.length > 0 && !info.some((c) => c.name === "user_id")) {
+      sqlite.exec(`ALTER TABLE settings RENAME TO settings_old`);
+      sqlite.exec(`
+        CREATE TABLE settings (
+          user_id TEXT NOT NULL DEFAULT 'local-user',
+          key TEXT NOT NULL,
+          value TEXT NOT NULL,
+          updated_at INTEGER NOT NULL,
+          PRIMARY KEY (user_id, key)
+        );
+      `);
+      sqlite.exec(`
+        INSERT INTO settings (user_id, key, value, updated_at)
+        SELECT 'local-user', key, value, updated_at FROM settings_old
+      `);
+      sqlite.exec(`DROP TABLE settings_old`);
+    }
+  } catch {
+    // shape already fine
+  }
+
   try {
     const info = sqlite
       .prepare(`PRAGMA table_info(skill_wishlist)`)
