@@ -61,6 +61,20 @@ function isRedColor(hex: string | undefined): boolean {
   return r > 180 && g < 100 && b < 100;
 }
 
+// Root marker convention. Any node whose label starts with `root:`
+// (case-insensitive, with optional surrounding whitespace) is treated as
+// a source/root. The prefix is stripped from the displayed trace; whatever
+// the user wrote after `root:` becomes the root segment in the breadcrumb.
+const ROOT_PREFIX_RE = /^\s*root\s*:\s*/i;
+
+function isRootLabel(label: string): boolean {
+  return ROOT_PREFIX_RE.test(label);
+}
+
+function stripRootPrefix(label: string): string {
+  return label.replace(ROOT_PREFIX_RE, "").trim();
+}
+
 function shapeTypeToKind(type: string): NodeKind | null {
   switch (type) {
     case "rectangle":
@@ -144,10 +158,12 @@ export function parseMindMapTodos(elements: ExcalidrawEl[]): MindMapTodo[] {
     if (node.kind !== "todo") continue;
 
     const traces = buildTrace(node.id, nodes);
-    const rooted = traces.find((t) => t[0] === "_magicsheep");
+    const rooted = traces.find((t) => isRootLabel(t[0]));
     if (!rooted) continue;
 
-    const trace = rooted.filter((label) => label !== "_magicsheep");
+    const trace = rooted
+      .map((label) => (isRootLabel(label) ? stripRootPrefix(label) : label))
+      .filter((label) => label.length > 0);
 
     todos.push({
       id: node.id,
