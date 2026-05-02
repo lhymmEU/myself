@@ -20,15 +20,17 @@ import {
 import { useT } from "@/lib/i18n/context";
 import { useCharacterAppearance } from "@/lib/swr/hooks";
 import dynamic from "next/dynamic";
-import type { LobsterColors } from "./vrm-viewer";
+import type { LobsterColors } from "./pixel-character";
 
-const CharacterViewer = dynamic(
+const PixelCharacter = dynamic(
   () =>
-    import("@/components/dashboard/vrm-viewer").then((m) => m.CharacterViewer),
+    import("@/components/dashboard/pixel-character").then(
+      (m) => m.PixelCharacter,
+    ),
   {
     ssr: false,
     loading: () => (
-      <div className="flex-1 min-h-[200px] rounded-md bg-muted/30 animate-pulse" />
+      <div className="aspect-square w-full max-w-[220px] mx-auto rounded-md bg-muted/30 animate-pulse" />
     ),
   }
 );
@@ -195,11 +197,23 @@ export function ClawPanel() {
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col gap-3 min-h-0">
-        <CharacterViewer
+        <PixelCharacter
           type="lobster"
           lobsterColors={lobsterColors}
+          lobsterSkills={clawSkills}
+          lobsterSlotLabels={{
+            code: t("dashboard.game.clawPanel.slots.code"),
+            translate: t("dashboard.game.clawPanel.slots.translate"),
+            search: t("dashboard.game.clawPanel.slots.search"),
+            summarize: t("dashboard.game.clawPanel.slots.summarize"),
+            image: t("dashboard.game.clawPanel.slots.image"),
+            music: t("dashboard.game.clawPanel.slots.music"),
+            scheduler: t("dashboard.game.clawPanel.slots.scheduler"),
+            tool: t("dashboard.game.clawPanel.slots.tool"),
+            generic: t("dashboard.game.clawPanel.slots.generic"),
+          }}
           grayscale={!clawConnected}
-          className={`flex-1 min-h-[200px] rounded-lg overflow-hidden ${
+          className={`aspect-square w-full max-w-[220px] mx-auto rounded-lg overflow-hidden ${
             clawConnected
               ? "bg-gradient-to-b from-red-950/10 to-red-950/30"
               : "bg-gradient-to-b from-muted/20 to-muted/50"

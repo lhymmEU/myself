@@ -82,6 +82,15 @@ export const zh: Translations = {
         levelFamiliar: "了解概念",
         levelFluent: "熟练使用",
         levelMastering: "精通掌握",
+        slots: {
+          glasses: "程序员之镜",
+          palette: "设计师调色板",
+          book: "语言之书",
+          headphones: "音乐耳机",
+          sword: "运动之剑",
+          briefcase: "商务公文包",
+          badge: "技能徽章",
+        },
       },
       clawPanel: {
         title: "我的龙虾",
@@ -101,6 +110,17 @@ export const zh: Translations = {
         failedLoad: "加载任务失败",
         failedSave: "保存任务失败",
         failedDelete: "删除任务失败",
+        slots: {
+          code: "代码模块",
+          translate: "翻译器",
+          search: "搜索透镜",
+          summarize: "摘要卷轴",
+          image: "图像画笔",
+          music: "声音模块",
+          scheduler: "定时器",
+          tool: "工具扳手",
+          generic: "技能之星",
+        },
       },
       wishlist: {
         title: "技能愿望单",
@@ -135,7 +155,7 @@ export const zh: Translations = {
         noTodos: "暂无步骤。让 Claw 为你生成！",
         todosFull: "最多 5 个步骤",
       },
-      modelPlaceholder: "3D 角色加载中...",
+      modelPlaceholder: "角色加载中...",
     },
   },
 

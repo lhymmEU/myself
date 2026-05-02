@@ -26,15 +26,17 @@ import { useRouter } from "next/navigation";
 import { useUserSkills, useCharacterAppearance } from "@/lib/swr/hooks";
 import { Badge } from "@/components/ui/badge";
 import dynamic from "next/dynamic";
-import type { UserColors } from "./vrm-viewer";
+import type { UserColors } from "./pixel-character";
 
-const CharacterViewer = dynamic(
+const PixelCharacter = dynamic(
   () =>
-    import("@/components/dashboard/vrm-viewer").then((m) => m.CharacterViewer),
+    import("@/components/dashboard/pixel-character").then(
+      (m) => m.PixelCharacter,
+    ),
   {
     ssr: false,
     loading: () => (
-      <div className="flex-1 min-h-[200px] rounded-md bg-muted/30 animate-pulse" />
+      <div className="aspect-square w-full max-w-[220px] mx-auto rounded-md bg-muted/30 animate-pulse" />
     ),
   }
 );
@@ -219,10 +221,20 @@ export function UserPanel() {
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col gap-3 min-h-0">
-        <CharacterViewer
+        <PixelCharacter
           type="user"
           userColors={userColors}
-          className="flex-1 min-h-[200px] rounded-lg bg-gradient-to-b from-muted/20 to-muted/50 overflow-hidden"
+          userSkills={skills}
+          userSlotLabels={{
+            glasses: t("dashboard.game.userPanel.slots.glasses"),
+            palette: t("dashboard.game.userPanel.slots.palette"),
+            book: t("dashboard.game.userPanel.slots.book"),
+            headphones: t("dashboard.game.userPanel.slots.headphones"),
+            sword: t("dashboard.game.userPanel.slots.sword"),
+            briefcase: t("dashboard.game.userPanel.slots.briefcase"),
+            badge: t("dashboard.game.userPanel.slots.badge"),
+          }}
+          className="aspect-square w-full max-w-[220px] mx-auto rounded-lg bg-gradient-to-b from-muted/20 to-muted/50 overflow-hidden"
         />
 
         <div className="flex items-center justify-between">

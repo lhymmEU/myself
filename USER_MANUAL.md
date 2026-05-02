@@ -29,13 +29,13 @@ In the **local install**, your data lives in `data/dashboard.db` and `data/vault
 **What you see.**
 
 - **Wishlist** at the top — quick add for things you want.
-- **User Panel** with a 3D VRM avatar viewer (drop in your own `.vrm` model file).
+- **User Panel** with a 2D pixel character — every skill you add equips a matching accessory (glasses for programming, palette for design, headphones for music, sword for sport, briefcase for business, badge for anything else). Skill level controls the accessory color (gray → blue → gold), and a row of dots under the feet tracks total skills.
 - **Todo preview** — the next few open todos from the Todos page.
-- **Claw panel** — a compact chat surface for the built-in AI assistant.
+- **Claw panel** — a compact chat surface for the built-in AI assistant. Its pixel lobster equips an accessory for each installed Claw skill, picked by the skill's `metadata.type` (or a keyword match on its name/description). Adding a skill plays a sparkle; removing one plays a poof.
 
 **Tips.**
 
-- The avatar viewer reads `.vrm` files. If you do not have one, the panel still works without it.
+- Both pixel characters keep the same color pickers as before — open the palette icon on each panel to recolor skin/hair/clothes (human) or shell/belly/eye (lobster).
 - Anything you add from the wishlist or claw panel here syncs with the full pages — there is only one underlying database.
 
 ---

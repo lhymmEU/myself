@@ -80,6 +80,15 @@ export const en = {
         levelFamiliar: "Familiar",
         levelFluent: "Fluent",
         levelMastering: "Mastering",
+        slots: {
+          glasses: "Coder's Glasses",
+          palette: "Designer's Palette",
+          book: "Linguist's Book",
+          headphones: "Musician's Headphones",
+          sword: "Athlete's Sword",
+          briefcase: "Business Briefcase",
+          badge: "Skill Badge",
+        },
       },
       clawPanel: {
         title: "My Lobster",
@@ -99,6 +108,17 @@ export const en = {
         failedLoad: "Failed to load jobs",
         failedSave: "Failed to save job",
         failedDelete: "Failed to delete job",
+        slots: {
+          code: "Code Module",
+          translate: "Translator",
+          search: "Search Lens",
+          summarize: "Summary Scroll",
+          image: "Image Brush",
+          music: "Sound Module",
+          scheduler: "Scheduler",
+          tool: "Utility Wrench",
+          generic: "Skill Star",
+        },
       },
       wishlist: {
         title: "Skill Wishlist",
@@ -133,7 +153,7 @@ export const en = {
         noTodos: "No steps yet. Generate with your Claw!",
         todosFull: "Maximum 5 steps reached",
       },
-      modelPlaceholder: "3D character loading...",
+      modelPlaceholder: "Loading character...",
     },
   },
 
