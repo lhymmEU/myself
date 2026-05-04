@@ -4,9 +4,9 @@ import { requireUserId } from "@/lib/core/route-helpers";
 import {
   executeCommand,
   executeOpenClawCommand,
-  isSSHConnected,
   getDefaultConnection,
 } from "@/lib/modules/claw/actions";
+import { detectAgentChange, preflight } from "@/lib/modules/claw/health";
 
 /**
  * GET — list sessions enriched with token usage from sessions.json store files.
@@ -27,15 +27,35 @@ export async function GET(req: NextRequest) {
     if (!connectionId) {
       return NextResponse.json({ error: "No connection configured" }, { status: 400 });
     }
-    if (!isSSHConnected(connectionId)) {
-      return NextResponse.json({ error: "Not connected via SSH" }, { status: 400 });
+
+    // Short liveness probe — if the SSH tunnel is half-dead, fail fast
+    // instead of waiting the full openclaw timeout. The probe also evicts
+    // the dead client so the next /api/claw/connect call rebuilds cleanly.
+    const pre = await preflight(connectionId);
+    if (!pre.ok) {
+      return NextResponse.json(pre.body, { status: pre.status });
     }
 
-    const listRes = await executeOpenClawCommand(
-      connectionId,
-      "sessions --all-agents --json",
-      15000
-    );
+    let listRes;
+    try {
+      listRes = await executeOpenClawCommand(
+        connectionId,
+        "sessions --all-agents --json",
+        8000,
+      );
+    } catch (err) {
+      // openclaw itself is wedged or the tunnel dropped between preflight
+      // and the listing. Treat this as a recoverable disconnect rather
+      // than a 500: the UI will show a clear "reconnect" affordance.
+      const msg = err instanceof Error ? err.message : String(err);
+      return NextResponse.json(
+        {
+          error: `openclaw sessions listing failed: ${msg}`,
+          reconnectRequired: true,
+        },
+        { status: 503 },
+      );
+    }
     const raw = listRes.stdout || listRes.stderr || "";
 
     let parsed: Record<string, unknown> = {};
@@ -45,6 +65,17 @@ export async function GET(req: NextRequest) {
       (parsed.sessions as Record<string, unknown>[]) ?? [];
     const stores: { agentId: string; path: string }[] =
       (parsed.stores as { agentId: string; path: string }[]) ?? [];
+
+    // Compare against the last-known agent set. A mismatch means openclaw
+    // was reinitialised (or the underlying agent dir wiped) and any
+    // sessionId/agentId the client cached is now stale.
+    const remoteAgentIds = Array.from(
+      new Set([
+        ...sessions.map((s) => s.agentId).filter(Boolean) as string[],
+        ...stores.map((s) => s.agentId).filter(Boolean),
+      ]),
+    );
+    const agentsChanged = detectAgentChange(connectionId, remoteAgentIds);
 
     const tokenMap = new Map<string, Record<string, unknown>>();
 
@@ -89,6 +120,7 @@ export async function GET(req: NextRequest) {
       sessions: enriched,
       stores,
       raw,
+      agentsChanged,
     });
   } catch (err) {
     return NextResponse.json(
@@ -109,8 +141,9 @@ export async function DELETE(req: NextRequest) {
     if (!connectionId) {
       return NextResponse.json({ error: "No connection configured" }, { status: 400 });
     }
-    if (!isSSHConnected(connectionId)) {
-      return NextResponse.json({ error: "Not connected via SSH" }, { status: 400 });
+    const pre = await preflight(connectionId);
+    if (!pre.ok) {
+      return NextResponse.json(pre.body, { status: pre.status });
     }
     if (!Array.isArray(keys) || keys.length === 0) {
       return NextResponse.json({ error: "No session keys provided" }, { status: 400 });

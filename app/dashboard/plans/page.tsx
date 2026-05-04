@@ -6,12 +6,20 @@ import type { PlanFolder } from "@/components/plans/page-list";
 import { Editor } from "@/components/plans/editor";
 import type { EditorHandle } from "@/components/plans/editor";
 import { ExportImportBar } from "@/components/plans/export-import-bar";
-import { FileText, PenLine, PanelLeft, PanelLeftClose } from "lucide-react";
+import {
+  FileText,
+  PenLine,
+  PanelLeft,
+  PanelLeftClose,
+  Sparkles,
+} from "lucide-react";
 import type { Block } from "@blocknote/core";
 import { useT } from "@/lib/i18n/context";
 import { usePlanList, usePlanFolders } from "@/lib/swr/hooks";
 import { Button } from "@/components/ui/button";
 import { usePlanClaw } from "@/components/plans/claw/plan-claw-provider";
+import { GenerateFromTodosDialog } from "@/components/plans/generate-from-todos-dialog";
+import { AttachmentsPanel } from "@/components/plans/attachments-panel";
 
 interface Plan {
   id: string;
@@ -34,8 +42,10 @@ export default function PlansPage() {
   const [activePlan, setActivePlan] = useState<Plan | null>(null);
   const [title, setTitle] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [generateOpen, setGenerateOpen] = useState(false);
   const titleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const editorRef = useRef<EditorHandle>(null);
+  const deepLinkApplied = useRef(false);
 
   const loadPlan = useCallback(async (id: string) => {
     try {
@@ -249,6 +259,32 @@ export default function PlansPage() {
     };
   }, []);
 
+  // Honour `?id=<planId>` deep links once on first arrival (used by the
+  // Todos page "View plan" link). Read directly from window.location to
+  // avoid pulling in `useSearchParams`, which would force a Suspense
+  // boundary around the whole page during static prerender.
+  useEffect(() => {
+    if (deepLinkApplied.current) return;
+    if (typeof window === "undefined" || plans.length === 0) return;
+    const targetId = new URLSearchParams(window.location.search).get("id");
+    if (!targetId) return;
+    if (!plans.find((p) => p.id === targetId)) return;
+    deepLinkApplied.current = true;
+    Promise.resolve().then(() => handleSelect(targetId));
+  }, [plans, handleSelect]);
+
+  const handleGenerated = useCallback(
+    async (planIds: string[]) => {
+      await mutatePlans();
+      const lastId = planIds[planIds.length - 1];
+      if (lastId) {
+        setActiveId(lastId);
+        loadPlan(lastId);
+      }
+    },
+    [mutatePlans, loadPlan],
+  );
+
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
       <div
@@ -294,34 +330,53 @@ export default function PlansPage() {
               onImport={handleImport}
             />
           )}
+          <div className="ml-auto pr-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setGenerateOpen(true)}
+              disabled={!clawConnected}
+              title={
+                clawConnected
+                  ? t("plans.generateFromTodos.title")
+                  : t("plans.generateFromTodos.notConnected")
+              }
+            >
+              <Sparkles className="h-4 w-4 mr-1" />
+              {t("plans.generateFromTodos.button")}
+            </Button>
+          </div>
         </div>
         {activePlan ? (
-          <div className="flex-1 overflow-y-auto">
-            <div className="max-w-3xl mx-auto px-6 pt-4 pb-24">
-              <input
-                value={title}
-                onChange={(e) => handleTitleChange(e.target.value)}
-                className="w-full text-4xl font-bold bg-transparent border-none outline-none placeholder:text-muted-foreground/40 tracking-tight"
-                placeholder={t("plans.untitled")}
-              />
-              <p className="mt-2 mb-6 text-sm text-muted-foreground">
-                {t("plans.lastEdited")}{" "}
-                {new Date(activePlan.updatedAt).toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </p>
-              <Editor
-                ref={editorRef}
-                key={activePlan.id}
-                content={activePlan.content as Block[]}
-                onChange={handleContentChange}
-                clawConnected={clawConnected}
-                onTranslate={handleTranslate}
-                onExplain={handleExplain}
-              />
+          <div className="flex-1 flex min-h-0 overflow-hidden">
+            <div className="flex-1 overflow-y-auto">
+              <div className="max-w-3xl mx-auto px-6 pt-4 pb-24">
+                <input
+                  value={title}
+                  onChange={(e) => handleTitleChange(e.target.value)}
+                  className="w-full text-4xl font-bold bg-transparent border-none outline-none placeholder:text-muted-foreground/40 tracking-tight"
+                  placeholder={t("plans.untitled")}
+                />
+                <p className="mt-2 mb-6 text-sm text-muted-foreground">
+                  {t("plans.lastEdited")}{" "}
+                  {new Date(activePlan.updatedAt).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </p>
+                <Editor
+                  ref={editorRef}
+                  key={activePlan.id}
+                  content={activePlan.content as Block[]}
+                  onChange={handleContentChange}
+                  clawConnected={clawConnected}
+                  onTranslate={handleTranslate}
+                  onExplain={handleExplain}
+                />
+              </div>
             </div>
+            <AttachmentsPanel planId={activePlan.id} />
           </div>
         ) : (
           <div className="flex-1 flex items-center justify-center">
@@ -349,6 +404,13 @@ export default function PlansPage() {
         )}
       </div>
       {panelElement}
+      {generateOpen && (
+        <GenerateFromTodosDialog
+          open={generateOpen}
+          onOpenChange={setGenerateOpen}
+          onGenerated={handleGenerated}
+        />
+      )}
     </div>
   );
 }

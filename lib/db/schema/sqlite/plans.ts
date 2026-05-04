@@ -20,3 +20,12 @@ export const planPages = sqliteTable("plan_pages", {
   createdAt: integer("created_at", { mode: "number" }).notNull(),
   updatedAt: integer("updated_at", { mode: "number" }).notNull(),
 });
+
+export const planMarkedAttachments = sqliteTable("plan_marked_attachments", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().default("local-user"),
+  planId: text("plan_id").notNull(),
+  markedItemId: text("marked_item_id").notNull(),
+  sortOrder: integer("sort_order", { mode: "number" }).notNull().default(0),
+  createdAt: integer("created_at", { mode: "number" }).notNull(),
+});

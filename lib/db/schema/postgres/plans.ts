@@ -20,3 +20,12 @@ export const planPages = pgTable("plan_pages", {
   createdAt: bigint("created_at", { mode: "number" }).notNull(),
   updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
 });
+
+export const planMarkedAttachments = pgTable("plan_marked_attachments", {
+  id: text("id").primaryKey(),
+  userId: uuid("user_id").notNull(),
+  planId: text("plan_id").notNull(),
+  markedItemId: text("marked_item_id").notNull(),
+  sortOrder: bigint("sort_order", { mode: "number" }).notNull().default(0),
+  createdAt: bigint("created_at", { mode: "number" }).notNull(),
+});

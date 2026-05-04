@@ -5,12 +5,19 @@ import {
   updatePlan,
   getAllPlans,
   getPlan,
+  getPlanByLinkedNode,
 } from "./actions";
+import {
+  attachMarkedItem,
+  detachMarkedItem,
+  listPlanAttachments,
+} from "./attachments";
 
 export const planTools: AgentTool[] = [
   {
     name: "createPlanPage",
-    description: "Create a new plan page with title and optional TipTap content",
+    description:
+      "Create a new plan page with title and optional BlockNote content. Pass linkedNodeId when drafting from a mind-map todo so the plan can be located again.",
     parameters: z.object({
       title: z.string(),
       content: z.unknown().optional(),
@@ -57,6 +64,63 @@ export const planTools: AgentTool[] = [
         return plan ?? { error: "Plan not found" };
       }
       return await getAllPlans();
+    },
+  },
+  {
+    name: "queryPlanByLinkedNode",
+    description:
+      "Look up a plan page by the mind-map element id it was generated from. Returns null when no plan exists yet — use this before deciding whether to call createPlanPage or updatePlanPage for a given todo.",
+    parameters: z.object({
+      linkedNodeId: z.string(),
+    }),
+    handler: async (params) => {
+      const { linkedNodeId } = params as { linkedNodeId: string };
+      const plan = await getPlanByLinkedNode(linkedNodeId);
+      return plan ?? { plan: null };
+    },
+  },
+  {
+    name: "attachMarkedItemToPlan",
+    description:
+      "Attach a marked item (bookmark) to a plan page so the user can keep it as a quick-reference link.",
+    parameters: z.object({
+      planId: z.string(),
+      markedItemId: z.string(),
+    }),
+    handler: async (params) => {
+      const { planId, markedItemId } = params as {
+        planId: string;
+        markedItemId: string;
+      };
+      return await attachMarkedItem({ planId, markedItemId });
+    },
+  },
+  {
+    name: "detachMarkedItemFromPlan",
+    description: "Remove a marked item from a plan page's attachments.",
+    parameters: z.object({
+      planId: z.string(),
+      markedItemId: z.string(),
+    }),
+    handler: async (params) => {
+      const { planId, markedItemId } = params as {
+        planId: string;
+        markedItemId: string;
+      };
+      await detachMarkedItem({ planId, markedItemId });
+      return { ok: true };
+    },
+  },
+  {
+    name: "listPlanAttachments",
+    description:
+      "List the marked items currently attached to a plan page, ordered by their attachment sortOrder.",
+    parameters: z.object({
+      planId: z.string(),
+    }),
+    handler: async (params) => {
+      const { planId } = params as { planId: string };
+      return await listPlanAttachments(planId);
     },
   },
 ];

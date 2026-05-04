@@ -45,6 +45,7 @@ interface ClawTransport {
   ) => Promise<ExecResult>;
   getSFTP: (connectionId: string) => Promise<SFTPWrapper> | SFTPWrapper;
   resolveAgentId: (connectionId: string) => Promise<string | null>;
+  pingConnection: (connectionId: string, timeoutMs?: number) => Promise<boolean>;
   loginShell: (command: string) => string;
 }
 
@@ -111,6 +112,19 @@ export async function resolveAgentId(
   connectionId: string,
 ): Promise<string | null> {
   return transport().resolveAgentId(connectionId);
+}
+
+/**
+ * Quick liveness probe over the active transport. Returns `false` when the
+ * tunnel is half-dead or the cloud relay isn't yet wired up. On failure,
+ * local mode evicts the cached SSH client so subsequent `isSSHConnected`
+ * checks return false immediately.
+ */
+export async function pingConnection(
+  connectionId: string,
+  timeoutMs = 3000,
+): Promise<boolean> {
+  return transport().pingConnection(connectionId, timeoutMs);
 }
 
 export function loginShell(command: string): string {

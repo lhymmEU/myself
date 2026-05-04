@@ -1,3 +1,5 @@
+import type { MarkedItem } from "@/lib/modules/marked/types";
+
 export interface PlanPage {
   id: string;
   title: string;
@@ -30,4 +32,10 @@ export interface UpdatePlanInput {
   content?: unknown;
   linkedNodeId?: string | null;
   folderId?: string | null;
+}
+
+export interface PlanAttachedItem extends MarkedItem {
+  attachmentId: string;
+  attachmentSortOrder: number;
+  attachedAt: number;
 }

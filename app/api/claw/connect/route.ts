@@ -7,6 +7,7 @@ import {
   isSSHConnected,
   getDefaultConnection,
   getConnection,
+  pingConnection,
 } from "@/lib/modules/claw/actions";
 
 export async function POST(req: NextRequest) {
@@ -32,8 +33,18 @@ export async function POST(req: NextRequest) {
 
     if (action === "status") {
       const conn = await getConnection(id, userId);
+      // A bare `isSSHConnected` check only proves the connections map has
+      // an entry — which persists across HMR and silent TCP drops. Ping
+      // the tunnel so a half-dead client is evicted here (inside
+      // pingConnection) instead of letting the UI mark itself "connected"
+      // and then fire a storm of commands that pile up behind a dead
+      // socket for 30s until keepalive finally trips.
+      let connected = isSSHConnected(id);
+      if (connected) {
+        connected = await pingConnection(id, 2000);
+      }
       return NextResponse.json({
-        connected: isSSHConnected(id),
+        connected,
         connectionId: id,
         host: conn?.host,
         username: conn?.username,

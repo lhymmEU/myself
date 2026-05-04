@@ -33,6 +33,28 @@ export const clawPairings = sqliteTable("claw_pairings", {
   createdAt: integer("created_at", { mode: "number" }).notNull(),
 });
 
+/**
+ * Friendly metadata for openclaw chat sessions. Replaces the legacy
+ * `localStorage["claw-dm-session-names"]` blob so renames travel
+ * across devices and survive a browser cache wipe.
+ *
+ * Compound key: a single openclaw session is identified by
+ * (userId, connectionId, agentId, sessionId). The `sessionId` is the
+ * compound session key returned by `openclaw sessions --json`, NOT the
+ * UUID transcript file name.
+ */
+export const clawSessionMeta = sqliteTable("claw_session_meta", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().default("local-user"),
+  connectionId: text("connection_id").notNull(),
+  agentId: text("agent_id").notNull(),
+  sessionId: text("session_id").notNull(),
+  name: text("name"),
+  pinnedAt: integer("pinned_at", { mode: "number" }),
+  createdAt: integer("created_at", { mode: "number" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "number" }).notNull(),
+});
+
 export const clawConnections = sqliteTable("claw_connections", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().default("local-user"),

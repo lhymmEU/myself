@@ -37,6 +37,28 @@ export const clawPairings = pgTable("claw_pairings", {
   createdAt: bigint("created_at", { mode: "number" }).notNull(),
 });
 
+/**
+ * Friendly metadata for openclaw chat sessions. Replaces the legacy
+ * `localStorage["claw-dm-session-names"]` blob so renames travel
+ * across devices and survive a browser cache wipe.
+ *
+ * Compound key: a single openclaw session is identified by
+ * (userId, connectionId, agentId, sessionId). The `sessionId` is the
+ * compound session key returned by `openclaw sessions --json`, NOT the
+ * UUID transcript file name.
+ */
+export const clawSessionMeta = pgTable("claw_session_meta", {
+  id: text("id").primaryKey(),
+  userId: uuid("user_id").notNull(),
+  connectionId: text("connection_id").notNull(),
+  agentId: text("agent_id").notNull(),
+  sessionId: text("session_id").notNull(),
+  name: text("name"),
+  pinnedAt: bigint("pinned_at", { mode: "number" }),
+  createdAt: bigint("created_at", { mode: "number" }).notNull(),
+  updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
+});
+
 export const clawConnections = pgTable("claw_connections", {
   id: text("id").primaryKey(),
   userId: uuid("user_id").notNull(),

@@ -190,6 +190,7 @@ function patchLegacySqliteSchema(sqlite: import("better-sqlite3").Database) {
     "todos",
     "plan_folders",
     "plan_pages",
+    "plan_marked_attachments",
     "character_appearance",
     "user_skills",
     "skill_wishlist",

@@ -3,8 +3,8 @@ import { bootApp } from "@/lib/core/init";
 import { requireUserId } from "@/lib/core/route-helpers";
 import {
   executeOpenClawCommand,
-  isSSHConnected,
   getDefaultConnection,
+  pingConnection,
 } from "@/lib/modules/claw/actions";
 
 export async function GET(req: NextRequest) {
@@ -21,11 +21,17 @@ export async function GET(req: NextRequest) {
         { status: 400 },
       );
     }
-    if (!isSSHConnected(connectionId)) {
+    // Liveness probe first. The dm/status endpoint is polled every 30s by
+    // the agent status bar, so a half-dead tunnel here means the user
+    // stares at a spinner indefinitely. `pingConnection` evicts the dead
+    // client on failure so the next /api/claw/connect rebuilds cleanly.
+    const alive = await pingConnection(connectionId, 2000);
+    if (!alive) {
       return NextResponse.json({
         online: false,
         health: "unknown" as const,
         gatewayRunning: false,
+        reconnectRequired: true,
       });
     }
 
@@ -38,7 +44,7 @@ export async function GET(req: NextRequest) {
       const statusResult = await executeOpenClawCommand(
         connectionId,
         "status --all --json",
-        30000,
+        8000,
       );
       if (statusResult.code === 0 && statusResult.stdout.trim()) {
         try {

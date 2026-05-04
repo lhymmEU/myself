@@ -8,8 +8,9 @@ import { TodoItem } from "./todo-item";
 import { parseMindMapTodos } from "@/lib/modules/todos/parse-mind-map";
 import { completeTodo } from "@/lib/modules/todos/complete-todo";
 import type { MindMapTodo } from "@/lib/modules/todos/types";
+import type { PlanPage } from "@/lib/modules/plans/types";
 import { useT } from "@/lib/i18n/context";
-import { useTodoSource } from "@/lib/swr/hooks";
+import { useTodoSource, usePlansByLinkedNodes } from "@/lib/swr/hooks";
 
 export function TodoList() {
   const t = useT();
@@ -26,6 +27,13 @@ export function TodoList() {
     }
     return parseMindMapTodos(elements as Parameters<typeof parseMindMapTodos>[0]);
   }, [scene, fetchError]);
+
+  const todoIds = useMemo(() => todos.map((td) => td.id), [todos]);
+  const { data: linkedData } = usePlansByLinkedNodes(todoIds);
+  const linkedByNode: Record<string, PlanPage> = useMemo(
+    () => linkedData?.byNode ?? {},
+    [linkedData],
+  );
 
   const error = fetchError ? (fetchError instanceof Error ? fetchError.message : t("todos.failedLoadTodos")) : null;
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
@@ -98,7 +106,12 @@ export function TodoList() {
       ) : (
         <div className="space-y-1.5">
           {filtered.map((todo) => (
-            <TodoItem key={todo.id} todo={todo} onComplete={handleComplete} />
+            <TodoItem
+              key={todo.id}
+              todo={todo}
+              onComplete={handleComplete}
+              linkedPlanId={linkedByNode[todo.id]?.id ?? null}
+            />
           ))}
         </div>
       )}

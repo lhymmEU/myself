@@ -40,7 +40,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, Cloud, Loader2, Lock, Plus, Upload } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Cloud,
+  Loader2,
+  Lock,
+  Plus,
+  Upload,
+} from "lucide-react";
 import {
   createCloudSecret,
   getCloudVaultStatus,
@@ -48,7 +56,11 @@ import {
   setupCloudVault,
   unlockCloudVault,
 } from "@/lib/modules/vault/client";
-import { encodeEdgeCredential } from "@/lib/modules/claw/edge-credentials";
+import {
+  encodeEdgeCredential,
+  inspectPemKey,
+  normalizePem,
+} from "@/lib/modules/claw/edge-credentials";
 
 interface AddEdgeServerProps {
   onAdded?: () => void;
@@ -160,12 +172,18 @@ export function AddEdgeServer({
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      setPrivateKey(String(reader.result ?? ""));
+      const raw = String(reader.result ?? "");
+      setPrivateKey(normalizePem(raw));
       setKeyFileName(file.name);
     };
     reader.readAsText(file);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
+
+  const pemInfo =
+    authMethod === "key" && privateKey.trim()
+      ? inspectPemKey(privateKey)
+      : null;
 
   const handleSave = async () => {
     setError(null);
@@ -403,19 +421,34 @@ export function AddEdgeServer({
                     ref={fileInputRef}
                     type="file"
                     className="hidden"
-                    accept=".pem,.key,.pub,*"
+                    accept=".pem,.key,.txt,application/x-pem-file"
                     onChange={handleKeyFile}
                   />
                   <Textarea
                     className="font-mono text-xs"
                     rows={5}
-                    placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+                    placeholder="-----BEGIN RSA PRIVATE KEY----- or -----BEGIN OPENSSH PRIVATE KEY-----"
                     value={privateKey}
                     onChange={(e) => {
                       setPrivateKey(e.target.value);
                       setKeyFileName(null);
                     }}
                   />
+                  {pemInfo && (
+                    <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                      {pemInfo.supported ? (
+                        <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                      ) : (
+                        <AlertCircle className="h-3 w-3 text-amber-500" />
+                      )}
+                      Detected: {pemInfo.label}
+                      {pemInfo.encrypted && " · passphrase required"}
+                    </p>
+                  )}
+                  <p className="text-[11px] text-muted-foreground">
+                    Accepts OpenSSH, PKCS#1 (RSA/EC/DSA `.pem`) and PKCS#8
+                    keys. Encrypted keys require the passphrase below.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label>Passphrase (optional)</Label>

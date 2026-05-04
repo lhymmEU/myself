@@ -1,13 +1,10 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { useClawConnections, useClawSessions } from "@/lib/swr/hooks";
-
-interface ClawDMResponse {
-  content: string;
-  responseType?: string;
-  sessionId?: string;
-}
+import { useSWRConfig } from "swr";
+import { useClawConnections } from "@/lib/swr/hooks";
+import { requestReconnect } from "@/lib/modules/claw/client-reconnect";
+import type { ClawUIMessageChunk } from "@/lib/claw-ai/parts";
 
 interface UseClawDMReturn {
   send: (message: string) => Promise<void>;
@@ -19,6 +16,17 @@ interface UseClawDMReturn {
   connectionId: string | null;
 }
 
+/**
+ * One-shot DM helper used by feature surfaces (Plans "generate from
+ * todos", etc.) that don't need the full chat experience. Wraps the
+ * server-side AI SDK stream and reduces it to a single `text` blob.
+ *
+ * Connection liveness and agent resolution are entirely server-side —
+ * this hook just shepherds the message and surfaces the joined text.
+ * When the server signals a stale tunnel (`reconnectRequired`) or
+ * remote re-init (`agentsChanged`), we auto-reconnect once and surface
+ * the original error so the user can retry without cleanup.
+ */
 export function useClawDM(): UseClawDMReturn {
   const [response, setResponse] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -37,18 +45,7 @@ export function useClawDM(): UseClawDMReturn {
   const connectionId = activeConnection?.id ?? connections[0]?.id ?? null;
   const connected = activeConnection?.connected ?? false;
 
-  const { data: sessionsData } = useClawSessions(
-    connected ? connectionId : null,
-    connected,
-  );
-
-  const agentId = useMemo(() => {
-    const sessions: { agentId?: string }[] = sessionsData?.sessions ?? [];
-    for (const s of sessions) {
-      if (s.agentId) return s.agentId;
-    }
-    return null;
-  }, [sessionsData]);
+  const { mutate: globalMutate } = useSWRConfig();
 
   const checkConnection = useCallback(async () => {
     for (const conn of connections) {
@@ -77,7 +74,6 @@ export function useClawDM(): UseClawDMReturn {
       setResponse(null);
 
       let connId = connectionId;
-      let agent = agentId;
 
       if (!connected || !connId) {
         const result = await checkConnection();
@@ -89,61 +85,105 @@ export function useClawDM(): UseClawDMReturn {
         connId = result.id;
       }
 
-      if (!agent) {
-        try {
-          const sessRes = await fetch(
-            `/api/claw/sessions?connectionId=${encodeURIComponent(connId)}`,
-          );
-          const sessData = await sessRes.json();
-          const sessions: { agentId?: string }[] = sessData?.sessions ?? [];
-          for (const s of sessions) {
-            if (s.agentId) {
-              agent = s.agentId;
-              break;
-            }
-          }
-        } catch {
-          // fall through
-        }
-      }
-
-      if (!agent) {
-        setError("No agent available");
-        setLoading(false);
-        return;
-      }
-
       try {
         const res = await fetch("/api/claw/dm", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             connectionId: connId,
-            message,
-            agentId: agent,
+            // The server reads the latest user message text out of the
+            // UIMessage list, so we mimic the AI SDK shape with a single
+            // user message. agentId/sessionId omitted — the server
+            // resolves them on demand.
+            messages: [
+              {
+                id: `oneshot-${Date.now()}`,
+                role: "user",
+                parts: [{ type: "text", text: message }],
+              },
+            ],
             sessionId: null,
           }),
         });
 
-        const data: ClawDMResponse = await res.json();
-
         if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          if (data?.reconnectRequired && connId) {
+            const pending = requestReconnect(connId);
+            if (pending) await pending.catch(() => false);
+            globalMutate(
+              `/api/claw/sessions?connectionId=${encodeURIComponent(connId)}`,
+            );
+          }
           setError(
-            (data as unknown as { error?: string }).error ??
-              "Request failed",
+            (data as { error?: string }).error ?? "Request failed",
           );
           setLoading(false);
           return;
         }
 
-        setResponse(data.content ?? "");
+        if (!res.body) {
+          setError("Empty response");
+          setLoading(false);
+          return;
+        }
+
+        // Drain the SSE stream — we only need the joined assistant
+        // text. The dm route emits `text-delta` chunks for streaming
+        // text plus `data-error` chunks for failures. Anything else
+        // (typed cards) is irrelevant to the plans flow's one-shot
+        // text expectation.
+        const reader = res.body
+          .pipeThrough(new TextDecoderStream())
+          .getReader();
+        let buffered = "";
+        let combined = "";
+        let dataError: string | null = null;
+        let done = false;
+        while (!done) {
+          const { value, done: streamDone } = await reader.read();
+          if (streamDone) break;
+          buffered += value;
+          let newlineIdx;
+          while ((newlineIdx = buffered.indexOf("\n\n")) >= 0) {
+            const event = buffered.slice(0, newlineIdx);
+            buffered = buffered.slice(newlineIdx + 2);
+            const dataLine = event
+              .split("\n")
+              .find((l) => l.startsWith("data:"));
+            if (!dataLine) continue;
+            const payload = dataLine.slice(5).trim();
+            if (payload === "[DONE]") {
+              done = true;
+              break;
+            }
+            try {
+              const chunk = JSON.parse(payload) as ClawUIMessageChunk;
+              if (chunk.type === "text-delta") {
+                combined += (chunk as { delta?: string }).delta ?? "";
+              }
+              if (chunk.type === "data-error") {
+                const data = (chunk as { data?: { message?: string } }).data;
+                if (data?.message) dataError = data.message;
+              }
+            } catch {
+              // malformed event — skip
+            }
+          }
+        }
+
+        if (dataError && !combined) {
+          setError(dataError);
+        } else {
+          setResponse(combined);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Network error");
       } finally {
         setLoading(false);
       }
     },
-    [connectionId, agentId, connected, checkConnection],
+    [connectionId, connected, checkConnection, globalMutate],
   );
 
   const reset = useCallback(() => {

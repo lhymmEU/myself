@@ -1,12 +1,9 @@
 "use client";
 
-import { Suspense, useState, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { MessageCircle, Settings2 } from "lucide-react";
-import { useT } from "@/lib/i18n/context";
-import { ConnectionForm } from "@/components/claw/connection-form";
-import { ClawAdvancedView } from "@/components/claw/claw-advanced-view";
-import { ClawDMPanel } from "@/components/claw/dm/claw-dm-panel";
+import { useClawConnections } from "@/lib/swr/hooks";
+import { ClawHome } from "@/components/claw/home/claw-home";
 
 interface ConnectState {
   connected: boolean;
@@ -15,10 +12,12 @@ interface ConnectState {
   username?: string;
 }
 
-type ClawMode = "dm" | "advanced";
+interface ConnectionInfo {
+  id: string;
+  isDefault: boolean;
+}
 
 function ClawPageInner() {
-  const t = useT();
   const searchParams = useSearchParams();
   const initialPrompt = searchParams.get("askClaw") ?? undefined;
   const initialSessionName = searchParams.get("sessionName") ?? undefined;
@@ -27,56 +26,81 @@ function ClawPageInner() {
     connected: false,
     connectionId: null,
   });
-  const [mode, setMode] = useState<ClawMode>("dm");
 
-  const handleConnectionChange = useCallback((state: ConnectState) => {
-    setConnectState(state);
+  // The chat home no longer renders the connection form. We resolve
+  // the default connection here and probe its live status so the home
+  // hero gets the right `connected` flag without UI clutter.
+  const { data: connectionsData } = useClawConnections();
+  const connections: ConnectionInfo[] = Array.isArray(connectionsData)
+    ? connectionsData
+    : [];
+  const defaultConnection = connections.find((c) => c.isDefault) ?? connections[0];
+
+  const probeStatus = useCallback(async (connectionId: string) => {
+    try {
+      const res = await fetch("/api/claw/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionId, action: "status" }),
+      });
+      const data = await res.json();
+      if (data.connected) {
+        setConnectState({
+          connected: true,
+          connectionId,
+          host: data.host,
+          username: data.username,
+        });
+        return true;
+      }
+    } catch {
+      // ignore — we'll show the "Connect your Claw" CTA
+    }
+    return false;
   }, []);
+
+  useEffect(() => {
+    if (!defaultConnection?.id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing connection state with the live `connections` list; no synchronous derived form because we also probe a remote endpoint below.
+      setConnectState({ connected: false, connectionId: null });
+      return;
+    }
+    const id = defaultConnection.id;
+    // Optimistically set the id so the home renders cards even while
+    // we're still probing whether the tunnel is alive.
+    setConnectState((prev) => ({ ...prev, connectionId: id }));
+    void probeStatus(id).then((ok) => {
+      if (!ok) {
+        // Try connect — many users land here without a live tunnel.
+        fetch("/api/claw/connect", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ connectionId: id }),
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.connected) {
+              setConnectState({
+                connected: true,
+                connectionId: id,
+                host: data.host,
+                username: data.username,
+              });
+            }
+          })
+          .catch(() => null);
+      }
+    });
+  }, [defaultConnection?.id, probeStatus]);
 
   return (
     <div className="space-y-6 px-8 py-4">
-      <ConnectionForm onConnectionChange={handleConnectionChange} />
-
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => setMode("dm")}
-          className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
-            mode === "dm"
-              ? "bg-muted border-border text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <MessageCircle className="h-3.5 w-3.5" />
-          {t("claw.dm.modeChat")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("advanced")}
-          className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
-            mode === "advanced"
-              ? "bg-muted border-border text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Settings2 className="h-3.5 w-3.5" />
-          {t("claw.dm.modeAdvanced")}
-        </button>
-      </div>
-
-      {mode === "dm" ? (
-        <ClawDMPanel
-          connectionId={connectState.connectionId}
-          connected={connectState.connected}
-          initialPrompt={initialPrompt}
-          initialSessionName={initialSessionName}
-        />
-      ) : (
-        <ClawAdvancedView
-          connectionId={connectState.connectionId}
-          connected={connectState.connected}
-        />
-      )}
+      <ClawHome
+        connectionId={connectState.connectionId}
+        connected={connectState.connected}
+        initialPrompt={initialPrompt}
+        initialSessionName={initialSessionName}
+      />
     </div>
   );
 }

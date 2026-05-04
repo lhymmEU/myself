@@ -4,9 +4,9 @@ import { requireUserId } from "@/lib/core/route-helpers";
 import {
   executeOpenClawCommand,
   executeCommand,
-  isSSHConnected,
   getDefaultConnection,
 } from "@/lib/modules/claw/actions";
+import { preflight } from "@/lib/modules/claw/health";
 
 const ALLOWED_COMMANDS: Record<string, string> = {
   status: "status --all",
@@ -39,25 +39,41 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No connection configured" }, { status: 400 });
     }
 
-    if (!isSSHConnected(id)) {
-      return NextResponse.json({ error: "Not connected via SSH" }, { status: 400 });
+    // Share the same preflight contract as sessions/dm: a half-dead
+    // tunnel returns 503 with reconnectRequired so the UI can auto-heal
+    // instead of eating a 30s openclaw hang followed by an opaque 500.
+    const pre = await preflight(id);
+    if (!pre.ok) {
+      return NextResponse.json(pre.body, { status: pre.status });
     }
 
-    if (raw) {
-      const result = await executeCommand(id, raw, 30000);
+    // Validate command before hitting the remote so we reject garbage
+    // without even queueing an exec.
+    if (!raw) {
+      const subcommand = ALLOWED_COMMANDS[command];
+      if (!subcommand) {
+        return NextResponse.json(
+          { error: `Unknown command: ${command}. Allowed: ${Object.keys(ALLOWED_COMMANDS).join(", ")}` },
+          { status: 400 }
+        );
+      }
+    }
+
+    try {
+      const result = raw
+        ? await executeCommand(id, raw, 30000)
+        : await executeOpenClawCommand(id, ALLOWED_COMMANDS[command], 30000);
       return NextResponse.json(result);
-    }
-
-    const subcommand = ALLOWED_COMMANDS[command];
-    if (!subcommand) {
+    } catch (err) {
+      // The tunnel dropped between preflight and exec, or openclaw itself
+      // wedged. Surface a recoverable 503 so the UI treats this as a
+      // reconnect hint rather than a hard failure.
+      const msg = err instanceof Error ? err.message : String(err);
       return NextResponse.json(
-        { error: `Unknown command: ${command}. Allowed: ${Object.keys(ALLOWED_COMMANDS).join(", ")}` },
-        { status: 400 }
+        { error: `Command failed: ${msg}`, reconnectRequired: true },
+        { status: 503 }
       );
     }
-
-    const result = await executeOpenClawCommand(id, subcommand, 30000);
-    return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },

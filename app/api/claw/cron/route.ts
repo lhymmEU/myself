@@ -5,6 +5,7 @@ import {
   executeCommand,
   isSSHConnected,
 } from "@/lib/modules/claw/actions";
+import { preflight } from "@/lib/modules/claw/health";
 
 interface OpenClawCronJob {
   jobId?: string;
@@ -70,11 +71,29 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ jobs: [] });
     }
 
-    const result = await executeOpenClawCommand(
-      connectionId,
-      "cron list --json",
-      15000
-    );
+    // Cron is polled every 30s by the UI — a half-dead tunnel here used
+    // to queue a 15s hang per poll, starving sessions/dm-status behind
+    // it. Preflight fails fast and emits the same reconnectRequired
+    // contract as the other claw routes so the UI can auto-heal.
+    const pre = await preflight(connectionId);
+    if (!pre.ok) {
+      return NextResponse.json({ jobs: [], ...pre.body }, { status: pre.status });
+    }
+
+    let result;
+    try {
+      result = await executeOpenClawCommand(
+        connectionId,
+        "cron list --json",
+        15000
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return NextResponse.json(
+        { jobs: [], error: `cron list failed: ${msg}`, reconnectRequired: true },
+        { status: 503 }
+      );
+    }
 
     if (result.code !== 0) {
       return NextResponse.json(

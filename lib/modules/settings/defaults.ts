@@ -29,6 +29,7 @@ const COMMON_DEFAULTS: Record<string, string> = {
   claw_access_wishlist: "false",
   claw_access_mindmap: "false",
   claw_access_skills: "false",
+  claw_access_marked: "false",
   finance_default_mode: "market",
   finance_enabled_modules: JSON.stringify([
     "market-indices", "treasury-rates", "equity", "crypto",
@@ -51,6 +52,7 @@ export const CLAW_ACCESS_MODULES = [
   "wishlist",
   "mindmap",
   "skills",
+  "marked",
 ] as const;
 
 export type ClawAccessModule = (typeof CLAW_ACCESS_MODULES)[number];

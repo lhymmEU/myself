@@ -1,10 +1,11 @@
 import { nanoid } from "nanoid";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { LOCAL_USER_ID } from "@/lib/core/runtime";
 import { eventBus } from "@/lib/core/event-bus";
 import { planPages, planFolders } from "./schema";
 import { PLAN_EVENTS } from "./events";
+import { deleteAttachmentsForPlan } from "./attachments";
 import type {
   PlanPage,
   PlanFolder,
@@ -66,6 +67,54 @@ export async function getPlan(
     .limit(1);
   const row = rows[0];
   return row ? parseRow(row) : null;
+}
+
+/**
+ * Idempotency hook for "auto-create plan from mind-map todo". Returns the
+ * single plan whose linked_node_id matches the given mind-map element id, if
+ * any.
+ */
+export async function getPlanByLinkedNode(
+  linkedNodeId: string,
+  userId: string = LOCAL_USER_ID,
+): Promise<PlanPage | null> {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(planPages)
+    .where(
+      and(
+        eq(planPages.linkedNodeId, linkedNodeId),
+        eq(planPages.userId, userId),
+      ),
+    )
+    .limit(1);
+  const row = rows[0];
+  return row ? parseRow(row) : null;
+}
+
+/**
+ * Bulk version used by the Todos UI badge — returns a map keyed by
+ * `linkedNodeId` so consumers can look up "does this todo have a plan?" in
+ * O(1).
+ */
+export async function getPlansByLinkedNodes(
+  ids: string[],
+  userId: string = LOCAL_USER_ID,
+): Promise<Record<string, PlanPage>> {
+  if (ids.length === 0) return {};
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(planPages)
+    .where(
+      and(eq(planPages.userId, userId), inArray(planPages.linkedNodeId, ids)),
+    );
+  const byNode: Record<string, PlanPage> = {};
+  for (const row of rows) {
+    if (row.linkedNodeId) byNode[row.linkedNodeId] = parseRow(row);
+  }
+  return byNode;
 }
 
 export async function createPlan(
@@ -143,6 +192,7 @@ export async function deletePlan(
 ): Promise<void> {
   const db = getDb();
   const existing = await getPlan(id, userId);
+  await deleteAttachmentsForPlan(id, userId);
   await db
     .delete(planPages)
     .where(and(eq(planPages.id, id), eq(planPages.userId, userId)));

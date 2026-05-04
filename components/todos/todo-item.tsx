@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Check, ChevronRight } from "lucide-react";
+import { AlertTriangle, Check, ChevronRight, FileText } from "lucide-react";
 import type { MindMapTodo } from "@/lib/modules/todos/types";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/context";
@@ -10,9 +11,10 @@ import { useT } from "@/lib/i18n/context";
 interface TodoItemProps {
   todo: MindMapTodo;
   onComplete?: (id: string) => void;
+  linkedPlanId?: string | null;
 }
 
-export function TodoItem({ todo, onComplete }: TodoItemProps) {
+export function TodoItem({ todo, onComplete, linkedPlanId }: TodoItemProps) {
   const t = useT();
   const [completing, setCompleting] = useState(false);
   const traceWithoutTitle = todo.trace.slice(0, -1);
@@ -71,6 +73,16 @@ export function TodoItem({ todo, onComplete }: TodoItemProps) {
           )}
         </div>
 
+        {linkedPlanId && (
+          <Link
+            href={`/dashboard/plans?id=${encodeURIComponent(linkedPlanId)}`}
+            title={t("todos.viewPlan")}
+            className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors shrink-0"
+          >
+            <FileText className="h-3 w-3" />
+            {t("todos.viewPlan")}
+          </Link>
+        )}
         {todo.isUrgent && (
           <Badge
             variant="outline"

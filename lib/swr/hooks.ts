@@ -1,17 +1,42 @@
 "use client";
 
 import useSWR, { type SWRConfiguration } from "swr";
-import { swrFetcher } from "./config";
+import { swrFetcher, clawFetcher } from "./config";
+import {
+  isReconnectPending,
+  requestReconnect,
+} from "@/lib/modules/claw/client-reconnect";
 
 // --- Claw hooks (remote data — slower, cache longer) ---
+
+/**
+ * Shared config applied to every claw poll-style hook. When the client
+ * coordinator is actively attempting a reconnect we skip the next
+ * revalidation so we don't stack another doomed request against a tunnel
+ * that's already known-dead. After the reconnect resolves the
+ * coordinator triggers a `mutate` for these keys and polling resumes.
+ */
+function clawSWRConfig(
+  connectionId: string | null,
+  base: SWRConfiguration,
+): SWRConfiguration {
+  return {
+    ...base,
+    isPaused: () =>
+      connectionId ? isReconnectPending(connectionId) : false,
+  };
+}
 
 export function useClawSessions(connectionId: string | null, connected?: boolean) {
   return useSWR(
     connectionId && connected !== false
       ? `/api/claw/sessions?connectionId=${encodeURIComponent(connectionId)}`
       : null,
-    swrFetcher,
-    { dedupingInterval: 30_000, revalidateOnFocus: true },
+    clawFetcher,
+    clawSWRConfig(connectionId, {
+      dedupingInterval: 30_000,
+      revalidateOnFocus: true,
+    }),
   );
 }
 
@@ -20,8 +45,11 @@ export function useClawCronJobs(connectionId: string | null) {
     connectionId
       ? `/api/claw/cron?connectionId=${encodeURIComponent(connectionId)}`
       : null,
-    swrFetcher,
-    { dedupingInterval: 30_000, revalidateOnFocus: true },
+    clawFetcher,
+    clawSWRConfig(connectionId, {
+      dedupingInterval: 30_000,
+      revalidateOnFocus: true,
+    }),
   );
 }
 
@@ -32,8 +60,15 @@ export function useClawChannels(connectionId: string | null) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ connectionId, command: "channels-list" }),
     });
+    const data = await res.json().catch(() => ({}));
+    // Mirror the clawFetcher contract: on a reconnectRequired 503 we
+    // kick off a coordinated reconnect and fall back to the built-in
+    // defaults so the channel dropdown stays usable during recovery.
+    if (res.status === 503 && data?.reconnectRequired) {
+      if (connectionId) requestReconnect(connectionId);
+      return ["whatsapp", "telegram", "discord", "imessage", "slack", "qqbot"];
+    }
     if (!res.ok) throw new Error("Failed to fetch channels");
-    const data = await res.json();
     const output: string = data.stdout || "";
     const lines = output
       .split("\n")
@@ -52,7 +87,7 @@ export function useClawChannels(connectionId: string | null) {
   return useSWR(
     connectionId ? `/api/claw/command#channels-${connectionId}` : null,
     fetcher,
-    { dedupingInterval: 120_000 },
+    clawSWRConfig(connectionId, { dedupingInterval: 120_000 }),
   );
 }
 
@@ -65,8 +100,8 @@ export function useAgentStatus(
     connectionId && connected
       ? `/api/claw/dm/status?connectionId=${encodeURIComponent(connectionId)}`
       : null,
-    swrFetcher,
-    { refreshInterval: 30_000, ...config },
+    clawFetcher,
+    clawSWRConfig(connectionId, { refreshInterval: 30_000, ...config }),
   );
 }
 
@@ -74,6 +109,32 @@ export function useClawConnections() {
   return useSWR("/api/claw/connections", swrFetcher, {
     dedupingInterval: 30_000,
   });
+}
+
+/**
+ * Server-persisted friendly names + pin state for openclaw chat
+ * sessions. Replaces the legacy `localStorage` blob so renames travel
+ * across devices.
+ */
+export function useClawSessionMeta(connectionId: string | null) {
+  return useSWR<{
+    records: Array<{
+      id: string;
+      connectionId: string;
+      agentId: string;
+      sessionId: string;
+      name: string | null;
+      pinnedAt: number | null;
+      createdAt: number;
+      updatedAt: number;
+    }>;
+  }>(
+    connectionId
+      ? `/api/claw/sessions/meta?connectionId=${encodeURIComponent(connectionId)}`
+      : "/api/claw/sessions/meta",
+    swrFetcher,
+    { dedupingInterval: 30_000, revalidateOnFocus: true },
+  );
 }
 
 // --- Dashboard hooks (local SQLite — fast) ---
@@ -113,6 +174,25 @@ export function usePlanList() {
 
 export function usePlanFolders() {
   return useSWR("/api/plans/folders", swrFetcher);
+}
+
+export function usePlanAttachments(planId: string | null) {
+  return useSWR(
+    planId ? `/api/plans/attachments?planId=${encodeURIComponent(planId)}` : null,
+    swrFetcher,
+  );
+}
+
+export function usePlansByLinkedNodes(ids: string[]) {
+  // Sort to keep the SWR key stable regardless of input order. A trailing
+  // delimiter on the empty case lets `null` short-circuit the request entirely.
+  const key =
+    ids.length > 0
+      ? `/api/plans?action=byLinkedNodes&ids=${encodeURIComponent(
+          [...ids].sort().join(","),
+        )}`
+      : null;
+  return useSWR(key, swrFetcher);
 }
 
 // --- Finance / OpenBB hooks ---

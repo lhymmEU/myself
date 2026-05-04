@@ -7,6 +7,10 @@ import { getAllPlans } from "@/lib/modules/plans/actions";
 import { fetchOpenBB } from "@/lib/modules/finance/openbb-client";
 import { getTodoSourceScene, getAllScenes } from "@/lib/modules/mind-map/actions";
 import { parseMindMapTodos } from "@/lib/modules/todos/parse-mind-map";
+import {
+  listCollections as listMarkedCollections,
+  listItems as listMarkedItems,
+} from "@/lib/modules/marked/actions";
 import { toolRegistry } from "@/lib/core/tool-registry";
 import { CLAW_ACCESS_MODULES } from "@/lib/modules/settings/defaults";
 
@@ -108,6 +112,27 @@ async function gatherModuleContext(
       }
       case "skills": {
         ctx.skills = await listUserSkills(userId);
+        break;
+      }
+      case "marked": {
+        const [collections, items] = await Promise.all([
+          listMarkedCollections(userId),
+          listMarkedItems(null, userId),
+        ]);
+        const counts = new Map<string | null, number>();
+        for (const item of items) {
+          const key = item.collectionId ?? null;
+          counts.set(key, (counts.get(key) ?? 0) + 1);
+        }
+        ctx.marked = {
+          collections: collections.map((c) => ({
+            id: c.id,
+            name: c.name,
+            itemCount: counts.get(c.id) ?? 0,
+          })),
+          uncollectedCount: counts.get(null) ?? 0,
+          totalItems: items.length,
+        };
         break;
       }
     }

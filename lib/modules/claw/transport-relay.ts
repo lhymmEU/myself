@@ -90,6 +90,16 @@ export async function resolveAgentId(
   return null;
 }
 
+export async function pingConnection(
+  _connectionId: string,
+  _timeoutMs = 3000,
+): Promise<boolean> {
+  // The relay transport doesn't hold a long-lived socket, so liveness is a
+  // per-call concern. Until the relay ships, treat every connection as
+  // not-live so callers surface the "reconnect" UX.
+  return false;
+}
+
 export function loginShell(command: string): string {
   return command;
 }

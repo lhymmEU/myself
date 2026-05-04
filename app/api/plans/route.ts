@@ -8,6 +8,7 @@ import {
   updatePlan,
   deletePlan,
   reorderPlans,
+  getPlansByLinkedNodes,
 } from "@/lib/modules/plans/actions";
 
 export async function GET(req: NextRequest) {
@@ -17,6 +18,16 @@ export async function GET(req: NextRequest) {
   try {
     const action = req.nextUrl.searchParams.get("action");
     const id = req.nextUrl.searchParams.get("id");
+
+    if (action === "byLinkedNodes") {
+      const idsParam = req.nextUrl.searchParams.get("ids") ?? "";
+      const ids = idsParam
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const byNode = await getPlansByLinkedNodes(ids, auth.userId);
+      return NextResponse.json({ byNode });
+    }
 
     if (action === "list" || (!action && !id)) {
       return NextResponse.json(await getAllPlans(auth.userId));
