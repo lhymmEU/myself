@@ -46,7 +46,7 @@ const LOCAL_ONLY_FILE_PATTERNS = [
   "lib/core/db.ts",
   "lib/core/init-db.ts",
   "lib/core/mailer.ts",
-  "lib/modules/claw/transport-ssh.ts",
+  "lib/claw/ssh.ts",
   "lib/modules/vault/vault-db.ts",
   "lib/modules/vault/actions.ts",
   // Hosts the local-only `getSettingSync` escape hatch used by mailer /
@@ -54,11 +54,9 @@ const LOCAL_ONLY_FILE_PATTERNS = [
   // sync read is gated by isLocal() inside the function itself.
   "lib/modules/settings/actions.ts",
   // API routes that are themselves gated with isLocal() at the top
-  // and only ship local features (terminal stream, file picker,
-  // OpenBB credentials writer).
-  "app/api/claw/terminal/route.ts",
-  "app/api/claw/read-local-file/route.ts",
+  // and only ship local features.
   "app/api/finance/openbb/credentials/route.ts",
+  "app/api/vault/read-local-file/route.ts",
 ];
 
 const restrictedImportsRule = {

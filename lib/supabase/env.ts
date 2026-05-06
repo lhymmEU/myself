@@ -40,7 +40,7 @@ export function getSupabaseServiceRoleKey(): string {
   if (!key) {
     throw new Error(
       "SUPABASE_SERVICE_ROLE_KEY not configured. Required only for " +
-        "server-side admin operations (e.g. minting JWTs for the claw relay).",
+        "server-side admin operations.",
     );
   }
   return key;

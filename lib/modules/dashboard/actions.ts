@@ -5,7 +5,6 @@ import { LOCAL_USER_ID } from "@/lib/core/runtime";
 import {
   userSkills,
   skillWishlist,
-  clawAssignedJobs,
   characterAppearance,
   wishlistTodos,
 } from "./schema";
@@ -309,75 +308,3 @@ export async function bulkCreateWishTodos(
   return { count: capped.length };
 }
 
-// --- Assigned Jobs ---
-
-function normalizeJob<T extends { createdAt: number | string }>(row: T): T {
-  return { ...row, createdAt: Number(row.createdAt) };
-}
-
-export async function listAssignedJobs(userId: string = LOCAL_USER_ID) {
-  const rows = await getDb()
-    .select()
-    .from(clawAssignedJobs)
-    .where(eq(clawAssignedJobs.userId, userId));
-  return rows.map(normalizeJob);
-}
-
-export async function createAssignedJob(
-  data: {
-    name: string;
-    description?: string;
-    status?: string;
-    cronJobId?: string;
-  },
-  userId: string = LOCAL_USER_ID,
-) {
-  const id = nanoid();
-  await getDb()
-    .insert(clawAssignedJobs)
-    .values({
-      id,
-      userId,
-      name: data.name,
-      description: data.description ?? "",
-      status: data.status ?? "active",
-      cronJobId: data.cronJobId ?? null,
-      createdAt: Date.now(),
-    });
-  return { id };
-}
-
-export async function updateAssignedJob(
-  id: string,
-  data: Partial<{
-    name: string;
-    description: string;
-    status: string;
-    cronJobId: string | null;
-  }>,
-  userId: string = LOCAL_USER_ID,
-): Promise<void> {
-  await getDb()
-    .update(clawAssignedJobs)
-    .set(data)
-    .where(
-      and(
-        eq(clawAssignedJobs.id, id),
-        eq(clawAssignedJobs.userId, userId),
-      ),
-    );
-}
-
-export async function deleteAssignedJob(
-  id: string,
-  userId: string = LOCAL_USER_ID,
-): Promise<void> {
-  await getDb()
-    .delete(clawAssignedJobs)
-    .where(
-      and(
-        eq(clawAssignedJobs.id, id),
-        eq(clawAssignedJobs.userId, userId),
-      ),
-    );
-}

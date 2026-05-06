@@ -45,13 +45,3 @@ export const wishlistTodos = sqliteTable("wishlist_todos", {
   sortOrder: integer("sort_order", { mode: "number" }).notNull().default(0),
   createdAt: integer("created_at", { mode: "number" }).notNull(),
 });
-
-export const clawAssignedJobs = sqliteTable("claw_assigned_jobs", {
-  id: text("id").primaryKey(),
-  userId: text("user_id").notNull().default("local-user"),
-  name: text("name").notNull(),
-  description: text("description").default(""),
-  status: text("status").notNull().default("active"),
-  cronJobId: text("cron_job_id"),
-  createdAt: integer("created_at", { mode: "number" }).notNull(),
-});

@@ -2,7 +2,6 @@
 
 import {
   useRef,
-  useState,
   useCallback,
   forwardRef,
   useImperativeHandle,
@@ -15,7 +14,6 @@ import {
   BlockNoteSchema,
   defaultBlockSpecs,
 } from "@blocknote/core";
-import { SelectionActions } from "@/components/plans/claw/selection-actions";
 
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
@@ -32,17 +30,13 @@ export interface EditorHandle {
 interface EditorProps {
   content: Block[] | null;
   onChange: (content: Block[]) => void;
-  clawConnected?: boolean;
-  onTranslate?: (text: string) => void;
-  onExplain?: (text: string) => void;
 }
 
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
-  { content, onChange, clawConnected = false, onTranslate, onExplain },
+  { content, onChange },
   ref
 ) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [selectedText, setSelectedText] = useState("");
 
   const editor = useCreateBlockNote({
     schema,
@@ -61,25 +55,13 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     }, 1000);
   }, [onChange, editor]);
 
-  const handleSelectionChange = useCallback(() => {
-    setSelectedText(editor.getSelectedText());
-  }, [editor]);
-
   return (
     <div className="relative">
       <BlockNoteView
         editor={editor}
         onChange={handleChange}
-        onSelectionChange={handleSelectionChange}
         theme="dark"
         className="bn-seamless"
-      />
-      <SelectionActions
-        charCount={selectedText.length}
-        selectedText={selectedText}
-        clawConnected={clawConnected}
-        onTranslate={onTranslate ?? (() => {})}
-        onExplain={onExplain ?? (() => {})}
       />
     </div>
   );

@@ -19,10 +19,8 @@ import {
   X,
   Swords,
   Palette,
-  ShieldCheck,
 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
-import { useRouter } from "next/navigation";
 import { useUserSkills, useCharacterAppearance } from "@/lib/swr/hooks";
 import { Badge } from "@/components/ui/badge";
 import dynamic from "next/dynamic";
@@ -75,7 +73,6 @@ const COLOR_LABELS: Record<keyof UserColors, string> = {
 
 export function UserPanel() {
   const t = useT();
-  const router = useRouter();
   const { data: skillsData, mutate: mutateSkills } = useUserSkills();
   const { data: appearanceData } = useCharacterAppearance("user");
   const skills: UserSkill[] = skillsData?.skills ?? [];
@@ -177,18 +174,6 @@ export function UserPanel() {
     setAdding(false);
     setForm({ name: "", level: "familiar", category: "" });
   };
-
-  const handleVerifySkill = useCallback(
-    (skill: UserSkill) => {
-      const levelLabel = t(`dashboard.game.userPanel.level${skill.level.charAt(0).toUpperCase() + skill.level.slice(1)}` as "dashboard.game.userPanel.levelFamiliar");
-      const prompt = encodeURIComponent(
-        `I claim "${levelLabel}" proficiency in "${skill.name}". Please design a comprehensive, real-world skill assessment: present practical scenarios and challenges that professionals actually encounter with this skill at the "${levelLabel}" tier, evaluate my responses, and give an honest verdict on whether my claimed level is accurate.`,
-      );
-      const sessionName = encodeURIComponent(`${skill.name} verification`);
-      router.push(`/dashboard/claw?askClaw=${prompt}&sessionName=${sessionName}`);
-    },
-    [router, t],
-  );
 
   return (
     <Card className="flex flex-col h-full">
@@ -339,15 +324,6 @@ export function UserPanel() {
                     )}
                   </div>
                   <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleVerifySkill(skill)}
-                      className="h-5 w-5 p-0"
-                      title={t("dashboard.game.userPanel.verifySkill")}
-                    >
-                      <ShieldCheck className="h-2.5 w-2.5" />
-                    </Button>
                     <Button
                       size="sm"
                       variant="ghost"

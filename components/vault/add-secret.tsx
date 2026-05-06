@@ -52,7 +52,7 @@ export function AddSecret({ onCreated }: AddSecretProps) {
     setLoadingPath(true);
     setError(null);
     try {
-      const res = await fetch("/api/claw/read-local-file", {
+      const res = await fetch("/api/vault/read-local-file", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ path: pathInput.trim() }),
@@ -259,7 +259,7 @@ export function AddSecret({ onCreated }: AddSecretProps) {
                   </Button>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  {t("claw.connection.pathTip")} <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">{t("claw.connection.pathTipKey")}</kbd> {t("claw.connection.pathTipSuffix")}
+                  {t("vault.addSecret.pathTip")} <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">{t("vault.addSecret.pathTipKey")}</kbd> {t("vault.addSecret.pathTipSuffix")}
                 </p>
               </div>
             )}

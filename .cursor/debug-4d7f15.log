@@ -1,0 +1,3 @@
+{"sessionId":"4d7f15","hypothesisId":"H-A","location":"app/api/claw/sessions/route.ts:GET","message":"preflight result","data":{"connectionId":"5XgyZaJ1vS2ba6RiUm5aE","preflightOk":true,"preflightStatus":"ok"},"timestamp":1777885271769}
+{"sessionId":"4d7f15","runId":"post-fix","hypothesisId":"H-A","location":"app/api/claw/sessions/route.ts:GET","message":"openclaw command failed - branching on SSH presence","data":{"connectionId":"5XgyZaJ1vS2ba6RiUm5aE","sshAlive":true,"errMsg":"Command timed out after 8000ms"},"timestamp":1777885287583}
+{"sessionId":"4d7f15","hypothesisId":"H-A","location":"app/api/claw/sessions/route.ts:GET","message":"preflight result","data":{"connectionId":"5XgyZaJ1vS2ba6RiUm5aE","preflightOk":true,"preflightStatus":"ok"},"timestamp":1777885382465}

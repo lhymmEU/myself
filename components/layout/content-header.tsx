@@ -8,7 +8,6 @@ import {
   Lock,
   Settings,
   LayoutDashboard,
-  Shell,
   Receipt,
   Languages,
   Blend,
@@ -31,7 +30,6 @@ const PAGE_META: {
   { href: "/dashboard/plans", labelKey: "sidebar.plans", icon: Blend },
   { href: "/dashboard/invoice", labelKey: "sidebar.invoice", icon: Receipt },
   { href: "/dashboard/vault", labelKey: "sidebar.vault", icon: Lock },
-  { href: "/dashboard/claw", labelKey: "sidebar.myClaw", icon: Shell },
   { href: "/dashboard/settings", labelKey: "sidebar.settings", icon: Settings },
 ];
 

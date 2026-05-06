@@ -11,14 +11,11 @@ import {
   PenLine,
   PanelLeft,
   PanelLeftClose,
-  Sparkles,
 } from "lucide-react";
 import type { Block } from "@blocknote/core";
 import { useT } from "@/lib/i18n/context";
 import { usePlanList, usePlanFolders } from "@/lib/swr/hooks";
 import { Button } from "@/components/ui/button";
-import { usePlanClaw } from "@/components/plans/claw/plan-claw-provider";
-import { GenerateFromTodosDialog } from "@/components/plans/generate-from-todos-dialog";
 import { AttachmentsPanel } from "@/components/plans/attachments-panel";
 
 interface Plan {
@@ -35,14 +32,12 @@ export default function PlansPage() {
   const t = useT();
   const { data: plansData, mutate: mutatePlans } = usePlanList();
   const { data: foldersData, mutate: mutateFolders } = usePlanFolders();
-  const { clawConnected, handleTranslate, handleExplain, panelElement } = usePlanClaw();
   const plans: Plan[] = useMemo(() => (Array.isArray(plansData) ? plansData : []), [plansData]);
   const folders: PlanFolder[] = useMemo(() => foldersData?.folders ?? [], [foldersData]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activePlan, setActivePlan] = useState<Plan | null>(null);
   const [title, setTitle] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [generateOpen, setGenerateOpen] = useState(false);
   const titleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const editorRef = useRef<EditorHandle>(null);
   const deepLinkApplied = useRef(false);
@@ -273,18 +268,6 @@ export default function PlansPage() {
     Promise.resolve().then(() => handleSelect(targetId));
   }, [plans, handleSelect]);
 
-  const handleGenerated = useCallback(
-    async (planIds: string[]) => {
-      await mutatePlans();
-      const lastId = planIds[planIds.length - 1];
-      if (lastId) {
-        setActiveId(lastId);
-        loadPlan(lastId);
-      }
-    },
-    [mutatePlans, loadPlan],
-  );
-
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
       <div
@@ -330,22 +313,6 @@ export default function PlansPage() {
               onImport={handleImport}
             />
           )}
-          <div className="ml-auto pr-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setGenerateOpen(true)}
-              disabled={!clawConnected}
-              title={
-                clawConnected
-                  ? t("plans.generateFromTodos.title")
-                  : t("plans.generateFromTodos.notConnected")
-              }
-            >
-              <Sparkles className="h-4 w-4 mr-1" />
-              {t("plans.generateFromTodos.button")}
-            </Button>
-          </div>
         </div>
         {activePlan ? (
           <div className="flex-1 flex min-h-0 overflow-hidden">
@@ -370,9 +337,6 @@ export default function PlansPage() {
                   key={activePlan.id}
                   content={activePlan.content as Block[]}
                   onChange={handleContentChange}
-                  clawConnected={clawConnected}
-                  onTranslate={handleTranslate}
-                  onExplain={handleExplain}
                 />
               </div>
             </div>
@@ -403,14 +367,6 @@ export default function PlansPage() {
           </div>
         )}
       </div>
-      {panelElement}
-      {generateOpen && (
-        <GenerateFromTodosDialog
-          open={generateOpen}
-          onOpenChange={setGenerateOpen}
-          onGenerated={handleGenerated}
-        />
-      )}
     </div>
   );
 }

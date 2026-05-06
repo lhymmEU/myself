@@ -13,12 +13,12 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Shell,
   Receipt,
   Blend,
   MapPlus,
   User,
   Bookmark,
+  Terminal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -130,6 +130,11 @@ export function Sidebar() {
             pathname === "/dashboard"
           )}
 
+          {renderLink(
+            { href: "/dashboard/claw", labelKey: "sidebar.claw", icon: Terminal },
+            pathname.startsWith("/dashboard/claw")
+          )}
+
           {/* Myself group */}
           {collapsed ? (
             <Tooltip>
@@ -178,12 +183,6 @@ export function Sidebar() {
                 </div>
               )}
             </div>
-          )}
-
-          {/* My Claw */}
-          {renderLink(
-            { href: "/dashboard/claw", labelKey: "sidebar.myClaw", icon: Shell },
-            pathname.startsWith("/dashboard/claw")
           )}
         </nav>
 

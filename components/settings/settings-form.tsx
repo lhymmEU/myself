@@ -6,7 +6,6 @@ import { OpenBBConfig } from "./openbb-config";
 import { FinanceProvidersConfig } from "./finance-providers-config";
 import { AppearanceConfig } from "./appearance-config";
 import { InvoiceConfig } from "./invoice-config";
-import { ClawAccessConfig } from "./claw-access-config";
 import { DataManagement } from "./data-management";
 import { Loader2 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
@@ -85,7 +84,6 @@ export function SettingsForm() {
       <div className="md:col-span-2">
         <InvoiceConfig settings={settings} onUpdate={handleUpdateSilent} />
       </div>
-      <ClawAccessConfig settings={settings} onUpdate={handleUpdate} />
       <DataManagement />
     </div>
   );

@@ -8,8 +8,6 @@ import {
   deleteWish,
   listUserSkills,
   createUserSkill,
-  listAssignedJobs,
-  createAssignedJob,
   listWishTodos,
   bulkCreateWishTodos,
 } from "./actions";
@@ -125,27 +123,6 @@ export const dashboardTools: AgentTool[] = [
     handler: async (params) => {
       const { wishId } = params as { wishId: string };
       return await listWishTodos(wishId);
-    },
-  },
-  {
-    name: "listAssignedJobs",
-    description: "List all jobs assigned to the Claw agent",
-    parameters: z.object({}),
-    handler: async () => await listAssignedJobs(),
-  },
-  {
-    name: "createAssignedJob",
-    description: "Create a new job assignment for the Claw agent",
-    parameters: z.object({
-      name: z.string(),
-      description: z.string().optional(),
-    }),
-    handler: async (params) => {
-      const { name, description } = params as {
-        name: string;
-        description?: string;
-      };
-      return await createAssignedJob({ name, description });
     },
   },
 ];

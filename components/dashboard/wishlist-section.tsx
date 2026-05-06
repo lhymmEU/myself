@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +13,6 @@ import {
   X,
   Star,
   Loader2,
-  Shell,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -162,22 +160,19 @@ function WishTodoList({ wishId, onTodoCountChange }: { wishId: string; onTodoCou
 
 function WishCard({
   wish,
-  onGenerateSteps,
   onEdit,
   onDelete,
   priorityColor,
 }: {
   wish: Wish;
-  onGenerateSteps: (wish: Wish) => void;
   onEdit: (wish: Wish) => void;
   onDelete: (id: string) => void;
   priorityColor: (p: string) => string;
 }) {
   const t = useT();
-  const [hasTodos, setHasTodos] = useState(false);
 
-  const handleTodoCountChange = useCallback((count: number) => {
-    setHasTodos(count > 0);
+  const handleTodoCountChange = useCallback(() => {
+    /* noop — todo count tracking removed with claw integration */
   }, []);
 
   return (
@@ -188,17 +183,6 @@ function WishCard({
             {wish.name}
           </span>
           <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-            {!hasTodos && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => onGenerateSteps(wish)}
-                className="h-5 w-5 p-0"
-                title={t("dashboard.game.wishlist.generateStepsTooltip")}
-              >
-                <Shell className="h-2.5 w-2.5" />
-              </Button>
-            )}
             <Button
               size="sm"
               variant="ghost"
@@ -244,7 +228,6 @@ function WishCard({
 
 export function WishlistSection() {
   const t = useT();
-  const router = useRouter();
   const { data: wishData, isLoading: loading, mutate } = useWishlist();
   const wishes: Wish[] = (wishData?.wishes ?? [] as Wish[])
     .slice()
@@ -319,17 +302,6 @@ export function WishlistSection() {
     setAdding(false);
     setForm({ name: "", targetLevel: "familiar", priority: "medium", notes: "" });
   };
-
-  const handleGenerateSteps = useCallback(
-    (wish: Wish) => {
-      const prompt = encodeURIComponent(
-        `I want to learn "${wish.name}" to the "${wish.targetLevel}" level. ${wish.notes ? `Context: ${wish.notes}. ` : ""}Please use the generateWishTodos tool to create up to 5 concrete, actionable learning steps for wish ID "${wish.id}". Each step should be a specific task I can complete to build toward this skill level.`,
-      );
-      const sessionName = encodeURIComponent(`${wish.name} todo list`);
-      router.push(`/dashboard/claw?askClaw=${prompt}&sessionName=${sessionName}`);
-    },
-    [router],
-  );
 
   const priorityColor = (p: string) => {
     switch (p) {
@@ -453,7 +425,6 @@ export function WishlistSection() {
             <WishCard
               key={wish.id}
               wish={wish}
-              onGenerateSteps={handleGenerateSteps}
               onEdit={startEdit}
               onDelete={handleDelete}
               priorityColor={priorityColor}

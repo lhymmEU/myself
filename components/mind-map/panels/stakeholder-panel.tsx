@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState, type RefObject } from "react";
-import { useRouter } from "next/navigation";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import type { PmStakeholder, StakeholderDetail } from "@/lib/modules/mind-map/product-types";
 import { useT } from "@/lib/i18n/context";
@@ -30,7 +29,6 @@ import {
   GripVertical,
   ChevronDown,
   ChevronRight,
-  Shell,
   Users,
 } from "lucide-react";
 import { placeEntityOnCanvas, DRAG_DATA_TYPE, type DragEntityData } from "./place-on-canvas";
@@ -72,7 +70,6 @@ const emptyForm: FormData = {
 
 export function StakeholderPanel({ excalidrawAPI }: StakeholderPanelProps) {
   const t = useT();
-  const router = useRouter();
   const [stakeholders, setStakeholders] = useState<PmStakeholder[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -207,25 +204,6 @@ export function StakeholderPanel({ excalidrawAPI }: StakeholderPanelProps) {
     e.dataTransfer.effectAllowed = "copy";
   };
 
-  const handleAskClaw = () => {
-    if (stakeholders.length === 0) return;
-
-    const stakeholderBlocks = stakeholders.map((s, i) => {
-      const lines = [
-        `[Stakeholder ${i + 1}: ${s.name}${s.role ? ` - ${s.role}` : ""}]`,
-        s.details.objectives ? `- Objectives: ${s.details.objectives}` : null,
-        s.details.desires ? `- Desires: ${s.details.desires}` : null,
-        s.details.requirements ? `- Requirements: ${s.details.requirements}` : null,
-        s.details.expectations ? `- Expectations: ${s.details.expectations}` : null,
-      ];
-      return lines.filter(Boolean).join("\n");
-    }).join("\n\n");
-
-    const prompt = `Analyze the following product stakeholders and their needs:\n\n${stakeholderBlocks}\n\nPlease provide:\n1. STAKEHOLDER GAP ANALYSIS: Identify conflicts and gaps between stakeholders. Suggest the minimum set of features to build that satisfies the most critical needs across all stakeholders, keeping the product lean.\n\n2. MARKET RESEARCH: What existing products, tools, and open-source projects have already built solutions addressing these stakeholder needs? Include links and brief descriptions.`;
-
-    router.push(`/dashboard/claw?askClaw=${encodeURIComponent(prompt.slice(0, 4000))}`);
-  };
-
   const detailFields: { key: keyof StakeholderDetail; labelKey: TranslationKey; placeholderKey: TranslationKey }[] = [
     { key: "objectives", labelKey: "mindMap.product.objectives", placeholderKey: "mindMap.product.objectivesPlaceholder" },
     { key: "desires", labelKey: "mindMap.product.desires", placeholderKey: "mindMap.product.desiresPlaceholder" },
@@ -354,18 +332,6 @@ export function StakeholderPanel({ excalidrawAPI }: StakeholderPanelProps) {
                 </div>
               </Collapsible>
             ))}
-
-            {stakeholders.length > 0 && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full gap-1.5"
-                onClick={handleAskClaw}
-              >
-                <Shell className="w-3.5 h-3.5" />
-                {t("mindMap.product.askClaw")}
-              </Button>
-            )}
 
             <div>
               <Label className="text-xs text-muted-foreground">

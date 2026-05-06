@@ -1,8 +1,7 @@
 "use client";
 
-import { type ReactNode, useState, useCallback, createContext, useContext } from "react";
+import { type ReactNode, useCallback, createContext, useContext } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AskClawButton } from "@/components/finance/ask-claw-button";
 import { KeyRound, ExternalLink } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
 
@@ -15,11 +14,11 @@ interface ModuleCardProps {
 
 export function ModuleCard({ moduleId, labelKey, missingProviders, children }: ModuleCardProps) {
   const t = useT();
-  const [contextData, setContextData] = useState<Record<string, unknown>>({});
 
-  const updateContext = useCallback((data: Record<string, unknown>) => {
-    setContextData(data);
-  }, []);
+  // Module context is preserved as a noop hook so child modules that
+  // call useModuleContext() keep compiling; nothing currently consumes
+  // the data after the Ask-Claw integration was removed.
+  const updateContext = useCallback(() => {}, []);
 
   const hasMissingKeys = missingProviders && missingProviders.length > 0;
 
@@ -29,12 +28,6 @@ export function ModuleCard({ moduleId, labelKey, missingProviders, children }: M
         <CardTitle className="text-sm font-medium">
           {t(labelKey as Parameters<typeof t>[0])}
         </CardTitle>
-        {!hasMissingKeys && (
-          <AskClawButton
-            moduleName={t(labelKey as Parameters<typeof t>[0])}
-            contextData={contextData}
-          />
-        )}
       </CardHeader>
       <CardContent>
         {hasMissingKeys ? (

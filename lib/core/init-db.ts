@@ -195,13 +195,11 @@ function patchLegacySqliteSchema(sqlite: import("better-sqlite3").Database) {
     "user_skills",
     "skill_wishlist",
     "wishlist_todos",
-    "claw_assigned_jobs",
     "invoice_clients",
     "invoice_signatures",
     "invoices",
     "marked_collections",
     "marked_items",
-    "cron_jobs",
     "claw_connections",
     "finance_accounts",
     "finance_transactions",
@@ -223,39 +221,6 @@ function patchLegacySqliteSchema(sqlite: import("better-sqlite3").Database) {
     } catch {
       // ignore — newly created table will already have it
     }
-  }
-
-  // Add new claw_connections columns introduced for the cloud relay and
-  // the edge transport (Flavor A — browser WASM SSH via Worker TCP bridge).
-  const clawCols = [
-    ["transport", "TEXT NOT NULL DEFAULT 'ssh'"],
-    ["pairing_code", "TEXT"],
-    ["pairing_expires_at", "INTEGER"],
-    ["agent_jwt", "TEXT"],
-    ["relay_url", "TEXT"],
-    ["public_key", "TEXT"],
-    ["gateway_port", "INTEGER NOT NULL DEFAULT 18789"],
-    ["credential_secret_id", "TEXT"],
-    ["host_key_fingerprint", "TEXT"],
-  ] as const;
-  try {
-    const info = sqlite
-      .prepare(`PRAGMA table_info(claw_connections)`)
-      .all() as { name: string }[];
-    if (info.length > 0) {
-      const have = new Set(info.map((c) => c.name));
-      for (const [col, defn] of clawCols) {
-        if (!have.has(col)) {
-          try {
-            sqlite.exec(`ALTER TABLE claw_connections ADD COLUMN ${col} ${defn}`);
-          } catch {
-            // best-effort
-          }
-        }
-      }
-    }
-  } catch {
-    // table not present yet
   }
 }
 
