@@ -23,6 +23,10 @@ import { swrFetcher } from "@/lib/swr/config";
 import { DEFAULT_WEB_SESSION_ID } from "@/lib/claw/constants";
 import { cn } from "@/lib/utils";
 
+function effectiveSession(id: string | undefined): string {
+  return id?.trim() || DEFAULT_WEB_SESSION_ID;
+}
+
 interface Props {
   connectionId: string;
   connectionName: string;
@@ -68,8 +72,13 @@ export function Chat({ connectionId, connectionName, onDelete }: Props) {
 
   const connectionIdRef = useRef(connectionId);
   const sessionIdRef = useRef<string | undefined>(undefined);
+  const bootstrappedRef = useRef<Set<string>>(new Set());
   connectionIdRef.current = connectionId;
   sessionIdRef.current = sessionId;
+
+  useEffect(() => {
+    bootstrappedRef.current.clear();
+  }, [connectionId]);
 
   const sessionsUrl = useMemo(
     () =>
@@ -91,17 +100,23 @@ export function Chat({ connectionId, connectionName, onDelete }: Props) {
           body,
           trigger,
           messageId,
-        }) => ({
-          body: {
-            ...(body ?? {}),
-            id,
-            messages: reqMessages,
-            trigger,
-            messageId,
-            connectionId: connectionIdRef.current,
-            sessionId: sessionIdRef.current,
-          },
-        }),
+        }) => {
+          const sid = effectiveSession(sessionIdRef.current);
+          const bootstrap = !bootstrappedRef.current.has(sid);
+          bootstrappedRef.current.add(sid);
+          return {
+            body: {
+              ...(body ?? {}),
+              id,
+              messages: reqMessages,
+              trigger,
+              messageId,
+              connectionId: connectionIdRef.current,
+              sessionId: sid,
+              bootstrap,
+            },
+          };
+        },
       }),
   );
 
@@ -131,13 +146,18 @@ export function Chat({ connectionId, connectionName, onDelete }: Props) {
     sendMessage({ text });
   }
 
-  function handleSuggestion(prompt: string) {
+  function handleChoose(text: string) {
     if (isStreaming) return;
-    sendMessage({ text: prompt });
+    sendMessage({ text });
   }
 
   function startNewSession() {
     setSessionId(`web-${nanoid()}`);
+    setMessages([]);
+  }
+
+  function clearChat() {
+    bootstrappedRef.current.delete(effectiveSession(sessionId));
     setMessages([]);
   }
 
@@ -210,7 +230,7 @@ export function Chat({ connectionId, connectionName, onDelete }: Props) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setMessages([])}
+              onClick={clearChat}
               disabled={isStreaming}
             >
               Clear
@@ -240,7 +260,7 @@ export function Chat({ connectionId, connectionName, onDelete }: Props) {
             <MessageRow
               key={message.id}
               message={message}
-              onSuggestion={handleSuggestion}
+              onChoose={handleChoose}
             />
           ))}
           {error && (
@@ -289,10 +309,10 @@ export function Chat({ connectionId, connectionName, onDelete }: Props) {
 
 interface RowProps {
   message: ClawUIMessage;
-  onSuggestion: (prompt: string) => void;
+  onChoose: (text: string) => void;
 }
 
-function MessageRow({ message, onSuggestion }: RowProps) {
+function MessageRow({ message, onChoose }: RowProps) {
   const parts = viewParts(message);
   const isUser = message.role === "user";
   return (
@@ -321,7 +341,7 @@ function MessageRow({ message, onSuggestion }: RowProps) {
         if (part.kind === "card" && part.card) {
           return (
             <div key={i} className="w-full max-w-[85%]">
-              <CardRenderer card={part.card} onSuggestion={onSuggestion} />
+              <CardRenderer card={part.card} onChoose={onChoose} />
             </div>
           );
         }

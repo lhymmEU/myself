@@ -3,22 +3,9 @@ import type { ClawCard } from "./messages";
 /**
  * Streaming parser for the openclaw stdout grammar.
  *
- * The agent is taught (via the system prompt) to wrap any structured
- * output in `[CARD]…[/CARD]` blocks containing JSON that conforms to the
- * {@link ClawCard} discriminated union. Anything outside a `[CARD]` block
- * is plain text.
- *
- * Usage:
- *
- *     const parser = createCardParser();
- *     for await (const chunk of stream) {
- *       for (const fragment of parser.feed(chunk)) {
- *         // fragment is { type: "text", text } | { type: "card", card }
- *       }
- *     }
- *     for (const tail of parser.flush()) {
- *       // emit any trailing text
- *     }
+ * Structured chunks use either `[CARD]…[/CARD]` or `[BEGIN CARD]…[END CARD]`
+ * containing JSON that conforms to {@link ClawCard}. Plain text is everything
+ * outside those blocks.
  */
 
 export type Fragment =
@@ -26,8 +13,14 @@ export type Fragment =
   | { type: "card"; card: ClawCard }
   | { type: "card-error"; raw: string; message: string };
 
-const OPEN_TAG = "[CARD]";
-const CLOSE_TAG = "[/CARD]";
+const CARD_VARIANTS = [
+  { open: "[CARD]", close: "[/CARD]" },
+  { open: "[BEGIN CARD]", close: "[END CARD]" },
+] as const;
+
+const MAX_OPEN_LEN = Math.max(
+  ...CARD_VARIANTS.map((v) => v.open.length),
+);
 
 interface ParserState {
   feed(chunk: string): Fragment[];
@@ -59,12 +52,23 @@ function tryParseCard(raw: string): Fragment {
   }
 }
 
+function findEarliestCardOpen(buffer: string):
+  | { index: number; open: string; close: string }
+  | null {
+  let best: { index: number; open: string; close: string } | null = null;
+  for (const v of CARD_VARIANTS) {
+    const i = buffer.indexOf(v.open);
+    if (i === -1) continue;
+    if (!best || i < best.index) {
+      best = { index: i, open: v.open, close: v.close };
+    }
+  }
+  return best;
+}
+
 export function createCardParser(): ParserState {
-  // Buffer holds bytes we haven't yet been able to classify. We keep it
-  // small by flushing as soon as we know a chunk can no longer match the
-  // start of an OPEN_TAG.
   let buffer = "";
-  let inCard = false;
+  let pendingClose: string | null = null;
 
   return {
     feed(chunk: string): Fragment[] {
@@ -72,24 +76,21 @@ export function createCardParser(): ParserState {
       const out: Fragment[] = [];
 
       while (true) {
-        if (inCard) {
-          const close = buffer.indexOf(CLOSE_TAG);
-          if (close === -1) {
-            // Not enough yet — leave buffer intact, wait for more.
+        if (pendingClose) {
+          const closeIdx = buffer.indexOf(pendingClose);
+          if (closeIdx === -1) {
             return out;
           }
-          const cardBody = buffer.slice(0, close);
-          buffer = buffer.slice(close + CLOSE_TAG.length);
+          const cardBody = buffer.slice(0, closeIdx);
+          buffer = buffer.slice(closeIdx + pendingClose.length);
           out.push(tryParseCard(cardBody));
-          inCard = false;
+          pendingClose = null;
           continue;
         }
 
-        const open = buffer.indexOf(OPEN_TAG);
-        if (open === -1) {
-          // Emit everything except a possible partial-tag tail so we
-          // don't accidentally split "[CAR" across chunks.
-          const safeLen = Math.max(0, buffer.length - (OPEN_TAG.length - 1));
+        const next = findEarliestCardOpen(buffer);
+        if (!next) {
+          const safeLen = Math.max(0, buffer.length - (MAX_OPEN_LEN - 1));
           if (safeLen > 0) {
             out.push({ type: "text", text: buffer.slice(0, safeLen) });
             buffer = buffer.slice(safeLen);
@@ -97,26 +98,24 @@ export function createCardParser(): ParserState {
           return out;
         }
 
-        if (open > 0) {
-          out.push({ type: "text", text: buffer.slice(0, open) });
+        if (next.index > 0) {
+          out.push({ type: "text", text: buffer.slice(0, next.index) });
         }
-        buffer = buffer.slice(open + OPEN_TAG.length);
-        inCard = true;
+        buffer = buffer.slice(next.index + next.open.length);
+        pendingClose = next.close;
       }
     },
 
     flush(): Fragment[] {
-      if (inCard) {
-        // Stream ended mid-card — surface what we have as an error so the
-        // UI doesn't silently drop content.
+      if (pendingClose) {
         const stray = buffer;
         buffer = "";
-        inCard = false;
+        pendingClose = null;
         return [
           {
             type: "card-error",
             raw: stray,
-            message: "Unterminated [CARD] block",
+            message: "Unterminated card block (expected closing tag)",
           },
         ];
       }

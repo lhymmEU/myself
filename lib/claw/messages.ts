@@ -12,6 +12,28 @@ export type ClawCard =
       items: Array<{ key: string; value: string }>;
     }
   | { kind: "list"; title?: string; items: string[] }
+  | {
+      kind: "table";
+      title?: string;
+      columns: string[];
+      rows: string[][];
+    }
+  | {
+      kind: "steps";
+      title?: string;
+      items: Array<{ label: string; done?: boolean }>;
+    }
+  | {
+      kind: "citation";
+      quote: string;
+      source?: { title?: string; url?: string };
+    }
+  | {
+      kind: "choices";
+      question?: string;
+      options: string[];
+      allowCustom?: boolean;
+    }
   | { kind: "code"; language?: string; code: string }
   | { kind: "alert"; level: "info" | "warn" | "error"; message: string }
   | { kind: "suggestions"; prompts: string[] };

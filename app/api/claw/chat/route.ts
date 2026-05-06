@@ -8,8 +8,10 @@ import {
 } from "@/lib/claw/db";
 import { streamCommand } from "@/lib/claw/ssh";
 import { createCardParser } from "@/lib/claw/parser";
+import { createStdoutNoiseFilter } from "@/lib/claw/filter-plugin-noise";
 import type { ClawUIMessage } from "@/lib/claw/messages";
 import { DEFAULT_WEB_SESSION_ID } from "@/lib/claw/constants";
+import { BOOTSTRAP_PREAMBLE } from "@/lib/claw/bootstrap-preamble";
 
 const partSchema = z.object({
   type: z.string(),
@@ -28,6 +30,7 @@ const bodySchema = z.object({
   messages: z.array(messageSchema),
   connectionId: z.string().optional(),
   sessionId: z.string().optional(),
+  bootstrap: z.boolean().optional(),
 });
 
 function lastUserText(
@@ -126,7 +129,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const command = buildCommand(userText, parsed.data.sessionId);
+  const sendText =
+    parsed.data.bootstrap === true
+      ? `${BOOTSTRAP_PREAMBLE}\n${userText}`
+      : userText;
+  const command = buildCommand(sendText, parsed.data.sessionId);
 
   const stream = createUIMessageStream<ClawUIMessage>({
     async execute({ writer }) {
@@ -144,6 +151,7 @@ export async function POST(req: NextRequest) {
       };
 
       const parser = createCardParser();
+      const noiseFilter = createStdoutNoiseFilter();
 
       try {
         const iter = streamCommand(connection.id, command, 120_000);
@@ -151,7 +159,11 @@ export async function POST(req: NextRequest) {
         // generator (the final ExecResult) for non-zero exit codes.
         let result = await iter.next();
         while (!result.done) {
-          const chunk = result.value;
+          const filtered = noiseFilter.push(result.value);
+          const chunk =
+            filtered +
+            // Important when stdout ends without a newline before flush().
+            "";
           for (const fragment of parser.feed(chunk)) {
             if (fragment.type === "text") {
               ensureTextOpen();
@@ -178,6 +190,35 @@ export async function POST(req: NextRequest) {
             }
           }
           result = await iter.next();
+        }
+
+        const noiseTail = noiseFilter.flush();
+        if (noiseTail) {
+          for (const fragment of parser.feed(noiseTail)) {
+            if (fragment.type === "text") {
+              ensureTextOpen();
+              writer.write({
+                type: "text-delta",
+                id: textId,
+                delta: fragment.text,
+              });
+            } else if (fragment.type === "card") {
+              closeText();
+              writer.write({
+                type: "data-card",
+                data: fragment.card,
+              });
+            } else {
+              closeText();
+              writer.write({
+                type: "data-error",
+                data: {
+                  message: "Failed to parse card payload",
+                  detail: `${fragment.message}: ${fragment.raw}`,
+                },
+              });
+            }
+          }
         }
 
         for (const fragment of parser.flush()) {
