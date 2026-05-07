@@ -1,25 +1,22 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { Loader2 } from "lucide-react";
 import { ConnectionSetup } from "@/components/claw/connection-setup";
+import {
+  ConnectionsManager,
+  type ClawConnectionSummary,
+} from "@/components/claw/connections-manager";
 import { Chat } from "@/components/claw/chat";
+import {
+  Sheet,
+  SheetContent,
+} from "@/components/ui/sheet";
 import { swrFetcher } from "@/lib/swr/config";
 
-interface ConnectionSummary {
-  id: string;
-  name: string;
-  host: string;
-  port: number;
-  username: string;
-  authMethod: "password" | "key";
-  isDefault: boolean;
-  createdAt: number;
-  updatedAt: number;
-}
-
 interface ConnectionsResponse {
-  connections: ConnectionSummary[];
+  connections: ClawConnectionSummary[];
 }
 
 export default function ClawPage() {
@@ -27,6 +24,26 @@ export default function ClawPage() {
     "/api/claw/connections",
     swrFetcher,
   );
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [connectionsOpen, setConnectionsOpen] = useState(false);
+
+  const connections = data?.connections ?? [];
+
+  const activeConnectionId =
+    selectedId && connections.some((c) => c.id === selectedId)
+      ? selectedId
+      : (connections.find((c) => c.isDefault) ?? connections[0])?.id ?? null;
+
+  useEffect(() => {
+    if (
+      selectedId &&
+      connections.length > 0 &&
+      !connections.some((c) => c.id === selectedId)
+    ) {
+      setSelectedId(null);
+    }
+  }, [connections, selectedId]);
 
   if (isLoading) {
     return (
@@ -46,7 +63,6 @@ export default function ClawPage() {
     );
   }
 
-  const connections = data?.connections ?? [];
   if (connections.length === 0) {
     return (
       <ConnectionSetup
@@ -57,25 +73,56 @@ export default function ClawPage() {
     );
   }
 
-  const active =
-    connections.find((c) => c.isDefault) ?? connections[0];
+  const active = connections.find((c) => c.id === activeConnectionId);
+  if (!active) {
+    return (
+      <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
-  async function handleDelete() {
+  async function handleDeleteActive() {
+    const c = connections.find((x) => x.id === activeConnectionId);
+    if (!c) return;
     const confirmed = window.confirm(
-      `Forget connection "${active.name}"? The remote agent itself is unaffected.`,
+      `Forget connection "${c.name}"? The remote agent itself is unaffected.`,
     );
     if (!confirmed) return;
-    await fetch(`/api/claw/connections?id=${encodeURIComponent(active.id)}`, {
+    await fetch(`/api/claw/connections?id=${encodeURIComponent(c.id)}`, {
       method: "DELETE",
     });
     await mutate();
   }
 
   return (
-    <Chat
-      connectionId={active.id}
-      connectionName={`${active.username}@${active.host}`}
-      onDelete={handleDelete}
-    />
+    <div className="flex h-[calc(100vh-3.5rem)] flex-col overflow-hidden bg-background">
+      <Sheet open={connectionsOpen} onOpenChange={setConnectionsOpen}>
+        <SheetContent
+          side="right"
+          className="flex h-full w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-md"
+        >
+          <ConnectionsManager
+            connections={connections}
+            activeId={activeConnectionId}
+            onActiveChange={(id) => {
+              setSelectedId(id);
+              setConnectionsOpen(false);
+            }}
+            onMutate={mutate}
+          />
+        </SheetContent>
+      </Sheet>
+
+      <div className="min-h-0 flex-1 flex flex-col">
+        <Chat
+          key={active.id}
+          connectionId={active.id}
+          connectionName={`${active.username}@${active.host}`}
+          onDelete={handleDeleteActive}
+          onManageConnections={() => setConnectionsOpen(true)}
+        />
+      </div>
+    </div>
   );
 }

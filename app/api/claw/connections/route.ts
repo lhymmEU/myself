@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { bootApp } from "@/lib/core/init";
 import { requireUserId } from "@/lib/core/route-helpers";
 import {
   listClawConnections,
@@ -46,6 +47,8 @@ function sanitize(connection: Awaited<ReturnType<typeof listClawConnections>>[nu
     updatedAt: connection.updatedAt,
   };
 }
+
+bootApp();
 
 export async function GET() {
   const auth = await requireUserId();

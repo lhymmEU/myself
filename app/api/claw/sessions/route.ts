@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { bootApp } from "@/lib/core/init";
 import { requireUserId } from "@/lib/core/route-helpers";
 import {
   getClawConnection,
   getDefaultClawConnection,
 } from "@/lib/claw/db";
+import { getSessionLabelMap } from "@/lib/claw/session-labels";
 import { executeCommand } from "@/lib/claw/ssh";
+
+bootApp();
 
 const LIST_CMD = `bash -lc ${JSON.stringify(
   "openclaw sessions --json --all-agents --limit 50",
@@ -27,10 +31,16 @@ export async function GET(req: NextRequest) {
 
   if (!connection) {
     return NextResponse.json(
-      { sessions: [] as ClawSessionRow[], error: "No claw connection configured" },
+      {
+        sessions: [] as ClawSessionRow[],
+        labels: {} as Record<string, string>,
+        error: "No claw connection configured",
+      },
       { status: 400 },
     );
   }
+
+  const labels = await getSessionLabelMap(connection.id, auth.userId);
 
   try {
     const { stdout, stderr, code } = await executeCommand(
@@ -41,6 +51,7 @@ export async function GET(req: NextRequest) {
     if (code !== 0) {
       return NextResponse.json({
         sessions: [] as ClawSessionRow[],
+        labels,
         error: stderr.trim() || `openclaw sessions exited with code ${code}`,
       });
     }
@@ -50,6 +61,7 @@ export async function GET(req: NextRequest) {
     } catch {
       return NextResponse.json({
         sessions: [] as ClawSessionRow[],
+        labels,
         error: "Invalid JSON from openclaw sessions",
       });
     }
@@ -74,12 +86,16 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ sessions });
+    return NextResponse.json({ sessions, labels });
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Failed to list sessions";
     return NextResponse.json(
-      { sessions: [] as ClawSessionRow[], error: message },
+      {
+        sessions: [] as ClawSessionRow[],
+        labels,
+        error: message,
+      },
       { status: 500 },
     );
   }

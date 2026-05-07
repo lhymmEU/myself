@@ -5,11 +5,26 @@ import useSWR from "swr";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { nanoid } from "nanoid";
-import { Loader2, Send, Trash2 } from "lucide-react";
+import {
+  ChevronRight,
+  Loader2,
+  Pencil,
+  Send,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -27,10 +42,25 @@ function effectiveSession(id: string | undefined): string {
   return id?.trim() || DEFAULT_WEB_SESSION_ID;
 }
 
+function currentSessionKey(sessionId: string | undefined): string {
+  return sessionId?.trim() || DEFAULT_WEB_SESSION_ID;
+}
+
+function formatRemoteSessionLabel(
+  key: string,
+  labels: Record<string, string>,
+  model?: string,
+): string {
+  const base = labels[key]?.trim() || key;
+  return model ? `${base} · ${model}` : base;
+}
+
 interface Props {
   connectionId: string;
   connectionName: string;
   onDelete?: () => void | Promise<void>;
+  /** Opens the SSH connections slide-in (right panel). */
+  onManageConnections?: () => void;
 }
 
 interface MessagePartView {
@@ -63,12 +93,21 @@ function viewParts(message: ClawUIMessage): MessagePartView[] {
 
 interface SessionsResponse {
   sessions: Array<{ key: string; agentId?: string; model?: string }>;
+  labels?: Record<string, string>;
   error?: string;
 }
 
-export function Chat({ connectionId, connectionName, onDelete }: Props) {
+export function Chat({
+  connectionId,
+  connectionName,
+  onDelete,
+  onManageConnections,
+}: Props) {
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameDraft, setRenameDraft] = useState("");
+  const [renameSaving, setRenameSaving] = useState(false);
 
   const connectionIdRef = useRef(connectionId);
   const sessionIdRef = useRef<string | undefined>(undefined);
@@ -162,6 +201,7 @@ export function Chat({ connectionId, connectionName, onDelete }: Props) {
   }
 
   const remoteSessions = sessionsData?.sessions ?? [];
+  const sessionLabels = sessionsData?.labels ?? {};
   const orphanSessionKey =
     sessionId &&
     !remoteSessions.some((s) => s.key === sessionId)
@@ -170,20 +210,79 @@ export function Chat({ connectionId, connectionName, onDelete }: Props) {
   const sessionSelectValue =
     sessionId === undefined ? "__default__" : sessionId;
 
+  function openRenameSession() {
+    const key = currentSessionKey(sessionId);
+    setRenameDraft(sessionLabels[key] ?? "");
+    setRenameOpen(true);
+  }
+
+  async function saveSessionRename(clearCustomName: boolean) {
+    const key = currentSessionKey(sessionId);
+    setRenameSaving(true);
+    try {
+      const res = await fetch("/api/claw/session-labels", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          connectionId,
+          sessionKey: key,
+          label: clearCustomName ? null : renameDraft.trim() === "" ? null : renameDraft.trim(),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        window.alert(data.error ?? "Failed to save name");
+        return;
+      }
+      await mutateSessions();
+      setRenameOpen(false);
+    } finally {
+      setRenameSaving(false);
+    }
+  }
+
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <header className="flex flex-col gap-3 border-b px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-base font-semibold">My Claw</h1>
-          <p className="text-xs text-muted-foreground">
-            Connected to <span className="font-mono">{connectionName}</span>
-          </p>
+          {onManageConnections ? (
+            <button
+              type="button"
+              onClick={onManageConnections}
+              className="group mt-1 flex max-w-full items-center gap-1 rounded-md text-left text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              <span className="shrink-0">Connected to</span>
+              <span className="min-w-0 truncate font-mono underline-offset-2 group-hover:underline">
+                {connectionName}
+              </span>
+              <ChevronRight className="size-3.5 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" aria-hidden />
+            </button>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Connected to{" "}
+              <span className="font-mono">{connectionName}</span>
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap items-end gap-2 sm:justify-end">
           <div className="flex min-w-[12rem] flex-1 flex-col gap-1 sm:max-w-xs sm:flex-initial">
-            <Label htmlFor="claw-session" className="text-xs text-muted-foreground">
-              Session
-            </Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="claw-session" className="text-xs text-muted-foreground">
+                Session
+              </Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0 text-muted-foreground"
+                onClick={openRenameSession}
+                disabled={isStreaming}
+                title="Rename session"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            </div>
             <Select
               value={sessionSelectValue}
               onValueChange={(v) => {
@@ -201,16 +300,24 @@ export function Chat({ connectionId, connectionName, onDelete }: Props) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__default__">
-                  Default session ({DEFAULT_WEB_SESSION_ID})
+                  {sessionLabels[DEFAULT_WEB_SESSION_ID]?.trim()
+                    ? sessionLabels[DEFAULT_WEB_SESSION_ID]
+                    : `Default session (${DEFAULT_WEB_SESSION_ID})`}
                 </SelectItem>
                 {orphanSessionKey && (
                   <SelectItem value={orphanSessionKey}>
-                    {orphanSessionKey} (unsaved)
+                    {sessionLabels[orphanSessionKey]?.trim()
+                      ? `${sessionLabels[orphanSessionKey]} (unsaved)`
+                      : `${orphanSessionKey} (unsaved)`}
                   </SelectItem>
                 )}
                 {remoteSessions.map((s) => (
                   <SelectItem key={s.key} value={s.key}>
-                    {s.model ? `${s.key} · ${s.model}` : s.key}
+                    {formatRemoteSessionLabel(
+                      s.key,
+                      sessionLabels,
+                      s.model,
+                    )}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -270,6 +377,71 @@ export function Chat({ connectionId, connectionName, onDelete }: Props) {
           )}
         </div>
       </div>
+
+      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Session name</DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-1">
+                <p>
+                  This label is only stored in your dashboard. The session id
+                  sent to the agent is unchanged.
+                </p>
+                <p className="font-mono text-xs text-muted-foreground">
+                  {currentSessionKey(sessionId)}
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2 py-2">
+            <Label htmlFor="claw-session-rename">Display name</Label>
+            <Input
+              id="claw-session-rename"
+              value={renameDraft}
+              onChange={(e) => setRenameDraft(e.target.value)}
+              placeholder="e.g. Work laptop"
+              autoComplete="off"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void saveSessionRename(false);
+                }
+              }}
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            {sessionLabels[currentSessionKey(sessionId)]?.trim() ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={renameSaving}
+                onClick={() => void saveSessionRename(true)}
+              >
+                Remove custom name
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={renameSaving}
+              onClick={() => setRenameOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={renameSaving}
+              onClick={() => void saveSessionRename(false)}
+            >
+              {renameSaving && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <form
         onSubmit={handleSubmit}
