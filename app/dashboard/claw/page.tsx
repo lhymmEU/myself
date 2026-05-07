@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import useSWR from "swr";
 import { Loader2 } from "lucide-react";
 import { ConnectionSetup } from "@/components/claw/connection-setup";
@@ -28,22 +28,15 @@ export default function ClawPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [connectionsOpen, setConnectionsOpen] = useState(false);
 
-  const connections = data?.connections ?? [];
+  const connections = useMemo(
+    () => data?.connections ?? [],
+    [data?.connections],
+  );
 
   const activeConnectionId =
     selectedId && connections.some((c) => c.id === selectedId)
       ? selectedId
       : (connections.find((c) => c.isDefault) ?? connections[0])?.id ?? null;
-
-  useEffect(() => {
-    if (
-      selectedId &&
-      connections.length > 0 &&
-      !connections.some((c) => c.id === selectedId)
-    ) {
-      setSelectedId(null);
-    }
-  }, [connections, selectedId]);
 
   if (isLoading) {
     return (
