@@ -47,6 +47,7 @@ export async function GET(req: NextRequest) {
       connection.id,
       LIST_CMD,
       60_000,
+      auth.userId,
     );
     if (code !== 0) {
       return NextResponse.json({

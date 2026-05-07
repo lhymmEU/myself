@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
       const noiseFilter = createStdoutNoiseFilter();
 
       try {
-        const iter = streamCommand(connection.id, command, 120_000);
+        const iter = streamCommand(connection.id, command, 120_000, auth.userId);
         // Manually iterate so we can also catch the return value of the
         // generator (the final ExecResult) for non-zero exit codes.
         let result = await iter.next();

@@ -10,6 +10,7 @@
  * `isLocal()` before invoking.
  */
 import type { Client as SshClient, ConnectConfig } from "ssh2";
+import { LOCAL_USER_ID } from "@/lib/core/runtime";
 import { getClawConnection } from "./db";
 
 interface CachedClient {
@@ -37,8 +38,9 @@ async function loadSsh2(): Promise<typeof import("ssh2")> {
 
 async function buildConnectConfig(
   connectionId: string,
+  userId: string = LOCAL_USER_ID,
 ): Promise<ConnectConfig> {
-  const conn = await getClawConnection(connectionId);
+  const conn = await getClawConnection(connectionId, userId);
   if (!conn) {
     throw new Error(`Connection ${connectionId} not found`);
   }
@@ -69,39 +71,54 @@ async function buildConnectConfig(
   throw new Error(`Unknown authMethod: ${conn.authMethod}`);
 }
 
-async function dial(connectionId: string): Promise<CachedClient> {
+async function dial(
+  connectionId: string,
+  userId: string = LOCAL_USER_ID,
+): Promise<CachedClient> {
   const { Client } = await loadSsh2();
-  const config = await buildConnectConfig(connectionId);
+  const config = await buildConnectConfig(connectionId, userId);
   const client = new Client();
   const ready = new Promise<void>((resolve, reject) => {
     client.once("ready", () => resolve());
     client.once("error", (err) => reject(err));
     client.once("close", () => {
       // Drop from the cache so the next call re-dials.
-      getCache().delete(connectionId);
+      getCache().delete(`${userId}:${connectionId}`);
     });
   });
   client.connect(config);
   return { client, ready };
 }
 
-export async function connect(connectionId: string): Promise<void> {
+/**
+ * @param userId - Must match the row in `claw_connections` (real Supabase uuid
+ * in cloud). Defaults to {@link LOCAL_USER_ID} for single-user local SQLite.
+ */
+export async function connect(
+  connectionId: string,
+  userId: string = LOCAL_USER_ID,
+): Promise<void> {
   const cache = getCache();
-  const existing = cache.get(connectionId);
+  const cacheKey = `${userId}:${connectionId}`;
+  const existing = cache.get(cacheKey);
   if (existing) {
     await existing.ready;
     return;
   }
-  const cached = await dial(connectionId);
-  cache.set(connectionId, cached);
+  const cached = await dial(connectionId, userId);
+  cache.set(cacheKey, cached);
   await cached.ready;
 }
 
-export function disconnect(connectionId: string): void {
+export function disconnect(
+  connectionId: string,
+  userId: string = LOCAL_USER_ID,
+): void {
   const cache = getCache();
-  const existing = cache.get(connectionId);
+  const cacheKey = `${userId}:${connectionId}`;
+  const existing = cache.get(cacheKey);
   if (!existing) return;
-  cache.delete(connectionId);
+  cache.delete(cacheKey);
   try {
     existing.client.end();
   } catch {
@@ -109,8 +126,11 @@ export function disconnect(connectionId: string): void {
   }
 }
 
-export function isConnected(connectionId: string): boolean {
-  return getCache().has(connectionId);
+export function isConnected(
+  connectionId: string,
+  userId: string = LOCAL_USER_ID,
+): boolean {
+  return getCache().has(`${userId}:${connectionId}`);
 }
 
 export interface ExecResult {
@@ -123,9 +143,10 @@ export async function executeCommand(
   connectionId: string,
   command: string,
   timeoutMs = 120_000,
+  userId: string = LOCAL_USER_ID,
 ): Promise<ExecResult> {
-  await connect(connectionId);
-  const cached = getCache().get(connectionId);
+  await connect(connectionId, userId);
+  const cached = getCache().get(`${userId}:${connectionId}`);
   if (!cached) {
     throw new Error("SSH connection unexpectedly closed");
   }
@@ -170,9 +191,10 @@ export async function* streamCommand(
   connectionId: string,
   command: string,
   timeoutMs = 120_000,
+  userId: string = LOCAL_USER_ID,
 ): AsyncGenerator<string, ExecResult, void> {
-  await connect(connectionId);
-  const cached = getCache().get(connectionId);
+  await connect(connectionId, userId);
+  const cached = getCache().get(`${userId}:${connectionId}`);
   if (!cached) {
     throw new Error("SSH connection unexpectedly closed");
   }
