@@ -12,6 +12,7 @@ import {
   Languages,
   Blend,
   MapPlus,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT, useLanguage } from "@/lib/i18n/context";
@@ -24,6 +25,7 @@ const PAGE_META: {
   exact?: boolean;
 }[] = [
   { href: "/dashboard", labelKey: "sidebar.dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/dashboard/me", labelKey: "sidebar.me", icon: User },
   { href: "/dashboard/mind-map", labelKey: "sidebar.mindMap", icon: MapPlus },
   { href: "/dashboard/todos", labelKey: "sidebar.todos", icon: CheckSquare },
   { href: "/dashboard/finance", labelKey: "sidebar.finance", icon: DollarSign },

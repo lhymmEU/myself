@@ -13,3 +13,4 @@ export * from "./marked";
 export * from "./claw";
 export * from "./finance";
 export * from "./vault";
+export * from "./insights";

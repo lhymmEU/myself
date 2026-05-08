@@ -38,6 +38,7 @@ interface NavItem {
 }
 
 const MYSELF_CHILDREN: NavItem[] = [
+  { href: "/dashboard/me", labelKey: "sidebar.me", icon: User },
   { href: "/dashboard/mind-map", labelKey: "sidebar.mindMap", icon: MapPlus },
   { href: "/dashboard/todos", labelKey: "sidebar.todos", icon: CheckSquare },
   { href: "/dashboard/finance", labelKey: "sidebar.finance", icon: DollarSign },

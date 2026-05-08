@@ -40,6 +40,7 @@ export const zh: Translations = {
     dashboard: "仪表盘",
     claw: "Claw",
     myself: "我自己",
+    me: "我",
     mindMap: "思维导图",
     todos: "待办事项",
     finance: "财务",

@@ -18,7 +18,7 @@ export function OverviewTab() {
     results: MarketIndex[];
   }>(
     connected ? "index/snapshots" : null,
-    { provider: "tmx" },
+    { provider: "cboe", region: "us" },
   );
 
   const { data: ratesRaw, isLoading: ratesLoading } = useOpenBB<{

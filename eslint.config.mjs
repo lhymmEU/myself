@@ -49,6 +49,10 @@ const LOCAL_ONLY_FILE_PATTERNS = [
   "lib/claw/ssh.ts",
   "lib/modules/vault/vault-db.ts",
   "lib/modules/vault/actions.ts",
+  // Karpathy LLM-wiki vault — fs writes gated by isLocal() inside the file.
+  "lib/modules/dashboard/wiki-vault.ts",
+  // Dev-only scripts that run on the local machine.
+  "scripts/**",
   // Hosts the local-only `getSettingSync` escape hatch used by mailer /
   // OpenRouter / OpenBB clients that were never written async-aware. The
   // sync read is gated by isLocal() inside the function itself.

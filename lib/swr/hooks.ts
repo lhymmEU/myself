@@ -98,3 +98,18 @@ export function useMarkedItems(collectionId?: string | null) {
     : "";
   return useSWR(`/api/marked?entity=item${params}`, swrFetcher);
 }
+
+// --- Bento dashboard / insights hooks ---
+
+export function useDashboardInsights() {
+  return useSWR("/api/dashboard/insights", swrFetcher, {
+    refreshInterval: 60_000,
+  });
+}
+
+export function useCardDetail(cardId: string | null) {
+  return useSWR(
+    cardId ? `/api/dashboard/insights?cardId=${encodeURIComponent(cardId)}&include=wiki` : null,
+    swrFetcher,
+  );
+}

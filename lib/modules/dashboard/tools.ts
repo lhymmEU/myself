@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { AgentTool } from "@/lib/core/types";
+import { getAgentToolUserId } from "@/lib/core/agent-tool-context";
 import type { SkillLevel } from "./schema";
 import {
   listWishlist,
@@ -19,7 +20,7 @@ export const dashboardTools: AgentTool[] = [
     name: "listWishlist",
     description: "List all items in the user's skill wishlist",
     parameters: z.object({}),
-    handler: async () => await listWishlist(),
+    handler: async () => await listWishlist(getAgentToolUserId()),
   },
   {
     name: "createWish",
@@ -39,7 +40,10 @@ export const dashboardTools: AgentTool[] = [
         notes?: string;
       };
       try {
-        return await createWish({ name, targetLevel, priority, notes });
+        return await createWish(
+          { name, targetLevel, priority, notes },
+          getAgentToolUserId(),
+        );
       } catch (e) {
         if (e instanceof Error && e.message === "wishlist_full") {
           return { error: "wishlist_full", message: "The wishlist already has 3 items. The user must complete or remove existing skills before adding new ones." };
@@ -66,7 +70,7 @@ export const dashboardTools: AgentTool[] = [
         priority?: string;
         notes?: string;
       };
-      await updateWish(id, data);
+      await updateWish(id, data, getAgentToolUserId());
       return { success: true };
     },
   },
@@ -76,7 +80,7 @@ export const dashboardTools: AgentTool[] = [
     parameters: z.object({ id: z.string() }),
     handler: async (params) => {
       const { id } = params as { id: string };
-      await deleteWish(id);
+      await deleteWish(id, getAgentToolUserId());
       return { success: true };
     },
   },
@@ -84,7 +88,7 @@ export const dashboardTools: AgentTool[] = [
     name: "listUserSkills",
     description: "List all of the user's skills with names, levels (familiar/fluent/mastering), and categories",
     parameters: z.object({}),
-    handler: async () => await listUserSkills(),
+    handler: async () => await listUserSkills(getAgentToolUserId()),
   },
   {
     name: "createUserSkill",
@@ -100,7 +104,10 @@ export const dashboardTools: AgentTool[] = [
         level?: SkillLevel;
         category?: string;
       };
-      return await createUserSkill({ name, level, category });
+      return await createUserSkill(
+        { name, level, category },
+        getAgentToolUserId(),
+      );
     },
   },
   {
@@ -113,7 +120,11 @@ export const dashboardTools: AgentTool[] = [
     }),
     handler: async (params) => {
       const { wishId, todos } = params as { wishId: string; todos: string[] };
-      return await bulkCreateWishTodos(wishId, todos);
+      return await bulkCreateWishTodos(
+        wishId,
+        todos,
+        getAgentToolUserId(),
+      );
     },
   },
   {
@@ -122,7 +133,7 @@ export const dashboardTools: AgentTool[] = [
     parameters: z.object({ wishId: z.string() }),
     handler: async (params) => {
       const { wishId } = params as { wishId: string };
-      return await listWishTodos(wishId);
+      return await listWishTodos(wishId, getAgentToolUserId());
     },
   },
 ];

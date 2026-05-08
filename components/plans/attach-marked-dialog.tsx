@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import type {
   MarkedCollection,
@@ -97,15 +96,15 @@ export function AttachMarkedDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[80vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-xl max-h-[85vh] flex flex-col overflow-hidden gap-0">
+        <DialogHeader className="shrink-0 space-y-2 pb-4">
           <DialogTitle>{t("plans.attachments.pickerTitle")}</DialogTitle>
           <p className="text-sm text-muted-foreground">
             {t("plans.attachments.pickerDesc")}
           </p>
         </DialogHeader>
 
-        <div className="relative">
+        <div className="relative shrink-0 pb-3">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
           <Input
             value={query}
@@ -115,7 +114,7 @@ export function AttachMarkedDialog({
           />
         </div>
 
-        <ScrollArea className="flex-1 -mx-6 px-6">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain -mx-6 px-6 pb-1">
           {grouped.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
               {items.length === 0
@@ -184,9 +183,9 @@ export function AttachMarkedDialog({
               ))}
             </div>
           )}
-        </ScrollArea>
+        </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t pt-4 mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t("common.close")}
           </Button>

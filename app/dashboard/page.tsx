@@ -1,7 +1,5 @@
-"use client";
-
-import { DashboardGameView } from "@/components/dashboard/dashboard-game-view";
+import { BentoDashboard } from "@/components/dashboard/bento/bento-dashboard";
 
 export default function DashboardPage() {
-  return <DashboardGameView />;
+  return <BentoDashboard />;
 }

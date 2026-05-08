@@ -2,6 +2,7 @@ import { and, count, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { getDb } from "@/lib/db";
 import { LOCAL_USER_ID } from "@/lib/core/runtime";
+import { eventBus } from "@/lib/core/event-bus";
 import {
   userSkills,
   skillWishlist,
@@ -9,6 +10,7 @@ import {
   wishlistTodos,
 } from "./schema";
 import type { SkillLevel } from "./schema";
+import { DASHBOARD_EVENTS } from "./events";
 
 // --- Character Appearance ---
 
@@ -169,6 +171,7 @@ export async function createWish(
       notes: data.notes ?? "",
       createdAt: Date.now(),
     });
+  eventBus.emit("dashboard", DASHBOARD_EVENTS.WISH_CREATED, { id, name: data.name });
   return { id };
 }
 
@@ -186,6 +189,7 @@ export async function updateWish(
     .update(skillWishlist)
     .set(data)
     .where(and(eq(skillWishlist.id, id), eq(skillWishlist.userId, userId)));
+  eventBus.emit("dashboard", DASHBOARD_EVENTS.WISH_UPDATED, { id });
 }
 
 export async function deleteWish(
@@ -200,6 +204,7 @@ export async function deleteWish(
   await getDb()
     .delete(skillWishlist)
     .where(and(eq(skillWishlist.id, id), eq(skillWishlist.userId, userId)));
+  eventBus.emit("dashboard", DASHBOARD_EVENTS.WISH_DELETED, { id });
 }
 
 // --- Wishlist Todos ---

@@ -38,6 +38,7 @@ export const en = {
     dashboard: "Dashboard",
     claw: "Claw",
     myself: "Myself",
+    me: "Me",
     mindMap: "Mind Map",
     todos: "Todos",
     finance: "Finance",

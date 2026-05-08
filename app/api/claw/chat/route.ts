@@ -10,8 +10,9 @@ import { streamCommand } from "@/lib/claw/ssh";
 import { createCardParser } from "@/lib/claw/parser";
 import { createStdoutNoiseFilter } from "@/lib/claw/filter-plugin-noise";
 import type { ClawUIMessage } from "@/lib/claw/messages";
-import { DEFAULT_WEB_SESSION_ID } from "@/lib/claw/constants";
 import { BOOTSTRAP_PREAMBLE } from "@/lib/claw/bootstrap-preamble";
+import { WIKI_PREAMBLE } from "@/lib/claw/wiki-preamble";
+import { buildOpenclawAgentCommand } from "@/lib/claw/openclaw-agent";
 
 const partSchema = z.object({
   type: z.string(),
@@ -31,6 +32,12 @@ const bodySchema = z.object({
   connectionId: z.string().optional(),
   sessionId: z.string().optional(),
   bootstrap: z.boolean().optional(),
+  /**
+   * When true, prepend the wiki-maintainer preamble instead of (or in
+   * addition to) the standard chat preamble. Used by the bento dashboard
+   * to flip openclaw into wiki-maintainer mode for one shot.
+   */
+  wikiPreamble: z.boolean().optional(),
 });
 
 function lastUserText(
@@ -52,36 +59,6 @@ function lastUserText(
     }
   }
   return null;
-}
-
-function shellEscape(input: string): string {
-  // Single-quote the message for `openclaw agent --message '…'`. Any
-  // existing single quotes get the standard `'\''` escape so we don't
-  // break out of the quoted string.
-  return `'${input.replace(/'/g, `'\\''`)}'`;
-}
-
-function buildCommand(message: string, sessionId?: string): string {
-  // See https://docs.openclaw.ai/cli/agent — `-m/--message`, `--session-id`,
-  // `--local`, `--timeout`; no `--system`. Stream plain stdout (no `--json`)
-  // so the UI card parser can consume chunks as they arrive.
-  // `--no-color` is a global `openclaw` flag, not valid on `openclaw agent`.
-  // Use NO_COLOR=1 for the subprocess instead.
-  const resolvedSession =
-    sessionId?.trim() || DEFAULT_WEB_SESSION_ID;
-  const parts = [
-    "NO_COLOR=1 openclaw agent",
-    "--local",
-    "--timeout 120",
-    `--session-id ${shellEscape(resolvedSession)}`,
-  ];
-  parts.push(`--message ${shellEscape(message)}`);
-  const inner = parts.join(" ");
-  // SSH `exec` uses a non-interactive shell with a minimal PATH. Node is
-  // often only on PATH after profile/rc (nvm, fnm, etc.), which yields
-  // `exec: node: not found` (exit 127) from the pnpm openclaw shim. Run
-  // the same command under a login shell so resolution matches an interactive SSH session.
-  return `bash -lc ${shellEscape(inner)}`;
 }
 
 export async function POST(req: NextRequest) {
@@ -129,11 +106,18 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const preambles: string[] = [];
+  if (parsed.data.wikiPreamble === true) preambles.push(WIKI_PREAMBLE);
+  if (parsed.data.bootstrap === true) preambles.push(BOOTSTRAP_PREAMBLE);
   const sendText =
-    parsed.data.bootstrap === true
-      ? `${BOOTSTRAP_PREAMBLE}\n${userText}`
+    preambles.length > 0
+      ? `${preambles.join("\n")}\n${userText}`
       : userText;
-  const command = buildCommand(sendText, parsed.data.sessionId);
+  const command = buildOpenclawAgentCommand({
+    message: sendText,
+    sessionId: parsed.data.sessionId,
+    agentTimeoutSec: 120,
+  });
 
   const stream = createUIMessageStream<ClawUIMessage>({
     async execute({ writer }) {

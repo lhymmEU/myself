@@ -15,7 +15,7 @@ export function MarketIndicesWidget() {
   const connected = healthData?.connected ?? false;
   const { data: indicesRaw, isLoading } = useOpenBB<{ results: MarketIndex[] }>(
     connected ? "index/snapshots" : null,
-    { provider: "tmx" },
+    { provider: "cboe", region: "us" },
   );
   const indices = useMemo(
     () => indicesRaw?.results ?? [],
