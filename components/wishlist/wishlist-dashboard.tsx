@@ -303,18 +303,6 @@ export function WishlistDashboard() {
         </Button>
       </div>
 
-      {wishesLoading ? (
-        <div className="flex flex-1 items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : (
-        <div className="grid flex-1 min-h-0 grid-cols-1 gap-3 lg:grid-cols-3">
-          {column("learn", "border-t-2 border-t-sky-500/60")}
-          {column("place", "border-t-2 border-t-amber-500/60")}
-          {column("goal", "border-t-2 border-t-violet-500/60")}
-        </div>
-      )}
-
       <div className="rounded-xl border bg-card p-4 space-y-2">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-semibold">{t("wishlist.todosSection")}</h3>
@@ -327,6 +315,18 @@ export function WishlistDashboard() {
         </div>
         <TodoPreview />
       </div>
+
+      {wishesLoading ? (
+        <div className="flex flex-1 items-center justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <div className="grid flex-1 min-h-0 grid-cols-1 gap-3 lg:grid-cols-3">
+          {column("learn", "border-t-2 border-t-sky-500/60")}
+          {column("place", "border-t-2 border-t-amber-500/60")}
+          {column("goal", "border-t-2 border-t-violet-500/60")}
+        </div>
+      )}
     </div>
   );
 }
