@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
 /**
@@ -47,7 +48,11 @@ const CLOUD_SCHEMA_FILES = [
   "vault",
 ] as const;
 
-const isCloudBuild = process.env.DEPLOYMENT_MODE === "cloud";
+/** Must match `lib/core/runtime.ts` so Webpack/Turbopack aliases apply on Vercel when only `NEXT_PUBLIC_DEPLOYMENT_MODE` is set. */
+const isCloudBuild =
+  (process.env.NEXT_PUBLIC_DEPLOYMENT_MODE ??
+    process.env.DEPLOYMENT_MODE ??
+    "local") === "cloud";
 
 const cloudSchemaAliases: Record<string, string> = isCloudBuild
   ? Object.fromEntries([
@@ -60,11 +65,36 @@ const cloudSchemaAliases: Record<string, string> = isCloudBuild
     ])
   : {};
 
+/** Webpack needs absolute paths; Turbopack accepts the `@/` spec strings above. */
+function cloudSchemaWebpackAliases(): Record<string, string> {
+  if (!isCloudBuild) return {};
+  const root = process.cwd();
+  const out: Record<string, string> = {};
+  for (const [from, to] of Object.entries(cloudSchemaAliases)) {
+    const rel = to.startsWith("@/") ? to.slice(2) : to;
+    out[from] = path.join(root, rel);
+  }
+  return out;
+}
+
 const nextConfig: NextConfig = {
   serverExternalPackages: EXTERNAL_NATIVE,
   ...(isCloudBuild && {
     turbopack: {
       resolveAlias: cloudSchemaAliases,
+    },
+    webpack: (config) => {
+      config.resolve = config.resolve ?? {};
+      const prev = config.resolve.alias;
+      const prevObj =
+        prev && typeof prev === "object" && !Array.isArray(prev)
+          ? (prev as Record<string, string | false | string[]>)
+          : {};
+      config.resolve.alias = {
+        ...prevObj,
+        ...cloudSchemaWebpackAliases(),
+      };
+      return config;
     },
   }),
 };
