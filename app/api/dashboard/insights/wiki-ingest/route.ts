@@ -22,12 +22,19 @@ export async function GET() {
   const conn = await getDefaultClawConnection(auth.userId);
   const state = await getWikiIngestState(auth.userId);
 
-  return NextResponse.json({
-    status: state.status,
-    detail: state.detail,
-    updatedAt: state.updatedAt,
-    hasConnection: !!conn,
-  });
+  return NextResponse.json(
+    {
+      status: state.status,
+      detail: state.detail,
+      updatedAt: state.updatedAt,
+      hasConnection: !!conn,
+    },
+    {
+      headers: {
+        "Cache-Control": "private, no-store, max-age=0",
+      },
+    },
+  );
 }
 
 export async function POST() {
@@ -63,5 +70,11 @@ export async function POST() {
     await runWikiIngestJob(connectionId, userId);
   });
 
-  return NextResponse.json({ accepted: true }, { status: 202 });
+  return NextResponse.json(
+    { accepted: true },
+    {
+      status: 202,
+      headers: { "Cache-Control": "private, no-store, max-age=0" },
+    },
+  );
 }

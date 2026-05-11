@@ -26,18 +26,19 @@ export function WikiIngestToolbar({
 }: {
   onIngestFinished?: () => void;
 }) {
-  const { data, mutate, isValidating } = useSWR<WikiIngestPayload>(
-    "/api/dashboard/insights/wiki-ingest",
-    swrFetcher,
-    {
+  const { data, error, isLoading, mutate, isValidating } =
+    useSWR<WikiIngestPayload>("/api/dashboard/insights/wiki-ingest", swrFetcher, {
       refreshInterval: (latestData) =>
         latestData?.status === "processing" ? 2000 : 0,
-    },
-  );
+    });
 
   const status = data?.status ?? "idle";
   const hasConnection = data?.hasConnection ?? false;
   const detail = data?.detail ?? "";
+
+  /** While `data` is undefined, `hasConnection` would falsely be false — that kept the button disabled on slow cloud cold starts. */
+  const disableForMissingConnection =
+    !isLoading && data !== undefined && !hasConnection;
 
   /** Set after POST succeeds so we refresh the bento even when status stays `done` (new `updatedAt`). */
   const pendingInsightRefresh = useRef(false);
@@ -148,10 +149,12 @@ export function WikiIngestToolbar({
               variant="secondary"
               size="sm"
               className="h-8 gap-1.5 rounded-full px-3"
-              disabled={!hasConnection || status === "processing"}
+              disabled={disableForMissingConnection || status === "processing"}
               onClick={() => void startIngest()}
             >
               {status === "processing" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : isLoading ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 <Library className="h-3.5 w-3.5" />
@@ -160,9 +163,13 @@ export function WikiIngestToolbar({
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            {hasConnection
-              ? "Runs openclaw on the SSH host. When finished, the agent must print a MYSELF_DASHBOARD_JSON block in stdout (see wiki-maintainer preamble). Up to ~15 min; this page returns immediately."
-              : "Configure a Claw SSH connection first (Dashboard → Claw)."}
+            {error
+              ? "Could not load wiki ingest status. Use refresh or reload the page."
+              : isLoading
+                ? "Checking whether a Claw SSH connection is configured…"
+                : hasConnection
+                  ? "Runs openclaw on the SSH host. When finished, the agent must print a MYSELF_DASHBOARD_JSON block in stdout (see wiki-maintainer preamble). Up to ~15 min; this page returns immediately."
+                  : "Configure a Claw SSH connection first (Dashboard → Claw)."}
           </TooltipContent>
         </Tooltip>
         <Tooltip>
