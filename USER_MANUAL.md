@@ -292,6 +292,30 @@ In the hosted version the same endpoint is auth-gated to the calling user — pa
 
 See [README.md](./README.md) for a deeper architectural overview.
 
+### Canonical tool URL (local vs cloud)
+
+The dashboard resolves the base URL your **remote** `openclaw` should use for HTTP tools in this order:
+
+1. **`NEXT_PUBLIC_APP_URL`** — set this to your public origin with scheme (for example `https://dashboard.example.com`). Best for custom domains and non-Vercel hosts.
+2. **Request headers** — when you open **`GET /api/claw/agent-tools-endpoint`** from the browser, the response uses `Host` / `x-forwarded-*` so the copy button matches the site you are on.
+3. **`VERCEL_URL`** — on Vercel deployments, the server prepends `https://` automatically if `NEXT_PUBLIC_APP_URL` is unset.
+
+Wiki ingest and Claw chat also append a one-line **“Tool HTTP endpoint: …”** hint to the message sent to `openclaw` so logs show the same URL.
+
+### Reverse SSH tunnel (local Next, remote openclaw)
+
+If `openclaw` runs on another machine (SSH host) but your Next app and SQLite data stay on your laptop:
+
+1. In **Dashboard → Claw →** connection settings, set **Remote tool tunnel port** to a free high port on the **SSH server** (for example `30443`).
+2. When the app connects over SSH, it requests **`forwardIn`** on remote **`127.0.0.1:thatPort`** and pipes each connection to your local Next HTTP port.
+3. Configure **openclaw on the server** to call **`http://127.0.0.1:30443/api/agent`** (not your laptop’s browser URL).
+
+The SSH server must allow remote forwards (`AllowTcpForwarding yes` in `sshd_config`). If the port is already in use, pick another.
+
+Optional env on the machine running Next:
+
+- **`AGENT_TOOL_FORWARD_TARGET`** — where the tunnel connects locally, default **`127.0.0.1:${PORT}`** with **`PORT`** defaulting to `3000` (matches `next dev` / `next start`).
+
 ---
 
 ## Getting help

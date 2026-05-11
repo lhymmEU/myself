@@ -39,6 +39,12 @@ export function WikiIngestToolbar({
   const hasConnection = data?.hasConnection ?? false;
   const detail = data?.detail ?? "";
 
+  /** Set after POST succeeds so we refresh the bento even when status stays `done` (new `updatedAt`). */
+  const pendingInsightRefresh = useRef(false);
+  /** Highest `updatedAt` seen while `processing`; completion must advance past this. */
+  const processingCheckpoint = useRef(0);
+  const hydrated = useRef(false);
+
   const startIngest = useCallback(async () => {
     try {
       const res = await fetch("/api/dashboard/insights/wiki-ingest", {
@@ -54,6 +60,7 @@ export function WikiIngestToolbar({
         toast.error(body.error ?? "Could not start wiki ingest");
         return;
       }
+      pendingInsightRefresh.current = true;
       toast.success("Wiki ingest started — running in the background.");
       await mutate();
     } catch (e) {
@@ -61,23 +68,37 @@ export function WikiIngestToolbar({
     }
   }, [mutate]);
 
-  const prevStatus = useRef<string | null>(null);
   useEffect(() => {
-    if (prevStatus.current === null) {
-      prevStatus.current = status;
+    if (!data) return;
+    const at = data.updatedAt ?? 0;
+    const st = data.status;
+
+    if (!hydrated.current) {
+      hydrated.current = true;
+      processingCheckpoint.current = at;
       return;
     }
-    const was = prevStatus.current;
-    prevStatus.current = status;
-    if (was === "processing" && status === "done") {
-      toast.success("Wiki ingest finished.");
-      onIngestFinished?.();
+
+    if (st === "processing") {
+      processingCheckpoint.current = Math.max(processingCheckpoint.current, at);
+      return;
     }
-    if (was === "processing" && status === "error") {
-      toast.error("Wiki ingest failed — hover the status light for detail.");
-      onIngestFinished?.();
+
+    if (
+      pendingInsightRefresh.current &&
+      (st === "done" || st === "error") &&
+      at > processingCheckpoint.current
+    ) {
+      processingCheckpoint.current = at;
+      pendingInsightRefresh.current = false;
+      if (st === "done") {
+        toast.success("Wiki ingest finished.");
+      } else {
+        toast.error("Wiki ingest failed — hover the status light for detail.");
+      }
+      void Promise.resolve(onIngestFinished?.());
     }
-  }, [status, onIngestFinished]);
+  }, [data, onIngestFinished]);
 
   const statusLabel =
     status === "processing"

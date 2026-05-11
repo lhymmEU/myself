@@ -73,7 +73,11 @@ export function BentoDashboard() {
           Your wiki, made visible.
         </p>
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          <WikiIngestToolbar onIngestFinished={() => mutate()} />
+          <WikiIngestToolbar
+            onIngestFinished={() =>
+              void mutate(undefined, { revalidate: true })
+            }
+          />
           <AskTheWiki onPinned={() => mutate()} />
         </div>
       </div>

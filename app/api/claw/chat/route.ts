@@ -13,6 +13,7 @@ import type { ClawUIMessage } from "@/lib/claw/messages";
 import { BOOTSTRAP_PREAMBLE } from "@/lib/claw/bootstrap-preamble";
 import { WIKI_PREAMBLE } from "@/lib/claw/wiki-preamble";
 import { buildOpenclawAgentCommand } from "@/lib/claw/openclaw-agent";
+import { formatAgentToolHttpInstruction } from "@/lib/core/public-app-origin";
 
 const partSchema = z.object({
   type: z.string(),
@@ -109,10 +110,12 @@ export async function POST(req: NextRequest) {
   const preambles: string[] = [];
   if (parsed.data.wikiPreamble === true) preambles.push(WIKI_PREAMBLE);
   if (parsed.data.bootstrap === true) preambles.push(BOOTSTRAP_PREAMBLE);
-  const sendText =
+  const toolLine = formatAgentToolHttpInstruction(req);
+  const preambleBlock =
     preambles.length > 0
-      ? `${preambles.join("\n")}\n${userText}`
-      : userText;
+      ? `${preambles.join("\n")}\n\n${toolLine}`
+      : toolLine;
+  const sendText = `${preambleBlock}\n\n${userText}`;
   const command = buildOpenclawAgentCommand({
     message: sendText,
     sessionId: parsed.data.sessionId,

@@ -18,6 +18,8 @@ export const clawConnections = pgTable("claw_connections", {
   privateKey: text("private_key"),
   passphrase: text("passphrase"),
   isDefault: boolean("is_default").notNull().default(false),
+  /** When set, SSH session requests reverse forward on remote 127.0.0.1:this → local Next (see AGENT_TOOL_FORWARD_TARGET). */
+  toolReverseForwardRemotePort: integer("tool_reverse_forward_remote_port"),
   createdAt: bigint("created_at", { mode: "number" }).notNull(),
   updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
 });

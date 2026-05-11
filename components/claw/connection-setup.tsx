@@ -20,7 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Copy, Loader2 } from "lucide-react";
 import {
   fetchSecret,
   fetchVaultStatus,
@@ -39,6 +39,8 @@ interface FormState {
   host: string;
   port: string;
   username: string;
+  /** Empty = disabled. Remote listen port for reverse SSH → local Next (openclaw uses http://127.0.0.1:PORT/api/agent on server). */
+  toolReverseForwardRemotePort: string;
   authMethod: AuthMethod;
   password: string;
   privateKey: string;
@@ -50,6 +52,7 @@ const INITIAL: FormState = {
   host: "",
   port: "22",
   username: "",
+  toolReverseForwardRemotePort: "",
   authMethod: "password",
   password: "",
   privateKey: "",
@@ -135,6 +138,16 @@ export function ConnectionSetup({ onCreated }: Props) {
       return;
     }
     const port = Number(form.port) || 22;
+    const trfRaw = form.toolReverseForwardRemotePort.trim();
+    let toolReverseForwardRemotePort: number | undefined;
+    if (trfRaw !== "") {
+      const n = Number(trfRaw);
+      if (!Number.isInteger(n) || n < 1 || n > 65535) {
+        setError("Remote tool tunnel port must be an integer 1–65535 or empty");
+        return;
+      }
+      toolReverseForwardRemotePort = n;
+    }
     const payload = {
       name: form.name.trim(),
       host: form.host.trim(),
@@ -147,6 +160,9 @@ export function ConnectionSetup({ onCreated }: Props) {
         form.authMethod === "key" && form.passphrase
           ? form.passphrase
           : null,
+      ...(toolReverseForwardRemotePort !== undefined
+        ? { toolReverseForwardRemotePort }
+        : {}),
     };
     setSubmitting(true);
     try {
@@ -222,6 +238,60 @@ export function ConnectionSetup({ onCreated }: Props) {
                 onChange={(e) => update("username", e.target.value)}
                 placeholder="claw"
               />
+            </div>
+
+            <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="toolReverseForwardRemotePort">
+                  Remote tool tunnel port (optional)
+                </Label>
+                <Input
+                  id="toolReverseForwardRemotePort"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={65535}
+                  placeholder="e.g. 30443 — leave empty to disable"
+                  value={form.toolReverseForwardRemotePort}
+                  onChange={(e) =>
+                    update("toolReverseForwardRemotePort", e.target.value)
+                  }
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                When set, this app requests a reverse SSH forward on{" "}
+                <span className="font-mono">127.0.0.1</span> on the{" "}
+                <strong>remote</strong> host so openclaw there can call your
+                local Next server via HTTP. Point openclaw at the URL below
+                (on the server). Requires{" "}
+                <span className="font-mono">AllowTcpForwarding</span> on{" "}
+                <span className="font-mono">sshd</span>.
+              </p>
+              {(() => {
+                const t = form.toolReverseForwardRemotePort.trim();
+                const n = Number(t);
+                if (t === "" || !Number.isInteger(n) || n < 1 || n > 65535) {
+                  return null;
+                }
+                const url = `http://127.0.0.1:${n}/api/agent`;
+                return (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <code className="max-w-full break-all rounded bg-background px-2 py-1 text-xs">
+                      {url}
+                    </code>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0"
+                      onClick={() => void navigator.clipboard.writeText(url)}
+                    >
+                      <Copy className="mr-1 h-3.5 w-3.5" />
+                      Copy
+                    </Button>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="space-y-1.5">

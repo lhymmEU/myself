@@ -8,6 +8,7 @@ import {
   updateClawConnection,
   deleteClawConnection,
 } from "@/lib/claw/db";
+import { disconnect as disconnectClawSsh } from "@/lib/claw/ssh";
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -19,6 +20,13 @@ const createSchema = z.object({
   privateKey: z.string().nullable().optional(),
   passphrase: z.string().nullable().optional(),
   isDefault: z.boolean().optional(),
+  toolReverseForwardRemotePort: z
+    .number()
+    .int()
+    .min(1)
+    .max(65535)
+    .nullable()
+    .optional(),
 });
 
 const updateSchema = z.object({
@@ -32,6 +40,13 @@ const updateSchema = z.object({
   privateKey: z.string().nullable().optional(),
   passphrase: z.string().nullable().optional(),
   isDefault: z.boolean().optional(),
+  toolReverseForwardRemotePort: z
+    .number()
+    .int()
+    .min(1)
+    .max(65535)
+    .nullable()
+    .optional(),
 });
 
 function sanitize(connection: Awaited<ReturnType<typeof listClawConnections>>[number]) {
@@ -43,6 +58,7 @@ function sanitize(connection: Awaited<ReturnType<typeof listClawConnections>>[nu
     username: connection.username,
     authMethod: connection.authMethod,
     isDefault: connection.isDefault,
+    toolReverseForwardRemotePort: connection.toolReverseForwardRemotePort,
     createdAt: connection.createdAt,
     updatedAt: connection.updatedAt,
   };
@@ -110,6 +126,7 @@ export async function PUT(req: NextRequest) {
   if (!updated) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+  disconnectClawSsh(id, auth.userId);
   return NextResponse.json({ connection: sanitize(updated) });
 }
 
@@ -120,6 +137,7 @@ export async function DELETE(req: NextRequest) {
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
+  disconnectClawSsh(id, auth.userId);
   await deleteClawConnection(id, auth.userId);
   return NextResponse.json({ success: true });
 }

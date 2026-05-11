@@ -1,3 +1,5 @@
+import { formatAgentToolHttpInstruction } from "@/lib/core/public-app-origin";
+
 /**
  * Preamble used when the dashboard kicks off a wiki-maintainer session with
  * openclaw. Sibling of bootstrap-preamble.ts (which is only the [CARD]
@@ -60,5 +62,6 @@ export const WIKI_PREAMBLE = [
  * Full message sent to openclaw for a background wiki ingest job (non-streaming).
  */
 export function buildWikiIngestMessage(): string {
-  return `${WIKI_PREAMBLE}\n\nExecute the full ingest → lint → publish workflow now (pending dismissals, readRawSources, wiki updates, publishDashboard with ≤9 cards including one heartbeat, then the MYSELF_DASHBOARD_JSON stdout block).`;
+  const toolLine = formatAgentToolHttpInstruction(undefined);
+  return `${WIKI_PREAMBLE}\n\n${toolLine}\n\nExecute the full ingest → lint → publish workflow now (pending dismissals, readRawSources, wiki updates, publishDashboard with ≤9 cards including one heartbeat, then the MYSELF_DASHBOARD_JSON stdout block).`;
 }

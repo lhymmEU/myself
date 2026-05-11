@@ -21,6 +21,10 @@ export const clawConnections = sqliteTable("claw_connections", {
   isDefault: integer("is_default", { mode: "boolean" })
     .notNull()
     .default(false),
+  /** When set, SSH session requests reverse forward on remote 127.0.0.1:this → local Next (see AGENT_TOOL_FORWARD_TARGET). */
+  toolReverseForwardRemotePort: integer("tool_reverse_forward_remote_port", {
+    mode: "number",
+  }),
   createdAt: integer("created_at", { mode: "number" }).notNull(),
   updatedAt: integer("updated_at", { mode: "number" }).notNull(),
 });
