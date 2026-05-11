@@ -35,7 +35,10 @@ import {
 import { CardRenderer } from "./card-renderer";
 import type { ClawUIMessage, ClawCard } from "@/lib/claw/messages";
 import { swrFetcher } from "@/lib/swr/config";
-import { DEFAULT_WEB_SESSION_ID } from "@/lib/claw/constants";
+import {
+  CLAW_ACTIVE_CONNECTION_STORAGE_KEY,
+  DEFAULT_WEB_SESSION_ID,
+} from "@/lib/claw/constants";
 import { cn } from "@/lib/utils";
 
 function effectiveSession(id: string | undefined): string {
@@ -117,6 +120,14 @@ export function Chat({
 
   useEffect(() => {
     bootstrappedRef.current.clear();
+  }, [connectionId]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(CLAW_ACTIVE_CONNECTION_STORAGE_KEY, connectionId);
+    } catch {
+      /* ignore quota / private mode */
+    }
   }, [connectionId]);
 
   const sessionsUrl = useMemo(

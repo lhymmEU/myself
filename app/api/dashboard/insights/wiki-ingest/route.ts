@@ -1,8 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { after } from "next/server";
 import { bootApp } from "@/lib/core/init";
 import { requireUserId } from "@/lib/core/route-helpers";
-import { getDefaultClawConnection } from "@/lib/claw/db";
+import {
+  getClawConnection,
+  getDefaultClawConnection,
+  listClawConnections,
+} from "@/lib/claw/db";
 import {
   getWikiIngestState,
   upsertWikiIngestState,
@@ -19,7 +23,7 @@ export async function GET() {
   const auth = await requireUserId();
   if ("response" in auth) return auth.response;
 
-  const conn = await getDefaultClawConnection(auth.userId);
+  const conns = await listClawConnections(auth.userId);
   const state = await getWikiIngestState(auth.userId);
 
   return NextResponse.json(
@@ -27,7 +31,7 @@ export async function GET() {
       status: state.status,
       detail: state.detail,
       updatedAt: state.updatedAt,
-      hasConnection: !!conn,
+      hasConnection: conns.length > 0,
     },
     {
       headers: {
@@ -37,17 +41,39 @@ export async function GET() {
   );
 }
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   bootApp();
   const auth = await requireUserId();
   if ("response" in auth) return auth.response;
 
-  const conn = await getDefaultClawConnection(auth.userId);
+  let requestedConnectionId: string | undefined;
+  const ct = req.headers.get("content-type") ?? "";
+  if (ct.includes("application/json")) {
+    try {
+      const raw: unknown = await req.json();
+      if (
+        raw &&
+        typeof raw === "object" &&
+        "connectionId" in raw &&
+        typeof (raw as { connectionId: unknown }).connectionId === "string"
+      ) {
+        const id = (raw as { connectionId: string }).connectionId.trim();
+        if (id) requestedConnectionId = id;
+      }
+    } catch {
+      /* empty or invalid body — fall back to default connection */
+    }
+  }
+
+  const conn = requestedConnectionId
+    ? await getClawConnection(requestedConnectionId, auth.userId)
+    : await getDefaultClawConnection(auth.userId);
   if (!conn) {
     return NextResponse.json(
       {
-        error:
-          "No Claw connection configured. Open Claw and save an SSH connection first.",
+        error: requestedConnectionId
+          ? "That SSH connection was not found. Refresh the connection list or pick another in Dashboard → Claw."
+          : "No Claw connection configured. Open Claw and save an SSH connection first.",
       },
       { status: 400 },
     );

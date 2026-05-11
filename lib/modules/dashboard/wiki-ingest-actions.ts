@@ -9,6 +9,7 @@ import { extractDashboardJsonFromWikiIngestStdout } from "@/lib/claw/dashboard-s
 import { executeCommand } from "@/lib/claw/ssh";
 import { buildOpenclawAgentCommand } from "@/lib/claw/openclaw-agent";
 import { buildWikiIngestMessage } from "@/lib/claw/wiki-preamble";
+import { getClawConnection } from "@/lib/claw/db";
 import { WIKI_MAINTAINER_SESSION_ID } from "@/lib/claw/constants";
 import {
   importDashboardJsonString,
@@ -88,7 +89,10 @@ export async function runWikiIngestJob(
   connectionId: string,
   userId: string,
 ): Promise<void> {
-  const message = buildWikiIngestMessage();
+  const connRow = await getClawConnection(connectionId, userId);
+  const message = buildWikiIngestMessage({
+    toolReverseForwardRemotePort: connRow?.toolReverseForwardRemotePort ?? null,
+  });
   const command = buildOpenclawAgentCommand({
     message,
     sessionId: WIKI_MAINTAINER_SESSION_ID,

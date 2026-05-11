@@ -58,10 +58,19 @@ export const WIKI_PREAMBLE = [
   "---",
 ].join("\n");
 
+export interface BuildWikiIngestMessageOptions {
+  /** When set, openclaw on the SSH host must use this loopback port (reverse tunnel to Next). */
+  toolReverseForwardRemotePort?: number | null;
+}
+
 /**
  * Full message sent to openclaw for a background wiki ingest job (non-streaming).
  */
-export function buildWikiIngestMessage(): string {
-  const toolLine = formatAgentToolHttpInstruction(undefined);
+export function buildWikiIngestMessage(
+  opts?: BuildWikiIngestMessageOptions,
+): string {
+  const toolLine = formatAgentToolHttpInstruction(undefined, {
+    reverseSshRemotePort: opts?.toolReverseForwardRemotePort,
+  });
   return `${WIKI_PREAMBLE}\n\n${toolLine}\n\nExecute the full ingest → lint → publish workflow now (pending dismissals, readRawSources, wiki updates, publishDashboard with ≤9 cards including one heartbeat, then the MYSELF_DASHBOARD_JSON stdout block).`;
 }

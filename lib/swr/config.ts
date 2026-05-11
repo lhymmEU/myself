@@ -3,7 +3,10 @@
 import { SWRConfig } from "swr";
 
 export const swrFetcher = async (url: string) => {
-  const res = await fetch(url);
+  const res = await fetch(url, {
+    credentials: "include",
+    cache: "no-store",
+  });
   if (!res.ok) {
     const err = new Error("Fetch failed");
     (err as unknown as Record<string, unknown>).status = res.status;

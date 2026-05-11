@@ -6,3 +6,10 @@ export const WIKI_MAINTAINER_SESSION_ID = "web-wiki-maintainer";
 
 /** Session id for one-shot wishlist plan generation (me / wishlist page). */
 export const WISHLIST_PLAN_SESSION_ID = "web-wishlist-plan";
+
+/**
+ * Browser sessionStorage key — last Claw SSH connection used for chat
+ * (`components/claw/chat.tsx`). Wiki ingest reads this so the dashboard uses
+ * the same connection as the agent you are talking to.
+ */
+export const CLAW_ACTIVE_CONNECTION_STORAGE_KEY = "myself.clawActiveConnectionId";

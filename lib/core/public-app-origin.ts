@@ -46,10 +46,26 @@ export function resolveAgentToolsHttpUrl(request?: NextRequest): string {
   return `${resolvePublicAppOrigin(request)}/api/agent`;
 }
 
+/** Full `/api/agent` URL openclaw should call on the SSH host when reverse forwarding is enabled. */
+export function resolveReverseTunnelAgentToolsUrl(remoteListenPort: number): string {
+  return `http://127.0.0.1:${remoteListenPort}/api/agent`;
+}
+
 /**
  * Single line for openclaw transcripts (wiki ingest, chat).
+ *
+ * When `reverseSshRemotePort` is set, the URL is on **this SSH host's** loopback
+ * (where openclaw runs); the dashboard opens a matching reverse forward to Next.
  */
-export function formatAgentToolHttpInstruction(request?: NextRequest): string {
+export function formatAgentToolHttpInstruction(
+  request?: NextRequest,
+  opts?: { reverseSshRemotePort?: number | null },
+): string {
+  const p = opts?.reverseSshRemotePort;
+  if (p != null && p > 0) {
+    const url = resolveReverseTunnelAgentToolsUrl(p);
+    return `Tool HTTP endpoint (readRawSources, publishDashboard, …): ${url} — call this URL from this host (reverse-SSH tunnel to the Next app); do not use the dev machine's localhost:PORT unless openclaw runs there.`;
+  }
   const url = resolveAgentToolsHttpUrl(request);
   return `Tool HTTP endpoint (readRawSources, publishDashboard, …): ${url}`;
 }

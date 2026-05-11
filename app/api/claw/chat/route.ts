@@ -110,7 +110,9 @@ export async function POST(req: NextRequest) {
   const preambles: string[] = [];
   if (parsed.data.wikiPreamble === true) preambles.push(WIKI_PREAMBLE);
   if (parsed.data.bootstrap === true) preambles.push(BOOTSTRAP_PREAMBLE);
-  const toolLine = formatAgentToolHttpInstruction(req);
+  const toolLine = formatAgentToolHttpInstruction(req, {
+    reverseSshRemotePort: connection.toolReverseForwardRemotePort,
+  });
   const preambleBlock =
     preambles.length > 0
       ? `${preambles.join("\n")}\n\n${toolLine}`

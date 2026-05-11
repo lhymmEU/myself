@@ -70,7 +70,14 @@ export async function GET() {
   const auth = await requireUserId();
   if ("response" in auth) return auth.response;
   const connections = await listClawConnections(auth.userId);
-  return NextResponse.json({ connections: connections.map(sanitize) });
+  return NextResponse.json(
+    { connections: connections.map(sanitize) },
+    {
+      headers: {
+        "Cache-Control": "private, no-store, max-age=0",
+      },
+    },
+  );
 }
 
 export async function POST(req: NextRequest) {

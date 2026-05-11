@@ -60,7 +60,7 @@ export default function ClawPage() {
     return (
       <ConnectionSetup
         onCreated={async () => {
-          await mutate();
+          await mutate(undefined, { revalidate: true });
         }}
       />
     );
@@ -85,7 +85,7 @@ export default function ClawPage() {
     await fetch(`/api/claw/connections?id=${encodeURIComponent(c.id)}`, {
       method: "DELETE",
     });
-    await mutate();
+    await mutate(undefined, { revalidate: true });
   }
 
   return (
@@ -102,7 +102,7 @@ export default function ClawPage() {
               setSelectedId(id);
               setConnectionsOpen(false);
             }}
-            onMutate={mutate}
+            onMutate={() => mutate(undefined, { revalidate: true })}
           />
         </SheetContent>
       </Sheet>

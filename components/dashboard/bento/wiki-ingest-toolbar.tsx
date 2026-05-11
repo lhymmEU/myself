@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import { Loader2, RefreshCw, Library } from "lucide-react";
 import { toast } from "sonner";
@@ -13,12 +13,25 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { swrFetcher } from "@/lib/swr/config";
+import { useClawConnectionsList } from "@/lib/swr/hooks";
+import { CLAW_ACTIVE_CONNECTION_STORAGE_KEY } from "@/lib/claw/constants";
 
 interface WikiIngestPayload {
   status: "idle" | "processing" | "done" | "error";
   detail: string;
   updatedAt: number;
-  hasConnection: boolean;
+  /** Legacy — prefer deriving eligibility from `/api/claw/connections` (same cache as Claw). */
+  hasConnection?: boolean;
+}
+
+function readStoredClawConnectionId(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const v = sessionStorage.getItem(CLAW_ACTIVE_CONNECTION_STORAGE_KEY);
+    return v?.trim() || null;
+  } catch {
+    return null;
+  }
 }
 
 export function WikiIngestToolbar({
@@ -26,19 +39,62 @@ export function WikiIngestToolbar({
 }: {
   onIngestFinished?: () => void;
 }) {
+  const {
+    data: connPayload,
+    error: connError,
+    isLoading: connLoading,
+    mutate: mutateConnections,
+    isValidating: connValidating,
+  } = useClawConnectionsList();
+
   const { data, error, isLoading, mutate, isValidating } =
     useSWR<WikiIngestPayload>("/api/dashboard/insights/wiki-ingest", swrFetcher, {
       refreshInterval: (latestData) =>
         latestData?.status === "processing" ? 2000 : 0,
     });
 
+  /** Bumped from callbacks only — re-reads sessionStorage without setState-in-effect. */
+  const [storageEpoch, setStorageEpoch] = useState(0);
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === "visible") {
+        setStorageEpoch((e) => e + 1);
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
+  const storedConnectionId = useMemo(() => {
+    void storageEpoch;
+    return readStoredClawConnectionId();
+  }, [storageEpoch]);
+
+  const connections = useMemo(
+    () => connPayload?.connections ?? [],
+    [connPayload?.connections],
+  );
+  const effectiveConnectionId = useMemo(() => {
+    if (connections.length === 0) return null;
+    if (
+      storedConnectionId &&
+      connections.some((c) => c.id === storedConnectionId)
+    ) {
+      return storedConnectionId;
+    }
+    const def = connections.find((c) => c.isDefault);
+    return def?.id ?? connections[0]!.id;
+  }, [connections, storedConnectionId]);
+
   const status = data?.status ?? "idle";
-  const hasConnection = data?.hasConnection ?? false;
+  const hasConnection = connections.length > 0;
   const detail = data?.detail ?? "";
 
-  /** While `data` is undefined, `hasConnection` would falsely be false — that kept the button disabled on slow cloud cold starts. */
   const disableForMissingConnection =
-    !isLoading && data !== undefined && !hasConnection;
+    !connLoading &&
+    connPayload !== undefined &&
+    !hasConnection &&
+    !connError;
 
   /** Set after POST succeeds so we refresh the bento even when status stays `done` (new `updatedAt`). */
   const pendingInsightRefresh = useRef(false);
@@ -47,9 +103,18 @@ export function WikiIngestToolbar({
   const hydrated = useRef(false);
 
   const startIngest = useCallback(async () => {
+    if (!effectiveConnectionId) {
+      toast.error(
+        "No SSH connection to use. Open Dashboard → Claw and save a connection.",
+      );
+      return;
+    }
     try {
       const res = await fetch("/api/dashboard/insights/wiki-ingest", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ connectionId: effectiveConnectionId }),
       });
       const body = await res.json().catch(() => ({}));
       if (res.status === 409) {
@@ -67,7 +132,7 @@ export function WikiIngestToolbar({
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Network error");
     }
-  }, [mutate]);
+  }, [effectiveConnectionId, mutate]);
 
   useEffect(() => {
     if (!data) return;
@@ -149,12 +214,17 @@ export function WikiIngestToolbar({
               variant="secondary"
               size="sm"
               className="h-8 gap-1.5 rounded-full px-3"
-              disabled={disableForMissingConnection || status === "processing"}
+              disabled={
+                disableForMissingConnection ||
+                connLoading ||
+                status === "processing" ||
+                !!connError
+              }
               onClick={() => void startIngest()}
             >
               {status === "processing" ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : isLoading ? (
+              ) : connLoading || isLoading ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 <Library className="h-3.5 w-3.5" />
@@ -163,13 +233,15 @@ export function WikiIngestToolbar({
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            {error
-              ? "Could not load wiki ingest status. Use refresh or reload the page."
-              : isLoading
-                ? "Checking whether a Claw SSH connection is configured…"
-                : hasConnection
-                  ? "Runs openclaw on the SSH host. When finished, the agent must print a MYSELF_DASHBOARD_JSON block in stdout (see wiki-maintainer preamble). Up to ~15 min; this page returns immediately."
-                  : "Configure a Claw SSH connection first (Dashboard → Claw)."}
+            {connError
+              ? "Could not load Claw connections. Use refresh or open Dashboard → Claw."
+              : error
+                ? "Could not load wiki ingest status. Use refresh or reload the page."
+                : connLoading
+                  ? "Loading your Claw SSH connections…"
+                  : hasConnection
+                    ? "Uses the same SSH connection as Claw chat when you have opened Claw in this browser (or your default). Runs openclaw on the remote host; up to ~15 min."
+                    : "Configure a Claw SSH connection first (Dashboard → Claw)."}
           </TooltipContent>
         </Tooltip>
         <Tooltip>
@@ -179,16 +251,28 @@ export function WikiIngestToolbar({
               variant="ghost"
               size="icon"
               className="h-8 w-8 rounded-full"
-              onClick={() => void mutate()}
-              disabled={isValidating}
-              aria-label="Refresh wiki ingest status"
+              onClick={() =>
+                void Promise.all([
+                  mutate(undefined, { revalidate: true }),
+                  mutateConnections(undefined, { revalidate: true }),
+                ]).then(() => {
+                  setStorageEpoch((e) => e + 1);
+                })
+              }
+              disabled={isValidating || connValidating}
+              aria-label="Refresh wiki ingest status and Claw connections"
             >
               <RefreshCw
-                className={cn("h-3.5 w-3.5", isValidating && "animate-spin")}
+                className={cn(
+                  "h-3.5 w-3.5",
+                  (isValidating || connValidating) && "animate-spin",
+                )}
               />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">Refresh status</TooltipContent>
+          <TooltipContent side="bottom">
+            Refresh ingest status and Claw connection list
+          </TooltipContent>
         </Tooltip>
       </div>
     </TooltipProvider>
