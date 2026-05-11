@@ -14,9 +14,10 @@ import { SuggestionsCard } from "./cards/suggestions";
 interface Props {
   card: ClawCard;
   onChoose?: (text: string) => void;
+  onToggleStep?: (index: number, nextDone: boolean) => void;
 }
 
-export function CardRenderer({ card, onChoose }: Props) {
+export function CardRenderer({ card, onChoose, onToggleStep }: Props) {
   switch (card.kind) {
     case "key-value":
       return <KeyValueCard title={card.title} items={card.items} />;
@@ -27,7 +28,13 @@ export function CardRenderer({ card, onChoose }: Props) {
         <TableCard title={card.title} columns={card.columns} rows={card.rows} />
       );
     case "steps":
-      return <StepsCard title={card.title} items={card.items} />;
+      return (
+        <StepsCard
+          title={card.title}
+          items={card.items}
+          onToggleStep={onToggleStep}
+        />
+      );
     case "citation":
       return (
         <CitationCard quote={card.quote} source={card.source} />

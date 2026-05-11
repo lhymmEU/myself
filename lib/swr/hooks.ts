@@ -5,27 +5,19 @@ import { swrFetcher } from "./config";
 
 // --- Dashboard hooks (local SQLite — fast) ---
 
-export function useWishlist() {
-  return useSWR("/api/dashboard/wishlist", swrFetcher);
+export function useUserWishes() {
+  return useSWR("/api/dashboard/wishes", swrFetcher);
 }
 
-export function useWishTodos(wishId: string | null) {
-  return useSWR(
-    wishId ? `/api/dashboard/wishlist/todos?wishId=${encodeURIComponent(wishId)}` : null,
+export function useClawConnectionsList() {
+  return useSWR<{ connections: { id: string; name: string; isDefault?: boolean }[] }>(
+    "/api/claw/connections",
     swrFetcher,
   );
 }
 
 export function useUserSkills() {
   return useSWR("/api/dashboard/skills", swrFetcher);
-}
-
-export function useCharacterAppearance(type: string) {
-  return useSWR(
-    `/api/dashboard/appearance?type=${encodeURIComponent(type)}`,
-    swrFetcher,
-    { dedupingInterval: 60_000 },
-  );
 }
 
 // --- Plans hooks ---

@@ -45,3 +45,15 @@ export const wishlistTodos = sqliteTable("wishlist_todos", {
   sortOrder: integer("sort_order", { mode: "number" }).notNull().default(0),
   createdAt: integer("created_at", { mode: "number" }).notNull(),
 });
+
+export const userWishes = sqliteTable("user_wishes", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().default("local-user"),
+  category: text("category", {
+    enum: ["learn", "place", "goal"],
+  }).notNull(),
+  userDescription: text("user_description").notNull(),
+  planData: text("plan_data").notNull().default("{}"),
+  createdAt: integer("created_at", { mode: "number" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "number" }).notNull(),
+});

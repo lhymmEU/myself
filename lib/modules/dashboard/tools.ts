@@ -3,84 +3,73 @@ import type { AgentTool } from "@/lib/core/types";
 import { getAgentToolUserId } from "@/lib/core/agent-tool-context";
 import type { SkillLevel } from "./schema";
 import {
-  listWishlist,
-  createWish,
-  updateWish,
-  deleteWish,
+  listUserWishes,
+  createUserWish,
+  updateUserWishPlanData,
+  deleteUserWish,
   listUserSkills,
   createUserSkill,
-  listWishTodos,
-  bulkCreateWishTodos,
 } from "./actions";
+import { normalizeToFlatStringRecord } from "@/lib/wishlist/parse-plan";
 
 const skillLevelEnum = z.enum(["familiar", "fluent", "mastering"]);
+const wishCategoryEnum = z.enum(["learn", "place", "goal"]);
 
 export const dashboardTools: AgentTool[] = [
   {
-    name: "listWishlist",
-    description: "List all items in the user's skill wishlist",
+    name: "listUserWishes",
+    description:
+      "List all user wishes (things to learn, places to go, goals). Each has category, userDescription, and planData as a JSON string of flat key→string entries.",
     parameters: z.object({}),
-    handler: async () => await listWishlist(getAgentToolUserId()),
+    handler: async () => await listUserWishes(getAgentToolUserId()),
   },
   {
-    name: "createWish",
+    name: "createUserWish",
     description:
-      "Add a new item to the user's skill wishlist. The wishlist is capped at 3 items — if full, the user must finish existing skills first.",
+      "Create a wish with category (learn | place | goal), userDescription, and planData as a flat object with string values only (e.g. title, summary, step_1, step_2).",
     parameters: z.object({
-      name: z.string(),
-      targetLevel: skillLevelEnum.optional(),
-      priority: z.enum(["low", "medium", "high"]).optional(),
-      notes: z.string().optional(),
+      category: wishCategoryEnum,
+      userDescription: z.string(),
+      planData: z.record(z.string(), z.unknown()),
     }),
     handler: async (params) => {
-      const { name, targetLevel, priority, notes } = params as {
-        name: string;
-        targetLevel?: SkillLevel;
-        priority?: string;
-        notes?: string;
+      const { category, userDescription, planData } = params as {
+        category: "learn" | "place" | "goal";
+        userDescription: string;
+        planData: Record<string, unknown>;
       };
-      try {
-        return await createWish(
-          { name, targetLevel, priority, notes },
-          getAgentToolUserId(),
-        );
-      } catch (e) {
-        if (e instanceof Error && e.message === "wishlist_full") {
-          return { error: "wishlist_full", message: "The wishlist already has 3 items. The user must complete or remove existing skills before adding new ones." };
-        }
-        throw e;
-      }
+      const flat = normalizeToFlatStringRecord(planData);
+      return await createUserWish(
+        { category, userDescription, planData: flat },
+        getAgentToolUserId(),
+      );
     },
   },
   {
-    name: "updateWish",
-    description: "Update an existing wishlist item",
+    name: "updateUserWishPlan",
+    description:
+      "Replace the stored plan JSON for a wish (flat string map). Pass the full plan object.",
     parameters: z.object({
       id: z.string(),
-      name: z.string().optional(),
-      targetLevel: skillLevelEnum.optional(),
-      priority: z.enum(["low", "medium", "high"]).optional(),
-      notes: z.string().optional(),
+      planData: z.record(z.string(), z.unknown()),
     }),
     handler: async (params) => {
-      const { id, ...data } = params as {
+      const { id, planData } = params as {
         id: string;
-        name?: string;
-        targetLevel?: SkillLevel;
-        priority?: string;
-        notes?: string;
+        planData: Record<string, unknown>;
       };
-      await updateWish(id, data, getAgentToolUserId());
+      const normalized = normalizeToFlatStringRecord(planData);
+      await updateUserWishPlanData(id, normalized, getAgentToolUserId());
       return { success: true };
     },
   },
   {
-    name: "deleteWish",
-    description: "Delete a wishlist item by id",
+    name: "deleteUserWish",
+    description: "Delete a user wish by id",
     parameters: z.object({ id: z.string() }),
     handler: async (params) => {
       const { id } = params as { id: string };
-      await deleteWish(id, getAgentToolUserId());
+      await deleteUserWish(id, getAgentToolUserId());
       return { success: true };
     },
   },
@@ -92,7 +81,8 @@ export const dashboardTools: AgentTool[] = [
   },
   {
     name: "createUserSkill",
-    description: "Add a new skill to the user's skill list. Level must be one of: familiar, fluent, mastering.",
+    description:
+      "Add a new skill to the user's skill list. Level must be one of: familiar, fluent, mastering.",
     parameters: z.object({
       name: z.string(),
       level: skillLevelEnum.optional(),
@@ -108,32 +98,6 @@ export const dashboardTools: AgentTool[] = [
         { name, level, category },
         getAgentToolUserId(),
       );
-    },
-  },
-  {
-    name: "generateWishTodos",
-    description:
-      "Generate up to 5 actionable todo steps for a wishlist item to help the user reach their target skill level. Provide the wish ID and an array of todo content strings. This replaces any existing todos for that wish.",
-    parameters: z.object({
-      wishId: z.string(),
-      todos: z.array(z.string()).min(1).max(5),
-    }),
-    handler: async (params) => {
-      const { wishId, todos } = params as { wishId: string; todos: string[] };
-      return await bulkCreateWishTodos(
-        wishId,
-        todos,
-        getAgentToolUserId(),
-      );
-    },
-  },
-  {
-    name: "listWishTodos",
-    description: "List all todos for a specific wishlist item",
-    parameters: z.object({ wishId: z.string() }),
-    handler: async (params) => {
-      const { wishId } = params as { wishId: string };
-      return await listWishTodos(wishId, getAgentToolUserId());
     },
   },
 ];

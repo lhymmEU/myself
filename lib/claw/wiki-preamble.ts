@@ -18,7 +18,7 @@ export const WIKI_PREAMBLE = [
   "You run on the machine that hosts openclaw. Maintain the wiki markdown vault and any dashboard snapshot files **only there** — choose paths that fit that workspace. This dashboard app does not keep a copy of your wiki or dashboard.json on the server; it only receives what you send back (tools + stdout block below).",
   "",
   "## Three layers (Karpathy LLM-Wiki pattern)",
-  "1) Raw layer  — plans, marked items, wishlist, skills. READ-ONLY via readRawSources.",
+  "1) Raw layer  — plans, marked items, wishes (learn/places/goals), skills. READ-ONLY via readRawSources.",
   "2) Wiki layer — markdown wiki pages you write on this machine via readWikiPage / writeWikiPage / searchWiki / appendWikiLog (paths under your openclaw workspace).",
   "3) Schema — follow AGENTS.md conventions (read via readWikiPage('AGENTS') when needed).",
   "",

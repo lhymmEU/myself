@@ -1,70 +1,12 @@
-import { and, count, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { getDb } from "@/lib/db";
 import { LOCAL_USER_ID } from "@/lib/core/runtime";
 import { eventBus } from "@/lib/core/event-bus";
-import {
-  userSkills,
-  skillWishlist,
-  characterAppearance,
-  wishlistTodos,
-} from "./schema";
+import { userSkills, userWishes } from "./schema";
 import type { SkillLevel } from "./schema";
+import type { WishCategory } from "@/lib/wishlist/types";
 import { DASHBOARD_EVENTS } from "./events";
-
-// --- Character Appearance ---
-
-export interface CharacterColors {
-  skinColor?: string | null;
-  hairColor?: string | null;
-  shirtColor?: string | null;
-  pantsColor?: string | null;
-  shoeColor?: string | null;
-  shellColor?: string | null;
-  shellDarkColor?: string | null;
-  bellyColor?: string | null;
-  eyeColor?: string | null;
-}
-
-export async function getCharacterAppearance(
-  characterType: string,
-  userId: string = LOCAL_USER_ID,
-): Promise<CharacterColors | null> {
-  const rows = await getDb()
-    .select()
-    .from(characterAppearance)
-    .where(
-      and(
-        eq(characterAppearance.userId, userId),
-        eq(characterAppearance.characterType, characterType),
-      ),
-    )
-    .limit(1);
-  return rows[0] ?? null;
-}
-
-export async function upsertCharacterAppearance(
-  characterType: string,
-  colors: CharacterColors,
-  userId: string = LOCAL_USER_ID,
-): Promise<void> {
-  const existing = await getCharacterAppearance(characterType, userId);
-  if (existing) {
-    await getDb()
-      .update(characterAppearance)
-      .set(colors)
-      .where(
-        and(
-          eq(characterAppearance.userId, userId),
-          eq(characterAppearance.characterType, characterType),
-        ),
-      );
-  } else {
-    await getDb()
-      .insert(characterAppearance)
-      .values({ id: nanoid(), userId, characterType, ...colors });
-  }
-}
 
 // --- User Skills ---
 
@@ -122,194 +64,90 @@ export async function deleteUserSkill(
     .where(and(eq(userSkills.id, id), eq(userSkills.userId, userId)));
 }
 
-// --- Skill Wishlist ---
+// --- User wishes (learn / places / goals) ---
 
-function normalizeWish<T extends { createdAt: number | string }>(row: T): T {
-  return { ...row, createdAt: Number(row.createdAt) };
-}
-
-export async function listWishlist(userId: string = LOCAL_USER_ID) {
-  const rows = await getDb()
-    .select()
-    .from(skillWishlist)
-    .where(eq(skillWishlist.userId, userId));
-  return rows.map(normalizeWish);
-}
-
-export async function countWishlist(
-  userId: string = LOCAL_USER_ID,
-): Promise<number> {
-  const result = await getDb()
-    .select({ value: count() })
-    .from(skillWishlist)
-    .where(eq(skillWishlist.userId, userId));
-  return Number(result[0]?.value ?? 0);
-}
-
-export async function createWish(
-  data: {
-    name: string;
-    targetLevel?: SkillLevel;
-    priority?: string;
-    notes?: string;
-  },
-  userId: string = LOCAL_USER_ID,
-) {
-  const current = await countWishlist(userId);
-  if (current >= 3) {
-    throw new Error("wishlist_full");
-  }
-  const id = nanoid();
-  await getDb()
-    .insert(skillWishlist)
-    .values({
-      id,
-      userId,
-      name: data.name,
-      targetLevel: data.targetLevel ?? "familiar",
-      priority: data.priority ?? "medium",
-      notes: data.notes ?? "",
-      createdAt: Date.now(),
-    });
-  eventBus.emit("dashboard", DASHBOARD_EVENTS.WISH_CREATED, { id, name: data.name });
-  return { id };
-}
-
-export async function updateWish(
-  id: string,
-  data: Partial<{
-    name: string;
-    targetLevel: SkillLevel;
-    priority: string;
-    notes: string;
-  }>,
-  userId: string = LOCAL_USER_ID,
-): Promise<void> {
-  await getDb()
-    .update(skillWishlist)
-    .set(data)
-    .where(and(eq(skillWishlist.id, id), eq(skillWishlist.userId, userId)));
-  eventBus.emit("dashboard", DASHBOARD_EVENTS.WISH_UPDATED, { id });
-}
-
-export async function deleteWish(
-  id: string,
-  userId: string = LOCAL_USER_ID,
-): Promise<void> {
-  await getDb()
-    .delete(wishlistTodos)
-    .where(
-      and(eq(wishlistTodos.wishId, id), eq(wishlistTodos.userId, userId)),
-    );
-  await getDb()
-    .delete(skillWishlist)
-    .where(and(eq(skillWishlist.id, id), eq(skillWishlist.userId, userId)));
-  eventBus.emit("dashboard", DASHBOARD_EVENTS.WISH_DELETED, { id });
-}
-
-// --- Wishlist Todos ---
-
-function normalizeWishTodo<
+function normalizeUserWishRow<
   T extends {
-    completed: number | string;
-    sortOrder: number | string;
     createdAt: number | string;
+    updatedAt: number | string;
   },
 >(row: T): T {
   return {
     ...row,
-    completed: Number(row.completed),
-    sortOrder: Number(row.sortOrder),
     createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt),
   };
 }
 
-export async function listWishTodos(
-  wishId: string,
-  userId: string = LOCAL_USER_ID,
-) {
+export async function listUserWishes(userId: string = LOCAL_USER_ID) {
   const rows = await getDb()
     .select()
-    .from(wishlistTodos)
-    .where(
-      and(
-        eq(wishlistTodos.userId, userId),
-        eq(wishlistTodos.wishId, wishId),
-      ),
-    );
-  return rows.map(normalizeWishTodo);
+    .from(userWishes)
+    .where(eq(userWishes.userId, userId));
+  return rows.map(normalizeUserWishRow);
 }
 
-export async function createWishTodo(
-  data: { wishId: string; content: string; sortOrder?: number },
+export async function createUserWish(
+  data: {
+    category: WishCategory;
+    userDescription: string;
+    planData: Record<string, string>;
+  },
   userId: string = LOCAL_USER_ID,
 ) {
-  const existing = await listWishTodos(data.wishId, userId);
-  if (existing.length >= 5) {
-    throw new Error("wish_todos_full");
-  }
   const id = nanoid();
+  const now = Date.now();
+  const planJson = JSON.stringify(data.planData);
   await getDb()
-    .insert(wishlistTodos)
+    .insert(userWishes)
     .values({
       id,
       userId,
-      wishId: data.wishId,
-      content: data.content,
-      sortOrder: data.sortOrder ?? existing.length,
-      createdAt: Date.now(),
+      category: data.category,
+      userDescription: data.userDescription.trim(),
+      planData: planJson,
+      createdAt: now,
+      updatedAt: now,
     });
-  return { id };
+  eventBus.emit("dashboard", DASHBOARD_EVENTS.WISH_CREATED, {
+    id,
+    name: data.userDescription.trim(),
+  });
+  const rows = await getDb()
+    .select()
+    .from(userWishes)
+    .where(and(eq(userWishes.id, id), eq(userWishes.userId, userId)))
+    .limit(1);
+  const row = rows[0];
+  if (!row) {
+    throw new Error("user_wish_insert_failed");
+  }
+  return normalizeUserWishRow(row);
 }
 
-export async function updateWishTodo(
+export async function updateUserWishPlanData(
   id: string,
-  data: Partial<{ content: string; completed: number; sortOrder: number }>,
+  planData: Record<string, string>,
   userId: string = LOCAL_USER_ID,
 ): Promise<void> {
   await getDb()
-    .update(wishlistTodos)
-    .set(data)
-    .where(and(eq(wishlistTodos.id, id), eq(wishlistTodos.userId, userId)));
+    .update(userWishes)
+    .set({
+      planData: JSON.stringify(planData),
+      updatedAt: Date.now(),
+    })
+    .where(and(eq(userWishes.id, id), eq(userWishes.userId, userId)));
+  eventBus.emit("dashboard", DASHBOARD_EVENTS.WISH_UPDATED, { id });
 }
 
-export async function deleteWishTodo(
+export async function deleteUserWish(
   id: string,
   userId: string = LOCAL_USER_ID,
 ): Promise<void> {
   await getDb()
-    .delete(wishlistTodos)
-    .where(and(eq(wishlistTodos.id, id), eq(wishlistTodos.userId, userId)));
+    .delete(userWishes)
+    .where(and(eq(userWishes.id, id), eq(userWishes.userId, userId)));
+  eventBus.emit("dashboard", DASHBOARD_EVENTS.WISH_DELETED, { id });
 }
 
-export async function bulkCreateWishTodos(
-  wishId: string,
-  contents: string[],
-  userId: string = LOCAL_USER_ID,
-) {
-  const existing = await listWishTodos(wishId, userId);
-  if (existing.length > 0) {
-    await getDb()
-      .delete(wishlistTodos)
-      .where(
-        and(
-          eq(wishlistTodos.wishId, wishId),
-          eq(wishlistTodos.userId, userId),
-        ),
-      );
-  }
-  const capped = contents.slice(0, 5);
-  const db = getDb();
-  for (let i = 0; i < capped.length; i++) {
-    await db.insert(wishlistTodos).values({
-      id: nanoid(),
-      userId,
-      wishId,
-      content: capped[i],
-      sortOrder: i,
-      createdAt: Date.now(),
-    });
-  }
-  return { count: capped.length };
-}
 

@@ -69,7 +69,7 @@ workflows to follow for ingest, query, and lint.
 
 ## Three layers
 
-- **Raw layer** — the user's plans, marked items, wishlist goals, and skills,
+- **Raw layer** — the user's plans, marked items, wishes (learn / places / goals), and skills,
   exposed via the agent tools. Never edited by you.
 - **Wiki layer** — every markdown file under \`data/wiki/\`. You own this.
 - **Schema layer** — this file. Co-evolves with the user.
@@ -106,7 +106,7 @@ Periodic health check. Surface as **lint** cards via \`publishDashboard\`:
 \`\`\`yaml
 ---
 kind: synthesis | entity | query | concept
-goalId: <id from skill_wishlist or null>
+goalId: <id from user_wishes or null>
 confidence: strong | thin | contradicted
 freshness: <epoch ms of the last source it draws from>
 sources:
@@ -141,7 +141,7 @@ Every line that begins with \`## [\` is a parseable log entry. Keep it terse:
 
 ## What you NEVER do
 
-- Modify raw sources (plans, marked, wishlist, skills). Read-only.
+- Modify raw sources (plans, marked, wishes, skills). Read-only.
 - Emit a card without a \`wikiSlug\` pointing at a real page.
 - Drop the heartbeat card.
 - Make up sources. If you have no source, surface a **gap** card instead.
@@ -154,7 +154,7 @@ openclaw maintains it on every ingest.
 
 ## Entities
 
-_(none yet — add a goal in the wishlist, then run an ingest pass)_
+_(none yet — add a wish on the Wishlist page, then run an ingest pass)_
 
 ## Syntheses
 

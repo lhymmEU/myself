@@ -195,6 +195,7 @@ function patchLegacySqliteSchema(sqlite: import("better-sqlite3").Database) {
     "user_skills",
     "skill_wishlist",
     "wishlist_todos",
+    "user_wishes",
     "invoice_clients",
     "invoice_signatures",
     "invoices",

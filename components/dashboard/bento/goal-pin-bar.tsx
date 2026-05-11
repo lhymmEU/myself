@@ -1,31 +1,29 @@
 "use client";
 
-import { useWishlist } from "@/lib/swr/hooks";
+import { useUserWishes } from "@/lib/swr/hooks";
 import { cn } from "@/lib/utils";
 import { Pin, PinOff } from "lucide-react";
 import { hueForGoal } from "./visual";
-
-interface Wish {
-  id: string;
-  name: string;
-  targetLevel: string;
-  priority: string;
-}
 
 interface Props {
   activeGoalId: string | null;
   onPin: (goalId: string | null) => void;
 }
 
+interface WishPinRow {
+  id: string;
+  userDescription: string;
+}
+
 export function GoalPinBar({ activeGoalId, onPin }: Props) {
-  const { data } = useWishlist();
-  const wishes: Wish[] = data?.wishes ?? [];
+  const { data } = useUserWishes();
+  const wishes: WishPinRow[] = data?.wishes ?? [];
 
   if (wishes.length === 0) {
     return (
       <div className="rounded-xl border border-dashed bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
         Set goals in <span className="font-medium text-foreground">Plans</span>{" "}
-        or your wishlist to organise the bento around them.
+        or add wishes on the Wishlist page to organise the bento around them.
       </div>
     );
   }
@@ -62,7 +60,7 @@ export function GoalPinBar({ activeGoalId, onPin }: Props) {
                 background: `oklch(0.65 0.16 var(--card-hue))`,
               }}
             />
-            <span className="truncate max-w-[14ch]">{wish.name}</span>
+            <span className="truncate max-w-[14ch]">{wish.userDescription}</span>
             {isActive ? (
               <PinOff className="h-3 w-3 text-muted-foreground" />
             ) : (

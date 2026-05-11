@@ -3,7 +3,7 @@
  *
  * These complement the per-feature tools defined in tools.ts; the bento
  * dashboard relies on this module to:
- *   - Read raw sources (plans, marked, wishlist, skills) — Karpathy's "raw layer".
+ *   - Read raw sources (plans, marked, wishes, skills) — Karpathy's "raw layer".
  *   - Read / write wiki pages on disk under data/wiki/.
  *   - Append to log.md and search the wiki.
  *   - Publish the bento payload via publishDashboard so the UI sees fresh cards.
@@ -12,7 +12,7 @@
 import { z } from "zod";
 import type { AgentTool } from "@/lib/core/types";
 import { getAgentToolUserId } from "@/lib/core/agent-tool-context";
-import { listWishlist, listUserSkills } from "./actions";
+import { listUserWishes, listUserSkills } from "./actions";
 import { getAllPlans } from "@/lib/modules/plans/actions";
 import { listCollections, listItems } from "@/lib/modules/marked/actions";
 import {
@@ -64,22 +64,22 @@ export const dashboardWikiTools: AgentTool[] = [
   {
     name: "readRawSources",
     description:
-      "Read the user's raw sources for wiki ingest. Returns plans, marked URL items + collections, wishlist goals, and user skills. Use this as the starting point for every ingest or lint pass. The wiki itself is read via readWikiPage / searchWiki.",
+      "Read the user's raw sources for wiki ingest. Returns plans, marked URL items + collections, wishes (learn / places / goals), and user skills. Use this as the starting point for every ingest or lint pass. The wiki itself is read via readWikiPage / searchWiki.",
     parameters: z.object({
       kinds: z
-        .array(z.enum(["plans", "marked", "wishlist", "skills"]))
+        .array(z.enum(["plans", "marked", "wishes", "wishlist", "skills"]))
         .optional(),
     }),
     handler: async (params) => {
       const uid = getAgentToolUserId();
       const { kinds } = params as {
-        kinds?: Array<"plans" | "marked" | "wishlist" | "skills">;
+        kinds?: Array<"plans" | "marked" | "wishes" | "wishlist" | "skills">;
       };
-      const wanted = new Set(
+      const normalizedKinds =
         kinds && kinds.length > 0
-          ? kinds
-          : ["plans", "marked", "wishlist", "skills"],
-      );
+          ? kinds.map((k) => (k === "wishlist" ? "wishes" : k))
+          : ["plans", "marked", "wishes", "skills"];
+      const wanted = new Set(normalizedKinds);
 
       const out: Record<string, unknown> = {};
       if (wanted.has("plans")) {
@@ -92,8 +92,8 @@ export const dashboardWikiTools: AgentTool[] = [
         ]);
         out.marked = { collections, items };
       }
-      if (wanted.has("wishlist")) {
-        out.wishlist = await listWishlist(uid);
+      if (wanted.has("wishes")) {
+        out.wishes = await listUserWishes(uid);
       }
       if (wanted.has("skills")) {
         out.skills = await listUserSkills(uid);
