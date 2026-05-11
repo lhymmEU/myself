@@ -1,5 +1,4 @@
 import type { FeatureModule, ModuleContext } from "./types";
-import { toolRegistry } from "./tool-registry";
 import { eventBus } from "./event-bus";
 import { MODE, isModuleAvailable } from "./runtime";
 
@@ -23,17 +22,12 @@ class ModuleRegistry {
     if (this.initialized) return;
 
     for (const mod of this.modules.values()) {
-      for (const tool of mod.tools) {
-        toolRegistry.register(tool);
-      }
-
       for (const [eventType, handler] of Object.entries(mod.eventHandlers)) {
         eventBus.subscribe(eventType, handler);
       }
 
       if (mod.init) {
         const ctx: ModuleContext = {
-          registerTool: (tool) => toolRegistry.register(tool),
           subscribe: (eventType, handler) =>
             eventBus.subscribe(eventType, handler),
           emit: (type, data) => eventBus.emit(mod.name, type, data),

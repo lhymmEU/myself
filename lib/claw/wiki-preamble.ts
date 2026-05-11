@@ -1,15 +1,7 @@
-import { formatAgentToolHttpInstruction } from "@/lib/core/public-app-origin";
-
 /**
  * Preamble used when the dashboard kicks off a wiki-maintainer session with
- * openclaw. Sibling of bootstrap-preamble.ts (which is only the [CARD]
- * contract for the chat UI).
- *
- * The dashboard sends this every time it asks openclaw to (re-)build the
- * bento — fresh ingest, lint pass, or new pinned-query answer. Combined
- * with the agent tools registered in lib/modules/dashboard/insights-tools.ts
- * the preamble gives openclaw enough scaffolding to behave as a disciplined
- * wiki maintainer.
+ * openclaw. Combined with `openclaw/skills/supabase-reads/SKILL.md` and the
+ * injected credential blocks, OpenClaw updates Supabase directly (no `/api/agent`).
  */
 export const WIKI_PREAMBLE = [
   "[CHANNEL=wiki-maintainer]",
@@ -17,60 +9,88 @@ export const WIKI_PREAMBLE = [
   "This session is non-conversational: do the work, then stop. Do not chit-chat.",
   "",
   "## Where state lives",
-  "Canonical wiki + dashboard cards live in **Supabase Postgres** behind the dashboard app. Use HTTP tools on `/api/agent` (reverse-SSH tunnel to the machine running Next) for readRawSources, readWikiPage, writeWikiPage, publishDashboard, etc. For optional **read-only** bulk queries against Postgres from this host, follow `openclaw/skills/supabase-reads/SKILL.md` in the app repo (anon key + user JWT; never service role).",
+  "All data is in **Supabase Postgres** under the user's account (RLS). Use the repo skill **`openclaw/skills/supabase-reads/`** (SKILL.md + `scripts/`) with the credentials in this message.",
+  "",
+  "## Credentials in this message",
+  "Between the `<<<MYSELF_SUPABASE_*_START>>>` / `<<<MYSELF_SUPABASE_*_END>>>` markers you will find three single-line values: project URL, anon key, and refresh token.",
+  "Export them before running scripts:",
+  "  export SUPABASE_URL='<url line>'",
+  "  export SUPABASE_ANON_KEY='<anon key line>'",
+  "  export SUPABASE_REFRESH_TOKEN='<refresh token line>'",
+  "Then run `npx tsx openclaw/skills/supabase-reads/scripts/<script>.ts` from the **repository root** of this app (the clone on this host). Never log these exports or paste them elsewhere.",
   "",
   "## Three layers (Karpathy LLM-Wiki pattern)",
-  "1) Raw layer  — plans, marked items, wishes (learn/places/goals), skills. READ-ONLY via readRawSources.",
-  "2) Wiki layer — markdown pages in Supabase via readWikiPage / writeWikiPage / searchWiki / appendWikiLog (HTTP tools; slug is path-like e.g. `syntheses/foo`, not a local file path).",
-  "3) Schema — follow AGENTS conventions (read via readWikiPage('AGENTS') when needed).",
+  "1) Raw layer — plans, marked items, wishes, skills. READ-ONLY via `read-raw-sources.ts`.",
+  "2) Wiki layer — `read-wiki-page.ts`, `write-wiki-page.ts`, `search-wiki.ts`, `append-wiki-log.ts`, `read-wiki-log.ts`. Slugs are path-like (e.g. `syntheses/foo`).",
+  "3) Schema — follow AGENTS conventions (`read-wiki-page.ts AGENTS` when needed).",
   "",
   "## What to do this session",
   "Run an ingest+lint+publish loop:",
-  "  a. readPendingDismissals → fold any user verbs (confirm/contradict/expand/archive) into the affected wiki pages, then markDismissalsIngested.",
-  "  b. readRawSources({}) → identify which entity / synthesis / query pages are stale or missing.",
-  "  c. For each affected page: readWikiPage, then writeWikiPage with updated markdown. Pages MUST start with YAML frontmatter (kind / goalId / confidence / freshness / sources). Use citations like ^[plan:<id>:42-58] inline.",
-  "  d. appendWikiLog with one line per op: '## [YYYY-MM-DD] ingest|lint|query | <one-line summary>'.",
-  "  e. Build the bento card list. Cap at 9. Always include exactly one heartbeat card summarising today's wiki activity.",
-  "  f. Call publishDashboard({ cards }) via tools when that endpoint is available so the host DB can update; still complete step g regardless.",
-  "  g. MANDATORY — After all tool work, print **exactly one** dashboard handoff block to stdout so the dashboard can load cards without relying on any fixed path on disk here:",
+  "  a. `dismissals-pending.ts` → fold user verbs into wiki → `dismissals-mark-ingested.ts` with processed ids.",
+  "  b. `read-raw-sources.ts` → identify stale or missing synthesis / entity / query pages.",
+  "  c. For each affected page: read wiki, then `write-wiki-page.ts` with updated markdown (YAML frontmatter: kind / goalId / confidence / freshness / sources). Citations like ^[plan:<id>:42-58].",
+  "  d. `append-wiki-log.ts` with one line per op: '## [YYYY-MM-DD] ingest|lint|query | <summary>'.",
+  "  e. Build the bento card list (≤9). Exactly one `heartbeat` card. Every card MUST have `wikiSlug`.",
+  "  f. Write `{ \"cards\": [...] }` to a temp file, then `publish-dashboard.ts` that path.",
+  "  g. MANDATORY — Print **exactly one** dashboard handoff block to stdout:",
   "       Line 1: <<<MYSELF_DASHBOARD_JSON_START>>>",
-  "       Line 2..N: a single JSON object: {\"generatedAt\":<unix_ms>,\"cards\":[...]} with the same card objects you would pass to publishDashboard (same shape as tool payload).",
+  "       Line 2..N: a single JSON object: {\"generatedAt\":<unix_ms>,\"cards\":[...]} (same card objects as publish).",
   "       Last line: <<<MYSELF_DASHBOARD_JSON_END>>>",
-  "     No extra characters inside the markers except the JSON. Minify or pretty-print is fine as long as it is one JSON object.",
   "",
   "## Card kinds",
-  "- synthesis : an emergent claim about a goal. Title is the claim. Body 2-4 lines. Tie to pinnedGoalId when relevant.",
-  "- lint      : stale, contradicted, or orphan content. Body explains why.",
-  "- gap       : a goal with no recent sources. Title points at the gap.",
-  "- query     : a pinned user question's current answer.",
-  "- heartbeat : exactly one. Body is today's wiki activity counts.",
+  "- synthesis, lint, gap, query, heartbeat (exactly one heartbeat).",
   "",
   "## Hard rules",
   "- Never modify raw sources.",
-  "- Never publish a card without a wikiSlug.",
+  "- Never publish a card without wikiSlug.",
   "- Never publish more than one heartbeat card.",
   "- If you have no sources for a topic, surface a `gap` card instead of inventing a synthesis.",
-  "- Do NOT emit [CARD] JSON to stdout. You MAY emit the MYSELF_DASHBOARD_JSON block above plus one optional short status line (≤200 chars) before or after that block.",
+  "- Do NOT emit [CARD] JSON to stdout.",
   "",
-  "## Quiet output (besides the mandatory block)",
-  "Optional one-line status, e.g. 'Ingested N sources, refreshed M pages, published K cards.'",
-  "User instruction follows below.",
+  "## Quiet output",
+  "Optional one-line status (≤200 chars) outside the mandatory JSON block.",
   "---",
 ].join("\n");
 
-export interface BuildWikiIngestMessageOptions {
-  /** When set, openclaw on the SSH host must use this loopback port (reverse tunnel to Next). */
-  toolReverseForwardRemotePort?: number | null;
+const URL_START = "<<<MYSELF_SUPABASE_URL_START>>>";
+const URL_END = "<<<MYSELF_SUPABASE_URL_END>>>";
+const ANON_START = "<<<MYSELF_SUPABASE_ANON_KEY_START>>>";
+const ANON_END = "<<<MYSELF_SUPABASE_ANON_KEY_END>>>";
+const RT_START = "<<<MYSELF_SUPABASE_REFRESH_TOKEN_START>>>";
+const RT_END = "<<<MYSELF_SUPABASE_REFRESH_TOKEN_END>>>";
+
+export function formatWikiIngestSupabaseCredentialBlock(opts: {
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+  refreshToken: string;
+}): string {
+  const u = opts.supabaseUrl.trim();
+  const a = opts.supabaseAnonKey.trim();
+  const r = opts.refreshToken.trim();
+  return [
+    "## Supabase credentials (this run only)",
+    URL_START,
+    u,
+    URL_END,
+    ANON_START,
+    a,
+    ANON_END,
+    RT_START,
+    r,
+    RT_END,
+    "",
+    "Export SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_REFRESH_TOKEN from the lines above, then follow SKILL.md under `openclaw/skills/supabase-reads/`.",
+  ].join("\n");
 }
 
 /**
  * Full message sent to openclaw for a background wiki ingest job (non-streaming).
  */
-export function buildWikiIngestMessage(
-  opts?: BuildWikiIngestMessageOptions,
-): string {
-  const toolLine = formatAgentToolHttpInstruction(undefined, {
-    reverseSshRemotePort: opts?.toolReverseForwardRemotePort,
-  });
-  return `${WIKI_PREAMBLE}\n\n${toolLine}\n\nExecute the full ingest → lint → publish workflow now (pending dismissals, readRawSources, wiki updates, publishDashboard with ≤9 cards including one heartbeat, then the MYSELF_DASHBOARD_JSON stdout block).`;
+export function buildWikiIngestMessage(opts: {
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+  refreshToken: string;
+}): string {
+  const cred = formatWikiIngestSupabaseCredentialBlock(opts);
+  return `${WIKI_PREAMBLE}\n\n${cred}\n\nExecute the full ingest → lint → publish workflow now (dismissals, raw sources, wiki updates, publish-dashboard, then the MYSELF_DASHBOARD_JSON stdout block).`;
 }

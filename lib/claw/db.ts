@@ -18,8 +18,6 @@ export interface ClawConnection {
   privateKey: string | null;
   passphrase: string | null;
   isDefault: boolean;
-  /** Remote listen port for reverse SSH tunnel to this app’s HTTP (openclaw calls 127.0.0.1:port). */
-  toolReverseForwardRemotePort: number | null;
   createdAt: number;
   updatedAt: number;
 }
@@ -34,13 +32,11 @@ export interface CreateClawConnectionInput {
   privateKey?: string | null;
   passphrase?: string | null;
   isDefault?: boolean;
-  toolReverseForwardRemotePort?: number | null;
 }
 
 export type UpdateClawConnectionInput = Partial<CreateClawConnectionInput>;
 
 function normalize(row: typeof clawConnections.$inferSelect): ClawConnection {
-  const forward = row.toolReverseForwardRemotePort;
   return {
     id: row.id,
     userId: row.userId,
@@ -53,10 +49,6 @@ function normalize(row: typeof clawConnections.$inferSelect): ClawConnection {
     privateKey: row.privateKey ?? null,
     passphrase: row.passphrase ?? null,
     isDefault: Boolean(row.isDefault),
-    toolReverseForwardRemotePort:
-      forward === null || forward === undefined
-        ? null
-        : Number(forward),
     createdAt: Number(row.createdAt),
     updatedAt: Number(row.updatedAt),
   };
@@ -108,7 +100,6 @@ export async function createClawConnection(
   const now = Date.now();
   const id = nanoid();
   const existing = await listClawConnections(userId);
-  // First connection is always the default; otherwise honour the caller.
   const shouldBeDefault = existing.length === 0 ? true : Boolean(input.isDefault);
   if (shouldBeDefault) {
     await clearDefault(userId);
@@ -125,10 +116,6 @@ export async function createClawConnection(
     privateKey: input.privateKey ?? null,
     passphrase: input.passphrase ?? null,
     isDefault: shouldBeDefault,
-    toolReverseForwardRemotePort:
-      input.toolReverseForwardRemotePort === undefined
-        ? null
-        : input.toolReverseForwardRemotePort,
     createdAt: now,
     updatedAt: now,
   });
@@ -157,9 +144,6 @@ export async function updateClawConnection(
   if (patch.privateKey !== undefined) updates.privateKey = patch.privateKey;
   if (patch.passphrase !== undefined) updates.passphrase = patch.passphrase;
   if (patch.isDefault !== undefined) updates.isDefault = patch.isDefault;
-  if (patch.toolReverseForwardRemotePort !== undefined) {
-    updates.toolReverseForwardRemotePort = patch.toolReverseForwardRemotePort;
-  }
   await getDb()
     .update(clawConnections)
     .set(updates)

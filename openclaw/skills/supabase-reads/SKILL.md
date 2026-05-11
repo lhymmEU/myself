@@ -1,38 +1,84 @@
 ---
-name: myself-supabase-reads
+name: myself-supabase-wiki
 description: >-
-  Read-only Supabase access for OpenClaw and other remote agents against the
-  Life Dashboard Postgres schema (wiki_pages, wiki_log_entries, and related
-  tables). Use when the agent needs SQL-backed context beyond /api/agent tools.
+  Supabase-backed wiki ingest for OpenClaw: read/write wiki_pages, wiki_log_entries,
+  dashboard_cards, card_dismissals, and raw sources (plans, marked, wishes, skills)
+  using supabase-js as the authenticated user (RLS). Use with credentials supplied
+  in the wiki-ingest message (delimited blocks), exported to env for the scripts below.
 ---
 
-# Myself — Supabase read bundle
+# Myself — Supabase wiki ingest (OpenClaw)
 
-## When to use this
+## Credentials (injected by the dashboard each run)
 
-- Prefer **`/api/agent`** on the Next.js host (via reverse SSH) for writes and
-  packaged tools (`readRawSources`, `writeWikiPage`, `publishDashboard`, …).
-- Use **these scripts** only for **read-only** exploration or batch reads from
-  the same machine where the agent runs, with a **user JWT** so RLS applies.
+The wiki-ingest job message includes delimited values **between these markers** (single line each unless noted):
 
-## Environment (required)
+- `<<<MYSELF_SUPABASE_URL_START>>>` … `<<<MYSELF_SUPABASE_URL_END>>>` — project URL
+- `<<<MYSELF_SUPABASE_ANON_KEY_START>>>` … `<<<MYSELF_SUPABASE_ANON_KEY_END>>>` — anon / publishable key
+- `<<<MYSELF_SUPABASE_REFRESH_TOKEN_START>>>` … `<<<MYSELF_SUPABASE_REFRESH_TOKEN_END>>>` — user refresh token
 
-| Variable | Meaning |
-|----------|---------|
-| `SUPABASE_URL` | Same as `NEXT_PUBLIC_SUPABASE_URL` |
-| `SUPABASE_ANON_KEY` | Same as `NEXT_PUBLIC_SUPABASE_ANON_KEY` (or publishable key) |
-| `MYSELF_SUPABASE_ACCESS_TOKEN` | Short-lived **user** access token (JWT) from a signed-in session |
-
-**Never** set `SUPABASE_SERVICE_ROLE_KEY` on the SSH host.
-
-## Scripts (from repo root)
+**Before running any script**, export them (same names the scripts expect):
 
 ```bash
-npx tsx openclaw/skills/supabase-reads/scripts/list-wiki-slugs.ts
-npx tsx openclaw/skills/supabase-reads/scripts/read-wiki-page.ts syntheses/example
+export SUPABASE_URL='<paste URL line>'
+export SUPABASE_ANON_KEY='<paste anon key line>'
+export SUPABASE_REFRESH_TOKEN='<paste refresh token line>'
 ```
 
-## Identity
+Never log these values, commit them to git, or paste them into unrelated services.
 
-All rows are scoped by `user_id = auth.uid()`. The JWT must be for the same
-account as the dashboard user so policies allow reads.
+In the dashboard, save the refresh token under **Settings → OpenClaw / wiki ingest** using **Get from session** (reads your Supabase auth cookie in this browser) or manual paste.
+
+## How auth works
+
+Scripts call `refreshSession` with `SUPABASE_REFRESH_TOKEN` so PostgREST requests run as **your** user (`auth.uid()`). Never use `SUPABASE_SERVICE_ROLE_KEY` on the OpenClaw host.
+
+## Repo layout
+
+From the **repository root** (`myself` clone on the OpenClaw machine):
+
+```text
+openclaw/skills/supabase-reads/scripts/
+```
+
+Run with `npx tsx` (Node 20+).
+
+## Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `read-raw-sources.ts` | JSON to stdout: `plans`, `marked`, `wishes`, `skills` (optional arg: comma kinds or `all`) |
+| `read-wiki-page.ts` `<slug>` | Markdown body to stdout |
+| `write-wiki-page.ts` `<slug>` `<file.md>` | Upsert wiki page |
+| `append-wiki-log.ts` `<text>` | Append one log line |
+| `read-wiki-log.ts` `[tail=50]` | Recent log lines |
+| `search-wiki.ts` `<query>` `[max]` | JSON `{ hits: [{ slug, excerpt }] }` |
+| `list-wiki-slugs.ts` | JSON array of slugs |
+| `dismissals-pending.ts` | JSON `{ dismissals: [...] }` where `ingested === 0` |
+| `dismissals-mark-ingested.ts` `<id>…` | Mark dismissal rows ingested |
+| `publish-dashboard.ts` `<cards.json>` | JSON file must be `{ "cards": [ … ] }` (max 9 cards); archives active cards not in the new set |
+
+### Example invocations
+
+```bash
+npx tsx openclaw/skills/supabase-reads/scripts/read-raw-sources.ts
+npx tsx openclaw/skills/supabase-reads/scripts/read-wiki-page.ts syntheses/example
+npx tsx openclaw/skills/supabase-reads/scripts/publish-dashboard.ts /tmp/cards.json
+```
+
+## Ingest workflow (matches dashboard preamble)
+
+1. `dismissals-pending.ts` → fold user verbs into wiki → `dismissals-mark-ingested.ts`
+2. `read-raw-sources.ts` → decide stale pages
+3. Read/write wiki pages + `append-wiki-log.ts`
+4. Build card list (≤9, exactly one `heartbeat`, every card has `wikiSlug`)
+5. Write `/tmp/cards.json` then `publish-dashboard.ts /tmp/cards.json`
+6. Print the **stdout dashboard JSON block** exactly as instructed in the main wiki-ingest message (`<<<MYSELF_DASHBOARD_JSON_*>>>`)
+
+## Tables (snake_case in Postgres)
+
+- `wiki_pages`: `user_id`, `slug`, `markdown`, `updated_at`
+- `wiki_log_entries`: `id`, `user_id`, `body`, `created_at`
+- `dashboard_cards`: see app `PublishCardInput` / `publishDashboard`
+- `card_dismissals`: `id`, `user_id`, `card_id`, `verb`, `payload_json`, `created_at`, `ingested`
+- Raw: `plan_pages`, `marked_collections`, `marked_items`, `user_wishes`, `user_skills`

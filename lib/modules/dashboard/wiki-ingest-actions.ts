@@ -10,6 +10,8 @@ import { executeCommand } from "@/lib/claw/ssh";
 import { buildOpenclawAgentCommand } from "@/lib/claw/openclaw-agent";
 import { buildWikiIngestMessage } from "@/lib/claw/wiki-preamble";
 import { getClawConnection } from "@/lib/claw/db";
+import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
+import { getOpenclawRefreshTokenPlain } from "@/lib/modules/dashboard/openclaw-token-actions";
 import { WIKI_MAINTAINER_SESSION_ID } from "@/lib/claw/constants";
 import {
   importDashboardJsonString,
@@ -89,9 +91,28 @@ export async function runWikiIngestJob(
   connectionId: string,
   userId: string,
 ): Promise<void> {
-  const connRow = await getClawConnection(connectionId, userId);
+  const connCheck = await getClawConnection(connectionId, userId);
+  if (!connCheck) {
+    await upsertWikiIngestState(
+      userId,
+      "error",
+      "SSH connection not found. Refresh Claw connections.",
+    );
+    return;
+  }
+  const refresh = await getOpenclawRefreshTokenPlain(userId);
+  if (!refresh) {
+    await upsertWikiIngestState(
+      userId,
+      "error",
+      "OpenClaw refresh token missing. Save it under Dashboard → Settings → OpenClaw / wiki ingest.",
+    );
+    return;
+  }
   const message = buildWikiIngestMessage({
-    toolReverseForwardRemotePort: connRow?.toolReverseForwardRemotePort ?? null,
+    supabaseUrl: getSupabaseUrl(),
+    supabaseAnonKey: getSupabaseAnonKey(),
+    refreshToken: refresh,
   });
   const command = buildOpenclawAgentCommand({
     message,

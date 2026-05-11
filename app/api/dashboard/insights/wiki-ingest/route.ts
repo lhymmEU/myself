@@ -12,6 +12,7 @@ import {
   upsertWikiIngestState,
   runWikiIngestJob,
 } from "@/lib/modules/dashboard/wiki-ingest-actions";
+import { hasOpenclawRefreshToken } from "@/lib/modules/dashboard/openclaw-token-actions";
 
 /**
  * GET — poll ingest status + whether a default Claw SSH connection exists.
@@ -25,6 +26,7 @@ export async function GET() {
 
   const conns = await listClawConnections(auth.userId);
   const state = await getWikiIngestState(auth.userId);
+  const openclawTokenConfigured = await hasOpenclawRefreshToken(auth.userId);
 
   return NextResponse.json(
     {
@@ -32,6 +34,7 @@ export async function GET() {
       detail: state.detail,
       updatedAt: state.updatedAt,
       hasConnection: conns.length > 0,
+      openclawTokenConfigured,
     },
     {
       headers: {
@@ -74,6 +77,16 @@ export async function POST(req: NextRequest) {
         error: requestedConnectionId
           ? "That SSH connection was not found. Refresh the connection list or pick another in Dashboard → Claw."
           : "No Claw connection configured. Open Claw and save an SSH connection first.",
+      },
+      { status: 400 },
+    );
+  }
+
+  if (!(await hasOpenclawRefreshToken(auth.userId))) {
+    return NextResponse.json(
+      {
+        error:
+          "Save your Supabase refresh token first (Dashboard → Settings → OpenClaw / wiki ingest). Wiki ingest is disabled until then.",
       },
       { status: 400 },
     );

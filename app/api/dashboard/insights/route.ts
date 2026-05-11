@@ -60,6 +60,7 @@ export async function GET(req: NextRequest) {
     ]);
     return NextResponse.json({ cards, pinned });
   } catch (err) {
+    console.error("[GET /api/dashboard/insights]", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to read cards" },
       { status: 500 },

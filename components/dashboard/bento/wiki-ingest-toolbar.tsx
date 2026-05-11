@@ -22,6 +22,7 @@ interface WikiIngestPayload {
   updatedAt: number;
   /** Legacy — prefer deriving eligibility from `/api/claw/connections` (same cache as Claw). */
   hasConnection?: boolean;
+  openclawTokenConfigured?: boolean;
 }
 
 function readStoredClawConnectionId(): string | null {
@@ -95,6 +96,10 @@ export function WikiIngestToolbar({
     connPayload !== undefined &&
     !hasConnection &&
     !connError;
+
+  const openclawReady = data?.openclawTokenConfigured === true;
+  const disableForMissingOpenclawToken =
+    !isLoading && data !== undefined && !openclawReady && !error;
 
   /** Set after POST succeeds so we refresh the bento even when status stays `done` (new `updatedAt`). */
   const pendingInsightRefresh = useRef(false);
@@ -216,6 +221,7 @@ export function WikiIngestToolbar({
               className="h-8 gap-1.5 rounded-full px-3"
               disabled={
                 disableForMissingConnection ||
+                disableForMissingOpenclawToken ||
                 connLoading ||
                 status === "processing" ||
                 !!connError
@@ -239,9 +245,11 @@ export function WikiIngestToolbar({
                 ? "Could not load wiki ingest status. Use refresh or reload the page."
                 : connLoading
                   ? "Loading your Claw SSH connections…"
-                  : hasConnection
-                    ? "Uses the same SSH connection as Claw chat when you have opened Claw in this browser (or your default). Runs openclaw on the remote host; up to ~15 min."
-                    : "Configure a Claw SSH connection first (Dashboard → Claw)."}
+                  : !openclawReady
+                    ? "Save your Supabase refresh token under Dashboard → Settings → OpenClaw / wiki ingest before running ingest."
+                    : hasConnection
+                      ? "Uses the same SSH connection as Claw chat when you have opened Claw in this browser (or your default). Runs openclaw on the remote host; up to ~15 min."
+                      : "Configure a Claw SSH connection first (Dashboard → Claw)."}
           </TooltipContent>
         </Tooltip>
         <Tooltip>

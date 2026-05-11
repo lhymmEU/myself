@@ -8,6 +8,7 @@ import { AppearanceConfig } from "./appearance-config";
 import { InvoiceConfig } from "./invoice-config";
 import { DataManagement } from "./data-management";
 import { AccountSecurity } from "./account-security";
+import { OpenClawSupabaseSettings } from "./openclaw-supabase-settings";
 import { Loader2 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
 import { isLocal } from "@/lib/core/runtime";
@@ -76,6 +77,7 @@ export function SettingsForm() {
       <div className="md:col-span-2">
         <AccountSecurity />
       </div>
+      <OpenClawSupabaseSettings />
       {SHOW_LOCAL_ONLY_SETTINGS && (
         <div className="md:col-span-2">
           <FinanceProvidersConfig settings={settings} onUpdate={handleUpdate} />

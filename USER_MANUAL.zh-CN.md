@@ -258,45 +258,13 @@ Claw 页面分为基础的 **DM 聊天面板** 和功能更全面的 **高级视
 
 ---
 
-## 高阶用户 —— 智能体 API
+## 高阶用户 —— OpenClaw 与 Supabase
 
-每个功能也通过 HTTP JSON 工具暴露在 `/api/agent` 端点上，方便你把面板接入自己的脚本、浏览器插件或外部 AI 助手。
+Wiki 同步与 wiki 模式的 Claw 聊天会在 **SSH 消息** 内向 openclaw 提供 Supabase 连接信息：URL 与 anon key 来自服务端环境变量，**refresh token** 请在 **面板 → 设置 → OpenClaw / wiki ingest** 保存（可使用「从当前会话获取」或手动粘贴），服务端使用 **`MYSELF_OPENCLAW_TOKEN_KEY`** 加密后写入数据库。
 
-```bash
-# 列出面板暴露的全部工具
-curl http://localhost:3000/api/agent
+在运行 openclaw 的机器上，按消息中的分隔块导出 `SUPABASE_URL`、`SUPABASE_ANON_KEY`、`SUPABASE_REFRESH_TOKEN`，再使用仓库 **`openclaw/skills/supabase-reads/`**（见 `SKILL.md` 与 `scripts/`）。数据访问受 RLS 约束，等同于当前登录用户。切勿在 SSH 主机使用 **service-role** 密钥。
 
-# 调用具体工具
-curl -X POST http://localhost:3000/api/agent \
-  -H "Content-Type: application/json" \
-  -d '{"name": "createTodo", "arguments": {"title": "买菜"}}'
-```
-
-更深入的架构介绍见 [README.zh-CN.md](./README.zh-CN.md)。
-
-### 工具接口的规范 URL（本地与云端）
-
-远程 `openclaw` 通过 HTTP 调用本应用的 `/api/agent`。解析顺序为：
-
-1. **`NEXT_PUBLIC_APP_URL`** — 带协议的公网根地址（例如 `https://dashboard.example.com`），适合自定义域名。
-2. **请求头** — 在浏览器中请求 **`GET /api/claw/agent-tools-endpoint`** 时，会用 `Host` / `x-forwarded-*` 生成与当前站点一致的复制用 URL。
-3. **`VERCEL_URL`** — 部署在 Vercel 且未设置 `NEXT_PUBLIC_APP_URL` 时，自动补全为 `https://…`。
-
-Wiki 全量同步与 Claw 聊天也会在发给 `openclaw` 的消息里附带一行 **「Tool HTTP endpoint: …」**，便于在远端日志里核对。
-
-### 反向 SSH 隧道（本机跑 Next，远端跑 openclaw）
-
-若 openclaw 在 SSH 服务器上，而 Next 与数据在本机：
-
-1. 在 **面板 → Claw** 的连接里填写 **远程工具隧道端口**（在 **SSH 服务器** 上监听，例如 `30443`）。
-2. 应用建立 SSH 后会在远端 **`127.0.0.1:该端口`** 上请求反向转发，并把流量转到本机 Next 的 HTTP 端口。
-3. 在 **服务器上** 把 openclaw 配置为访问 **`http://127.0.0.1:30443/api/agent`**。
-
-服务器需允许 TCP 转发（`sshd` 中 `AllowTcpForwarding yes`）。若端口被占用，请换一个。
-
-本机可选环境变量：
-
-- **`AGENT_TOOL_FORWARD_TARGET`** — 隧道在本机落地的地址，默认 **`127.0.0.1:${PORT}`**，`PORT` 缺省为 `3000`。
+更深入的说明见 [README.zh-CN.md](./README.zh-CN.md)。
 
 ---
 

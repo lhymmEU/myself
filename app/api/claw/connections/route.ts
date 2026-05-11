@@ -20,13 +20,6 @@ const createSchema = z.object({
   privateKey: z.string().nullable().optional(),
   passphrase: z.string().nullable().optional(),
   isDefault: z.boolean().optional(),
-  toolReverseForwardRemotePort: z
-    .number()
-    .int()
-    .min(1)
-    .max(65535)
-    .nullable()
-    .optional(),
 });
 
 const updateSchema = z.object({
@@ -40,13 +33,6 @@ const updateSchema = z.object({
   privateKey: z.string().nullable().optional(),
   passphrase: z.string().nullable().optional(),
   isDefault: z.boolean().optional(),
-  toolReverseForwardRemotePort: z
-    .number()
-    .int()
-    .min(1)
-    .max(65535)
-    .nullable()
-    .optional(),
 });
 
 function sanitize(connection: Awaited<ReturnType<typeof listClawConnections>>[number]) {
@@ -58,7 +44,6 @@ function sanitize(connection: Awaited<ReturnType<typeof listClawConnections>>[nu
     username: connection.username,
     authMethod: connection.authMethod,
     isDefault: connection.isDefault,
-    toolReverseForwardRemotePort: connection.toolReverseForwardRemotePort,
     createdAt: connection.createdAt,
     updatedAt: connection.updatedAt,
   };

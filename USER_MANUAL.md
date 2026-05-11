@@ -263,51 +263,13 @@ To **delete your account**: **Settings → Data Management** — removes rows fo
 
 ---
 
-## Power users — the agent API
+## Power users — OpenClaw and Supabase
 
-Every feature is also exposed as a JSON tool over HTTP at `/api/agent`. This makes it easy to wire the dashboard into your own scripts, browser extensions, or external AI agents.
+Wiki ingest and wiki-style Claw chat send **Supabase credentials inside the SSH message** to `openclaw`: the project URL and anon key come from the server’s env (`NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`), and your **refresh token** is stored encrypted after you save it under **Dashboard → Settings → OpenClaw / wiki ingest** (use **Get from session** while logged in here, or paste manually). Set **`MYSELF_OPENCLAW_TOKEN_KEY`** on the server (long random secret) so the token can be encrypted at rest.
 
-```bash
-# Local install — list every tool the dashboard exposes
-curl http://localhost:3000/api/agent
+On the machine where openclaw runs, use the repo bundle **`openclaw/skills/supabase-reads/`** (`SKILL.md` + `scripts/`): export `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_REFRESH_TOKEN` from the delimited blocks in the message, then run the `npx tsx …/scripts/*.ts` helpers. Row-Level Security applies as your logged-in user. Never put the **service-role** key on the SSH host.
 
-# Run a specific tool
-curl -X POST http://localhost:3000/api/agent \
-  -H "Content-Type: application/json" \
-  -d '{"name": "createTodo", "arguments": {"title": "Buy groceries"}}'
-```
-
-In the hosted version the same endpoint is auth-gated to the calling user — pass your Supabase access token as a `Bearer` header.
-
-See [README.md](./README.md) for a deeper architectural overview.
-
-### Direct Supabase reads (remote openclaw)
-
-For bulk read-only access outside `/api/agent`, use the repo bundle **`openclaw/skills/supabase-reads/`** (`SKILL.md` + `scripts/`). Set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and a **user access token** (JWT) with the same permissions as your logged-in session. Never put the service-role key on the SSH host. The skill explains which script to run for wiki slugs, page bodies, and log tail.
-
-### Canonical tool URL (local vs cloud)
-
-The dashboard resolves the base URL your **remote** `openclaw` should use for HTTP tools in this order:
-
-1. **`NEXT_PUBLIC_APP_URL`** — set this to your public origin with scheme (for example `https://dashboard.example.com`). Best for custom domains and non-Vercel hosts.
-2. **Request headers** — when you open **`GET /api/claw/agent-tools-endpoint`** from the browser, the response uses `Host` / `x-forwarded-*` so the copy button matches the site you are on.
-3. **`VERCEL_URL`** — on Vercel deployments, the server prepends `https://` automatically if `NEXT_PUBLIC_APP_URL` is unset.
-
-Wiki ingest and Claw chat also append a one-line **“Tool HTTP endpoint: …”** hint to the message sent to `openclaw` so logs show the same URL.
-
-### Reverse SSH tunnel (local Next, remote openclaw)
-
-If `openclaw` runs on another machine (SSH host) but your Next app and Supabase-backed API stay on your laptop:
-
-1. In **Dashboard → Claw →** connection settings, set **Remote tool tunnel port** to a free high port on the **SSH server** (for example `30443`).
-2. When the app connects over SSH, it requests **`forwardIn`** on remote **`127.0.0.1:thatPort`** and pipes each connection to your local Next HTTP port.
-3. Configure **openclaw on the server** to call **`http://127.0.0.1:30443/api/agent`** (not your laptop’s browser URL).
-
-The SSH server must allow remote forwards (`AllowTcpForwarding yes` in `sshd_config`). If the port is already in use, pick another.
-
-Optional env on the machine running Next:
-
-- **`AGENT_TOOL_FORWARD_TARGET`** — where the tunnel connects locally, default **`127.0.0.1:${PORT}`** with **`PORT`** defaulting to `3000` (matches `next dev` / `next start`).
+See [README.md](./README.md) for architecture details.
 
 ---
 

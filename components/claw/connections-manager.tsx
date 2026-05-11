@@ -1,14 +1,7 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
-import {
-  Copy,
-  Loader2,
-  Pencil,
-  Plus,
-  Star,
-  Trash2,
-} from "lucide-react";
+import { useState, type FormEvent, useEffect } from "react";
+import { Loader2, Pencil, Plus, Star, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -32,7 +25,6 @@ export interface ClawConnectionSummary {
   username: string;
   authMethod: "password" | "key";
   isDefault: boolean;
-  toolReverseForwardRemotePort: number | null;
   createdAt: number;
   updatedAt: number;
 }
@@ -55,24 +47,6 @@ export function ConnectionsManager({
     null,
   );
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [appToolEndpoint, setAppToolEndpoint] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void fetch("/api/claw/agent-tools-endpoint")
-      .then((r) => r.json())
-      .then((d: { agentToolsHttpUrl?: string }) => {
-        if (!cancelled && typeof d.agentToolsHttpUrl === "string") {
-          setAppToolEndpoint(d.agentToolsHttpUrl);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setAppToolEndpoint(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   async function setDefault(id: string) {
     setBusyId(id);
@@ -128,31 +102,6 @@ export function ConnectionsManager({
                 Choose which connection the chat uses. Set a default for new
                 sessions.
               </p>
-              {appToolEndpoint && (
-                <div className="flex flex-col gap-1.5 pt-2">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    This app&apos;s tool HTTP URL (browser / cloud — configure
-                    openclaw when it reaches this host directly)
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <code className="max-w-full break-all rounded border bg-muted/50 px-2 py-1 text-[11px] leading-snug">
-                      {appToolEndpoint}
-                    </code>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 shrink-0 text-xs"
-                      onClick={() =>
-                        void navigator.clipboard.writeText(appToolEndpoint)
-                      }
-                    >
-                      <Copy className="mr-1 h-3 w-3" />
-                      Copy
-                    </Button>
-                  </div>
-                </div>
-              )}
             </div>
             <Button type="button" size="sm" onClick={() => setAddOpen(true)}>
               <Plus className="mr-1.5 h-4 w-4" />
@@ -188,30 +137,6 @@ export function ConnectionsManager({
                   <p className="truncate font-mono text-xs text-muted-foreground">
                     {endpoint}
                   </p>
-                  {c.toolReverseForwardRemotePort != null &&
-                    c.toolReverseForwardRemotePort > 0 && (
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
-                        <span className="text-[11px] text-muted-foreground">
-                          On <strong>server</strong>, openclaw →
-                        </span>
-                        <code className="max-w-full break-all rounded bg-muted/50 px-1.5 py-0.5 text-[11px]">
-                          {`http://127.0.0.1:${c.toolReverseForwardRemotePort}/api/agent`}
-                        </code>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2 text-[11px]"
-                          onClick={() =>
-                            void navigator.clipboard.writeText(
-                              `http://127.0.0.1:${c.toolReverseForwardRemotePort}/api/agent`,
-                            )
-                          }
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    )}
                 </div>
                 <div className="flex flex-wrap gap-2 shrink-0">
                   <Button
@@ -304,8 +229,6 @@ function EditConnectionDialog({
   const [host, setHost] = useState("");
   const [port, setPort] = useState("22");
   const [username, setUsername] = useState("");
-  const [toolReverseForwardRemotePort, setToolReverseForwardRemotePort] =
-    useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -315,11 +238,6 @@ function EditConnectionDialog({
     setHost(connection.host);
     setPort(String(connection.port));
     setUsername(connection.username);
-    setToolReverseForwardRemotePort(
-      connection.toolReverseForwardRemotePort != null
-        ? String(connection.toolReverseForwardRemotePort)
-        : "",
-    );
     setError(null);
   }, [connection]);
 
@@ -327,18 +245,6 @@ function EditConnectionDialog({
     e.preventDefault();
     if (!connection) return;
     setError(null);
-    const trRaw = toolReverseForwardRemotePort.trim();
-    let toolFwd: number | null;
-    if (trRaw === "") {
-      toolFwd = null;
-    } else {
-      const n = Number(trRaw);
-      if (!Number.isInteger(n) || n < 1 || n > 65535) {
-        setError("Remote tool tunnel port must be an integer 1–65535 or empty");
-        return;
-      }
-      toolFwd = n;
-    }
     setSubmitting(true);
     try {
       const res = await fetch("/api/claw/connections", {
@@ -350,7 +256,6 @@ function EditConnectionDialog({
           host: host.trim(),
           port: Number(port) || 22,
           username: username.trim(),
-          toolReverseForwardRemotePort: toolFwd,
         }),
       });
       if (!res.ok) {
@@ -416,28 +321,6 @@ function EditConnectionDialog({
                   onChange={(e) => setPort(e.target.value)}
                 />
               </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-tool-forward">Remote tool tunnel port</Label>
-              <Input
-                id="edit-tool-forward"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                max={65535}
-                placeholder="Empty = disabled"
-                value={toolReverseForwardRemotePort}
-                onChange={(e) => setToolReverseForwardRemotePort(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                On the SSH server, openclaw should call{" "}
-                <span className="font-mono">
-                  http://127.0.0.1:
-                  {toolReverseForwardRemotePort.trim() || "PORT"}
-                  /api/agent
-                </span>{" "}
-                when this port is set (reverse tunnel from this app).
-              </p>
             </div>
             {error && (
               <p className="text-sm text-destructive">{error}</p>

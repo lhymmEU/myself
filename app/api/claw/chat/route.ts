@@ -11,9 +11,13 @@ import { createCardParser } from "@/lib/claw/parser";
 import { createStdoutNoiseFilter } from "@/lib/claw/filter-plugin-noise";
 import type { ClawUIMessage } from "@/lib/claw/messages";
 import { BOOTSTRAP_PREAMBLE } from "@/lib/claw/bootstrap-preamble";
-import { WIKI_PREAMBLE } from "@/lib/claw/wiki-preamble";
+import {
+  WIKI_PREAMBLE,
+  formatWikiIngestSupabaseCredentialBlock,
+} from "@/lib/claw/wiki-preamble";
 import { buildOpenclawAgentCommand } from "@/lib/claw/openclaw-agent";
-import { formatAgentToolHttpInstruction } from "@/lib/core/public-app-origin";
+import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
+import { getOpenclawRefreshTokenPlain } from "@/lib/modules/dashboard/openclaw-token-actions";
 
 const partSchema = z.object({
   type: z.string(),
@@ -107,17 +111,30 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const preambles: string[] = [];
-  if (parsed.data.wikiPreamble === true) preambles.push(WIKI_PREAMBLE);
-  if (parsed.data.bootstrap === true) preambles.push(BOOTSTRAP_PREAMBLE);
-  const toolLine = formatAgentToolHttpInstruction(req, {
-    reverseSshRemotePort: connection.toolReverseForwardRemotePort,
-  });
-  const preambleBlock =
-    preambles.length > 0
-      ? `${preambles.join("\n")}\n\n${toolLine}`
-      : toolLine;
-  const sendText = `${preambleBlock}\n\n${userText}`;
+  const parts: string[] = [];
+  if (parsed.data.wikiPreamble === true) {
+    const refresh = await getOpenclawRefreshTokenPlain(auth.userId);
+    if (!refresh) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Save your Supabase refresh token under Dashboard → Settings → OpenClaw / wiki ingest before wiki maintainer chat.",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    const cred = formatWikiIngestSupabaseCredentialBlock({
+      supabaseUrl: getSupabaseUrl(),
+      supabaseAnonKey: getSupabaseAnonKey(),
+      refreshToken: refresh,
+    });
+    parts.push(`${WIKI_PREAMBLE}\n\n${cred}`);
+  }
+  if (parsed.data.bootstrap === true) {
+    parts.push(BOOTSTRAP_PREAMBLE);
+  }
+  const sendText =
+    parts.length > 0 ? `${parts.join("\n\n")}\n\n${userText}` : userText;
   const command = buildOpenclawAgentCommand({
     message: sendText,
     sessionId: parsed.data.sessionId,

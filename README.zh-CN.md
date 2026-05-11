@@ -127,21 +127,9 @@ openbb-api --host 127.0.0.1 --port 6900
 
 ---
 
-## Agent API
+## OpenClaw 与 Supabase
 
-面板支持 AI Agent 调用。所有功能都通过 `/api/agent` 端点暴露为工具：
-
-```bash
-# 列出所有可用工具
-curl http://localhost:3000/api/agent
-
-# 执行一个工具
-curl -X POST http://localhost:3000/api/agent \
-  -H "Content-Type: application/json" \
-  -d '{"name": "createTodo", "arguments": {"title": "买菜"}}'
-```
-
-覆盖所有模块的工具（思维导图、待办、财务、计划、设置）。
+远端 **openclaw** 通过 **Supabase**（anon key + 用户 refresh token）直接访问数据，使用仓库内 [`openclaw/skills/supabase-reads/`](./openclaw/skills/supabase-reads/)（`SKILL.md` + `scripts/`）。Wiki 同步时，面板会在 SSH 任务消息中附带 `SUPABASE_URL`、`SUPABASE_ANON_KEY` 以及你保存在 **面板 → 设置 → OpenClaw / wiki ingest** 的 refresh token（可点「从当前会话获取」或手动粘贴；服务端用 `MYSELF_OPENCLAW_TOKEN_KEY` 加密存储）。切勿在 SSH 主机上使用 service-role 密钥。
 
 ## 架构
 
@@ -150,7 +138,6 @@ curl -X POST http://localhost:3000/api/agent \
 ```
 schema.ts   — Drizzle ORM 数据表定义
 actions.ts  — 数据访问函数（增删改查）
-tools.ts    — Agent 可调用的工具定义
 types.ts    — TypeScript 接口
 events.ts   — 事件总线常量
 index.ts    — 模块注册

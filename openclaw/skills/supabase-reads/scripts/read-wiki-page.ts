@@ -1,21 +1,14 @@
-import { createClient } from "@supabase/supabase-js";
+import { createUserSupabase } from "./lib/user-client";
 
 const slug = process.argv[2];
-const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
-const anon =
-  process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const token = process.env.MYSELF_SUPABASE_ACCESS_TOKEN;
-
-if (!url || !anon || !token || !slug) {
+if (!slug) {
   console.error(
-    "Usage: MYSELF_SUPABASE_ACCESS_TOKEN=... SUPABASE_URL=... SUPABASE_ANON_KEY=... tsx read-wiki-page.ts <slug>",
+    "Usage: SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_REFRESH_TOKEN=... tsx read-wiki-page.ts <slug>",
   );
   process.exit(1);
 }
 
-const supabase = createClient(url, anon, {
-  global: { headers: { Authorization: `Bearer ${token}` } },
-});
+const supabase = await createUserSupabase();
 
 const { data, error } = await supabase
   .from("wiki_pages")

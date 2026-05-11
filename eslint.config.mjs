@@ -44,6 +44,7 @@ const LOCAL_ONLY_FILE_PATTERNS = [
   "lib/claw/ssh.ts",
   "lib/modules/vault/actions.ts",
   "scripts/**",
+  "openclaw/**",
   "app/api/finance/openbb/credentials/route.ts",
   "app/api/vault/read-local-file/route.ts",
 ];

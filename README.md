@@ -164,7 +164,6 @@ CI runs **lint**, **typecheck**, and **`next build`** on every PR. ESLint restri
 lib/modules/<feature>/
   index.ts        # FeatureModule manifest with availableIn: ['local','cloud']
   actions.ts      # Drizzle queries — every action takes (userId, …)
-  tools.ts        # Agent-callable tool definitions (LLM only ships in local)
   types.ts        # Shared TS interfaces
   events.ts       # Cross-module event names
 ```
@@ -180,18 +179,9 @@ lib/modules/<feature>/
 - **OpenBB** Python sidecar for market intelligence (local mode only)
 - **Cloudflare Workers + Durable Objects** for the encrypted lobster relay (cloud mode)
 
-## Agent API
+## OpenClaw and Supabase
 
-Every feature is exposed as a JSON tool over HTTP at `/api/agent`:
-
-```bash
-curl http://localhost:3000/api/agent                                # list tools
-curl -X POST http://localhost:3000/api/agent \
-  -H "Content-Type: application/json" \
-  -d '{"name": "createTodo", "arguments": {"title": "Buy groceries"}}'
-```
-
-In cloud mode the same endpoint is auth-gated to the calling user.
+Remote **openclaw** talks to your data **directly via Supabase** (anon key + your refresh session) using the bundle [`openclaw/skills/supabase-reads/`](./openclaw/skills/supabase-reads/) (`SKILL.md` + `scripts/`). On each wiki ingest, the dashboard sends `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and your saved refresh token in the SSH job message (see the wiki preamble). Save the refresh token under **Dashboard → Settings → OpenClaw / wiki ingest** (paste or **Get from session**); the server encrypts it with `MYSELF_OPENCLAW_TOKEN_KEY`. Never use the service-role key on the SSH host.
 
 ## Roadmap
 
