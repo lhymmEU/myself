@@ -2,8 +2,8 @@ import { nanoid } from "nanoid";
 import { and, desc, eq, sql } from "drizzle-orm";
 
 import { eventBus } from "@/lib/core/event-bus";
-import { LOCAL_USER_ID, isCloud } from "@/lib/core/runtime";
-import { vaultMeta, vaultSecrets } from "@/lib/db/schema/sqlite/vault";
+import { LOCAL_USER_ID } from "@/lib/core/runtime";
+import { vaultMeta, vaultSecrets } from "@/lib/db/schema/postgres/vault";
 import { getVaultDb, getVaultPathSetting, moveVaultDb } from "./vault-db";
 import { VAULT_EVENTS } from "./events";
 import {
@@ -76,7 +76,7 @@ export async function setupVault(
   storagePath?: string,
   userId: string = LOCAL_USER_ID,
 ): Promise<void> {
-  if (storagePath && !isCloud()) {
+  if (storagePath) {
     moveVaultDb(storagePath);
   }
 
@@ -410,34 +410,10 @@ export async function changePassword(
   return true;
 }
 
-export function changeVaultPath(newPath: string): void {
-  if (isCloud()) return; // no-op in cloud
-  const wasUnlocked = isVaultUnlocked();
-  const savedKey = wasUnlocked
-    ? new Uint8Array(_masterKeys.get(LOCAL_USER_ID)!)
-    : null;
-
-  moveVaultDb(newPath);
-
-  if (wasUnlocked && savedKey) {
-    _masterKeys.set(LOCAL_USER_ID, savedKey);
-  }
-}
-
 export function getStoragePath(): string {
   return getVaultPathSetting();
 }
 
 export function getVaultDbFileSize(): number {
-  if (isCloud()) return 0;
-  const p = getVaultPathSetting();
-  /* eslint-disable @typescript-eslint/no-require-imports */
-  const fs = require("fs");
-  /* eslint-enable @typescript-eslint/no-require-imports */
-  try {
-    const stat = fs.statSync(p);
-    return stat.size;
-  } catch {
-    return 0;
-  }
+  return 0;
 }

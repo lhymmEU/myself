@@ -1,66 +1,54 @@
 import OpenAI from "openai";
-import { getSettingSync } from "@/lib/modules/settings/actions";
+import { getSetting } from "@/lib/modules/settings/actions";
 import { isLocal } from "@/lib/core/runtime";
 
-let _client: OpenAI | null = null;
-let _cachedKey: string | null = null;
+const clients = new Map<string, OpenAI>();
 
 const CLOUD_DISABLED_MESSAGE =
-  "LLM features are disabled in cloud mode. Cloud users connect their own lobsters that hold their own model keys; the cloud server never proxies LLM calls.";
+  "LLM features are disabled when DEPLOYMENT_MODE is not local. Use OpenClaw with your own model keys.";
 
-function getClient(): OpenAI {
+function ensureLocal(): void {
   if (!isLocal()) {
     throw new Error(CLOUD_DISABLED_MESSAGE);
   }
-  const key = safeGetSetting("openrouter_api_key");
+}
+
+async function getClient(userId: string): Promise<OpenAI> {
+  ensureLocal();
+  const key = await getSetting("openrouter_api_key", userId);
   if (!key) {
     throw new Error(
-      "OpenRouter API key not configured. Go to Settings to add your API key."
+      "OpenRouter API key not configured. Go to Settings to add your API key.",
     );
   }
-
-  if (_client && _cachedKey === key) {
-    return _client;
-  }
-
-  _client = new OpenAI({
+  const existing = clients.get(userId);
+  if (existing) return existing;
+  const client = new OpenAI({
     baseURL: "https://openrouter.ai/api/v1",
     apiKey: key,
   });
-  _cachedKey = key;
-  return _client;
+  clients.set(userId, client);
+  return client;
 }
 
 export function isLlmAvailable(): boolean {
   return isLocal();
 }
 
-function safeGetSetting(key: string): string | null {
-  try {
-    return getSettingSync(key);
-  } catch {
-    return null;
-  }
-}
-
-function getModel(): string {
-  return safeGetSetting("llm_model") || "anthropic/claude-sonnet-4";
-}
-
-function getTemperature(): number {
-  const temp = safeGetSetting("llm_temperature");
-  return temp ? parseFloat(temp) : 0.7;
-}
-
 export async function chatCompletion(
+  userId: string,
   messages: OpenAI.Chat.ChatCompletionMessageParam[],
-  options?: { temperature?: number; maxTokens?: number }
+  options?: { temperature?: number; maxTokens?: number },
 ): Promise<string> {
-  const client = getClient();
+  const client = await getClient(userId);
+  const model =
+    (await getSetting("llm_model", userId)) || "anthropic/claude-sonnet-4";
+  const tempRaw = await getSetting("llm_temperature", userId);
+  const temperature = tempRaw ? parseFloat(tempRaw) : 0.7;
   const response = await client.chat.completions.create({
-    model: getModel(),
+    model,
     messages,
-    temperature: options?.temperature ?? getTemperature(),
+    temperature: options?.temperature ?? temperature,
     max_tokens: options?.maxTokens ?? 2048,
   });
 
@@ -68,14 +56,19 @@ export async function chatCompletion(
 }
 
 export async function structuredOutput<T>(
+  userId: string,
   messages: OpenAI.Chat.ChatCompletionMessageParam[],
-  options?: { temperature?: number; maxTokens?: number }
+  options?: { temperature?: number; maxTokens?: number },
 ): Promise<T> {
-  const client = getClient();
+  const client = await getClient(userId);
+  const model =
+    (await getSetting("llm_model", userId)) || "anthropic/claude-sonnet-4";
+  const tempRaw = await getSetting("llm_temperature", userId);
+  const temperature = tempRaw ? parseFloat(tempRaw) : 0.7;
   const response = await client.chat.completions.create({
-    model: getModel(),
+    model,
     messages,
-    temperature: options?.temperature ?? getTemperature(),
+    temperature: options?.temperature ?? temperature,
     max_tokens: options?.maxTokens ?? 4096,
     response_format: { type: "json_object" },
   });

@@ -6,4 +6,4 @@ export {
   pmFeatures,
   pmDemands,
   pmStakeholders,
-} from "@/lib/db/schema/sqlite/mind-map";
+} from "@/lib/db/schema/postgres/mind-map";

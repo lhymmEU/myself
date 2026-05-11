@@ -48,8 +48,5 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Schema parity (sqlite ↔ postgres)
-        run: npm run schema:check
-
-      - name: Build (cloud mode)
-        run: npm run build:cloud
+      - name: Build
+        run: npm run build

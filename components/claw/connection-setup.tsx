@@ -438,6 +438,12 @@ export function ConnectionSetup({ onCreated }: Props) {
               </Button>
             </div>
           </form>
+          <p className="text-xs text-muted-foreground border-t border-border pt-3 mt-3 px-6 pb-4">
+            Remote agents can read Postgres via the repo bundle{" "}
+            <code className="rounded bg-muted px-1">openclaw/skills/supabase-reads/</code>{" "}
+            (see <code className="rounded bg-muted px-1">SKILL.md</code>) using your
+            Supabase anon key + user JWT — never the service role on the SSH host.
+          </p>
         </CardContent>
       </Card>
     </div>

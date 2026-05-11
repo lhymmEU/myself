@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { AgentTool } from "@/lib/core/types";
+import { getAgentToolUserId } from "@/lib/core/agent-tool-context";
 import {
   createCollection,
   updateCollection,
@@ -22,7 +23,7 @@ export const markedTools: AgentTool[] = [
     }),
     handler: async (params) => {
       const { name, notes } = params as { name: string; notes?: string };
-      return await createCollection({ name, notes });
+      return await createCollection({ name, notes }, getAgentToolUserId());
     },
   },
   {
@@ -39,7 +40,10 @@ export const markedTools: AgentTool[] = [
         name?: string;
         notes?: string | null;
       };
-      return await updateCollection({ id, name, notes });
+      return await updateCollection(
+        { id, name, notes },
+        getAgentToolUserId(),
+      );
     },
   },
   {
@@ -50,11 +54,12 @@ export const markedTools: AgentTool[] = [
     }),
     handler: async (params) => {
       const { id } = params as { id?: string };
+      const uid = getAgentToolUserId();
       if (id) {
-        const c = await getCollection(id);
+        const c = await getCollection(id, uid);
         return c ?? { error: "Collection not found" };
       }
-      return await listCollections();
+      return await listCollections(uid);
     },
   },
   {
@@ -80,16 +85,19 @@ export const markedTools: AgentTool[] = [
         meta = await fetchUrlMeta(url);
         finalTitle = meta.title || url;
       }
-      return await createItem({
-        url,
-        title: finalTitle,
-        notes,
-        collectionId,
-        favicon: meta?.favicon,
-        ogImage: meta?.image,
-        ogDescription: meta?.description,
-        sourceTag: meta?.sourceTag,
-      });
+      return await createItem(
+        {
+          url,
+          title: finalTitle,
+          notes,
+          collectionId,
+          favicon: meta?.favicon,
+          ogImage: meta?.image,
+          ogDescription: meta?.description,
+          sourceTag: meta?.sourceTag,
+        },
+        getAgentToolUserId(),
+      );
     },
   },
   {
@@ -108,7 +116,10 @@ export const markedTools: AgentTool[] = [
         notes?: string | null;
         collectionId?: string | null;
       };
-      return await updateItem({ id, title, notes, collectionId });
+      return await updateItem(
+        { id, title, notes, collectionId },
+        getAgentToolUserId(),
+      );
     },
   },
   {
@@ -124,11 +135,12 @@ export const markedTools: AgentTool[] = [
         collectionId?: string;
         id?: string;
       };
+      const uid = getAgentToolUserId();
       if (id) {
-        const item = await getItem(id);
+        const item = await getItem(id, uid);
         return item ?? { error: "Item not found" };
       }
-      return await listItems(collectionId);
+      return await listItems(collectionId, uid);
     },
   },
 ];

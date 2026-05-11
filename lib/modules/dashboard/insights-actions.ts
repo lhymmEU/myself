@@ -15,8 +15,8 @@ import {
   dashboardCards,
   pinnedQueries,
   cardDismissals,
-} from "@/lib/db/schema/sqlite/insights";
-import { appendLog, readWikiPage, writeWikiPage } from "./wiki-vault";
+} from "@/lib/db/schema/postgres/insights";
+import { appendLog } from "./wiki-vault";
 import type {
   DashboardCard,
   PinnedQuery,
@@ -366,7 +366,8 @@ export async function pinQuery(
     createdAt: Date.now(),
   };
   await getDb().insert(pinnedQueries).values(row);
-  appendLog(
+  await appendLog(
+    userId,
     `## [${formatDate(row.createdAt)}] query | ${question.replace(/\n+/g, " ")}`,
   );
   return normalizePinned(row as typeof pinnedQueries.$inferSelect);
@@ -395,7 +396,7 @@ export async function touchPinnedQuery(
 // Helpers (date formatting for log entries)
 // ---------------------------------------------------------------------------
 
-function formatDate(ts: number): string {
+export function formatDate(ts: number): string {
   const d = new Date(ts);
   const yyyy = d.getUTCFullYear();
   const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
@@ -408,4 +409,4 @@ function formatDate(ts: number): string {
 // from one place.
 // ---------------------------------------------------------------------------
 
-export { readWikiPage, writeWikiPage, appendLog, formatDate };
+export { readWikiPage, writeWikiPage, appendLog } from "./wiki-vault";

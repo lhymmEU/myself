@@ -8,7 +8,7 @@ import {
   financeBudgets,
   financeInvestments,
   financeTransactions,
-} from "@/lib/db/schema/sqlite/finance";
+} from "@/lib/db/schema/postgres/finance";
 
 export interface FinanceAccount {
   id: string;

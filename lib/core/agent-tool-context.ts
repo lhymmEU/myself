@@ -1,11 +1,9 @@
 /**
  * Per-request user id for agent tool handlers. `/api/agent` wraps execution in
  * {@link runWithAgentToolUser} so tools like publishDashboard write rows for
- * the authenticated user — matching GET /api/dashboard/insights (critical in
- * cloud mode where userId is a Supabase uuid, not LOCAL_USER_ID).
+ * the authenticated user.
  */
 import { AsyncLocalStorage } from "async_hooks";
-import { LOCAL_USER_ID } from "./runtime";
 
 interface AgentToolStore {
   userId: string;
@@ -14,7 +12,13 @@ interface AgentToolStore {
 const storage = new AsyncLocalStorage<AgentToolStore>();
 
 export function getAgentToolUserId(): string {
-  return storage.getStore()?.userId ?? LOCAL_USER_ID;
+  const id = storage.getStore()?.userId;
+  if (!id) {
+    throw new Error(
+      "Agent tool call missing user context (expected runWithAgentToolUser).",
+    );
+  }
+  return id;
 }
 
 export function runWithAgentToolUser<T>(

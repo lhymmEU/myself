@@ -4,8 +4,7 @@
  * These complement the per-feature tools defined in tools.ts; the bento
  * dashboard relies on this module to:
  *   - Read raw sources (plans, marked, wishes, skills) — Karpathy's "raw layer".
- *   - Read / write wiki pages on disk under data/wiki/.
- *   - Append to log.md and search the wiki.
+ *   - Read / write wiki pages in Supabase (\`wiki_pages\`, \`wiki_log_entries\`).
  *   - Publish the bento payload via publishDashboard so the UI sees fresh cards.
  *   - Read pending user verbs so user actions become wiki maintenance.
  */
@@ -107,9 +106,10 @@ export const dashboardWikiTools: AgentTool[] = [
       "Read a single wiki page by slug. Slug is the path under data/wiki/ without the .md extension, e.g. 'syntheses/learning-rust' or 'entities/career'. Returns null if the page does not exist.",
     parameters: z.object({ slug: z.string() }),
     handler: async (params) => {
+      const uid = getAgentToolUserId();
       const { slug } = params as { slug: string };
       try {
-        const markdown = readWikiPage(slug);
+        const markdown = await readWikiPage(uid, slug);
         return { slug, markdown };
       } catch (e) {
         return {
@@ -129,9 +129,10 @@ export const dashboardWikiTools: AgentTool[] = [
       markdown: z.string(),
     }),
     handler: async (params) => {
+      const uid = getAgentToolUserId();
       const { slug, markdown } = params as { slug: string; markdown: string };
       try {
-        writeWikiPage(slug, markdown);
+        await writeWikiPage(uid, slug, markdown);
         return { slug, written: true };
       } catch (e) {
         return {
@@ -148,8 +149,9 @@ export const dashboardWikiTools: AgentTool[] = [
       "Append one line to data/wiki/log.md. Use the format '## [YYYY-MM-DD] <op> | <summary>' so entries stay grep-able. <op> should be one of: ingest, lint, query, init.",
     parameters: z.object({ entry: z.string() }),
     handler: async (params) => {
+      const uid = getAgentToolUserId();
       const { entry } = params as { entry: string };
-      appendLog(entry);
+      await appendLog(uid, entry);
       return { appended: true };
     },
   },
@@ -159,8 +161,9 @@ export const dashboardWikiTools: AgentTool[] = [
       "Return the last N lines of data/wiki/log.md (default 50). Useful for the heartbeat card and for understanding what was already done recently.",
     parameters: z.object({ tail: z.number().optional() }),
     handler: async (params) => {
+      const uid = getAgentToolUserId();
       const { tail } = params as { tail?: number };
-      return { log: readLog(tail ?? 50) };
+      return { log: await readLog(uid, tail ?? 50) };
     },
   },
   {
@@ -172,8 +175,9 @@ export const dashboardWikiTools: AgentTool[] = [
       max: z.number().optional(),
     }),
     handler: async (params) => {
+      const uid = getAgentToolUserId();
       const { query, max } = params as { query: string; max?: number };
-      return { hits: searchWiki(query, max ?? 12) };
+      return { hits: await searchWiki(uid, query, max ?? 12) };
     },
   },
   {

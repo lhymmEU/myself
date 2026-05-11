@@ -2,7 +2,7 @@ import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { getDb } from "@/lib/db";
 import { LOCAL_USER_ID } from "@/lib/core/runtime";
-import { clawConnections } from "@/lib/db/schema/sqlite/claw";
+import { clawConnections } from "@/lib/db/schema/postgres/claw";
 
 export type ClawAuthMethod = "password" | "key";
 

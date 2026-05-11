@@ -10,16 +10,14 @@
     "dev": "DEPLOYMENT_MODE=local NEXT_PUBLIC_DEPLOYMENT_MODE=local next dev",
     "dev:cloud": "DEPLOYMENT_MODE=cloud NEXT_PUBLIC_DEPLOYMENT_MODE=cloud next dev",
     "build": "next build",
-    "build:local": "DEPLOYMENT_MODE=local NEXT_PUBLIC_DEPLOYMENT_MODE=local next build",
-    "build:cloud": "DEPLOYMENT_MODE=cloud NEXT_PUBLIC_DEPLOYMENT_MODE=cloud next build",
     "start": "next start",
     "lint": "eslint",
     "setup": "npm install && npm run build",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "schema:check": "tsx scripts/schema-parity.ts",
+    "db:generate": "drizzle-kit generate --config drizzle.postgres.config.ts",
+    "db:migrate": "drizzle-kit migrate --config drizzle.postgres.config.ts",
     "typecheck": "tsc --noEmit",
-    "lobsterd": "tsx lobsterd/src/index.ts"
+    "lobsterd": "tsx lobsterd/src/index.ts",
+    "migrate:sqlite": "tsx scripts/migrate-sqlite-to-supabase.ts"
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.176",

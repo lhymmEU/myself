@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { AgentTool } from "@/lib/core/types";
+import { getAgentToolUserId } from "@/lib/core/agent-tool-context";
 import { getTodoSourceScene } from "@/lib/modules/mind-map/actions";
 import { parseMindMapTodos } from "./parse-mind-map";
 
@@ -13,7 +14,7 @@ export const todoTools: AgentTool[] = [
     }),
     handler: async (params) => {
       const { urgentOnly } = params as { urgentOnly?: boolean };
-      const scene = await getTodoSourceScene();
+      const scene = await getTodoSourceScene(getAgentToolUserId());
       if (!scene) return [];
       let elements: unknown[] = [];
       try {

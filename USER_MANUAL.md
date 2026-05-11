@@ -249,28 +249,17 @@ The settings page is divided into tabs:
 
 ## Where your data lives
 
-### Local install
+All application data lives in **Supabase Postgres**, partitioned per user by `user_id` and enforced by Row-Level Security (`auth.uid() = user_id`). That includes the mind map, todos, plans, invoices, marked items, settings, finance rows, claw connections, **wiki pages** (`wiki_pages` / `wiki_log_entries`), and dashboard cards.
 
-Everything is on your machine, in two SQLite files:
+**Self-hosted** installs use the same stack: set `DATABASE_URL`, Supabase Auth env vars, and run the app; optional `DEPLOYMENT_MODE=local` still enables OpenBB and bundled LLM features on the machine that runs Next.
 
-| File | What's in it |
-|------|--------------|
-| `data/dashboard.db` | Mind map, todos, plans, invoices, marked, settings, finance, claw |
-| `data/vault.db` | Encrypted vault secrets only |
+Vault secrets are encrypted in the browser (hosted-style) when `DEPLOYMENT_MODE=cloud`, or handled server-side when `DEPLOYMENT_MODE=local` — see **Vault** in the UI.
 
-To **back up**: copy both files (and the `-shm` / `-wal` companion files) somewhere safe.
+To **export everything**: **Settings → Data Management → Export** (JSON snapshot).
 
-To **wipe everything**: stop the dashboard (`Ctrl+C` in the terminal), delete the `data/` folder, and start again with `npm run dev`. Fresh databases will be created.
+To **delete your account**: **Settings → Data Management** — removes rows for your `user_id`.
 
-To **migrate to another machine**: copy the entire project folder, including `data/`, to the new machine and run `npm install && npm run dev`.
-
-### Hosted version
-
-Your data lives in Supabase Postgres, partitioned per user by `user_id` and enforced by Row-Level Security policies (`auth.uid() = user_id`). Vault secrets are encrypted in your browser before they're sent — the server only sees ciphertext + nonce, so even a database leak wouldn't expose them.
-
-To **export everything**: use **Settings → Data Management → Export** for a JSON snapshot you can re-import locally or back into another cloud account.
-
-To **delete your account**: also under **Settings → Data Management**. This drops every row scoped to your `user_id` from every table.
+**Migrating from legacy SQLite** (`data/dashboard.db` / `data/vault.db`): run `tsx scripts/migrate-sqlite-to-supabase.ts` after setting env vars documented in that script (maps `local-user` to your real Supabase `user_id`).
 
 ---
 
@@ -292,6 +281,10 @@ In the hosted version the same endpoint is auth-gated to the calling user — pa
 
 See [README.md](./README.md) for a deeper architectural overview.
 
+### Direct Supabase reads (remote openclaw)
+
+For bulk read-only access outside `/api/agent`, use the repo bundle **`openclaw/skills/supabase-reads/`** (`SKILL.md` + `scripts/`). Set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and a **user access token** (JWT) with the same permissions as your logged-in session. Never put the service-role key on the SSH host. The skill explains which script to run for wiki slugs, page bodies, and log tail.
+
 ### Canonical tool URL (local vs cloud)
 
 The dashboard resolves the base URL your **remote** `openclaw` should use for HTTP tools in this order:
@@ -304,7 +297,7 @@ Wiki ingest and Claw chat also append a one-line **“Tool HTTP endpoint: …”
 
 ### Reverse SSH tunnel (local Next, remote openclaw)
 
-If `openclaw` runs on another machine (SSH host) but your Next app and SQLite data stay on your laptop:
+If `openclaw` runs on another machine (SSH host) but your Next app and Supabase-backed API stay on your laptop:
 
 1. In **Dashboard → Claw →** connection settings, set **Remote tool tunnel port** to a free high port on the **SSH server** (for example `30443`).
 2. When the app connects over SSH, it requests **`forwardIn`** on remote **`127.0.0.1:thatPort`** and pipes each connection to your local Next HTTP port.

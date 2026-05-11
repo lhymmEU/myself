@@ -3,7 +3,7 @@ import type {
   CardConfidence,
   CardState,
   CardVerb,
-} from "@/lib/db/schema/sqlite/insights";
+} from "@/lib/db/schema/postgres/insights";
 
 export type { CardKind, CardConfidence, CardState, CardVerb };
 

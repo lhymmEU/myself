@@ -11,8 +11,6 @@
  * Per Supabase docs we must use `getClaims()` (which validates the JWT
  * signature) rather than `getSession()` to make any auth decisions.
  *
- * This file is local-mode safe: in local mode the root middleware
- * short-circuits before reaching here, so we never touch Supabase env vars.
  */
 
 import { createServerClient } from "@supabase/ssr";

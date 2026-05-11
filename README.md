@@ -130,22 +130,22 @@ For the full step-by-step install, see [`INSTALL.md`](./INSTALL.md). For a tour 
 
 ---
 
-## Architecture (one codebase, two deployments)
+## Architecture (one data plane, capability flags)
 
-The dashboard ships in two modes from a single repository, picked by an environment variable:
+**Data** always lives in **Supabase Postgres** (`DATABASE_URL`). **Auth** is always Supabase (email + password, magic link, OAuth — see login + Settings → Account security).
 
 ```
-DEPLOYMENT_MODE=local   # default — SQLite, ssh2, nodemailer, OpenBB, OpenRouter LLM
-DEPLOYMENT_MODE=cloud   # Vercel + Supabase — Postgres, Resend, lobsterd relay, no LLM
+DEPLOYMENT_MODE=local   # default — ssh2, nodemailer, OpenBB, OpenRouter LLM (optional)
+DEPLOYMENT_MODE=cloud   # hosted-style — Resend, lobsterd relay, browser crypto vault, no bundled LLM
 ```
 
-Every "this differs by deployment" decision lives in [`lib/core/runtime.ts`](./lib/core/runtime.ts), so flipping a deployment is a one-env-var change. Each feature module declares which modes it ships in, and the registry skips the rest.
+Capability differences live in [`lib/core/runtime.ts`](./lib/core/runtime.ts). Feature modules use `availableIn` so the registry can skip features that need a local capability.
 
 ```
 lib/core/runtime.ts            # MODE, isLocal(), isCloud(), capability layer
-lib/db/                        # Drizzle dispatch — sqlite or postgres-js
-lib/db/schema/{sqlite,postgres}# Mirrored schemas, parity-checked in CI
-lib/supabase/                  # @supabase/ssr — cloud auth
+lib/db/                        # Drizzle + postgres-js
+lib/db/schema/postgres/        # Drizzle schema + drizzle/postgres SQL migrations
+lib/supabase/                  # @supabase/ssr — auth + middleware
 lib/core/mailer.ts             # Nodemailer (local) | Resend (cloud)
 lib/modules/claw/transport-ssh.ts    # Local SSH (ssh2)
 lib/modules/claw/transport-relay.ts  # Cloud lobsterd relay client (home-NAT)
@@ -153,9 +153,10 @@ lib/modules/claw/transport-edge.ts   # Cloud browser-WASM SSH (gossh-wasm) for c
 workers/relay/                 # Cloudflare Worker — /pair (lobsterd) and /dial (edge SSH)
 lobsterd/                      # Optional home-NAT agent daemon for cloud users
 public/wasm/                   # Vendored gossh-wasm + wasm_exec.js
+openclaw/skills/supabase-reads/ # Remote-agent read bundle (SKILL.md + scripts)
 ```
 
-CI runs both builds (`build:local` and `build:cloud`) on every PR, plus a schema-parity test that fails if SQLite and Postgres tables drift apart. ESLint forbids new code from sneaking in raw SQL or `fs`/`child_process`/`net` outside the local-only allowlist.
+CI runs **lint**, **typecheck**, and **`next build`** on every PR. ESLint restricts raw `fs` / `child_process` / `net` outside an explicit allowlist.
 
 ### Per-feature module layout
 
@@ -171,8 +172,8 @@ lib/modules/<feature>/
 ## Tech stack
 
 - **Next.js 16** App Router (Turbopack)
-- **Drizzle ORM** — dual-driver, SQLite (better-sqlite3) and Postgres (postgres-js)
-- **Supabase** — Postgres + Auth + Row-Level Security in cloud mode
+- **Drizzle ORM** — Postgres (postgres-js) + Supabase
+- **Supabase** — Postgres + Auth + Row-Level Security
 - **shadcn/ui** + Tailwind CSS v4 + Lucide React
 - **Recharts**, **xterm.js**, **BlockNote**, **Excalidraw**
 - **OpenRouter** via OpenAI SDK (local mode only — cloud users connect their own lobster)

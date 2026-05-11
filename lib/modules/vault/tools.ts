@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { AgentTool } from "@/lib/core/types";
+import { getAgentToolUserId } from "@/lib/core/agent-tool-context";
 import {
   getAllSecrets,
   getSecret,
@@ -14,7 +15,7 @@ export const vaultTools: AgentTool[] = [
     description: "Check if the vault is initialized, locked/unlocked, and how many secrets it holds",
     parameters: z.object({}),
     handler: async () => {
-      return await getVaultStatus();
+      return await getVaultStatus(getAgentToolUserId());
     },
   },
   {
@@ -22,7 +23,7 @@ export const vaultTools: AgentTool[] = [
     description: "List all secrets in the vault (names and categories only, no values)",
     parameters: z.object({}),
     handler: async () => {
-      return await getAllSecrets();
+      return await getAllSecrets(getAgentToolUserId());
     },
   },
   {
@@ -33,7 +34,7 @@ export const vaultTools: AgentTool[] = [
     }),
     handler: async (params) => {
       const { id } = params as { id: string };
-      return await getSecret(id);
+      return await getSecret(id, getAgentToolUserId());
     },
   },
   {
@@ -65,13 +66,16 @@ export const vaultTools: AgentTool[] = [
         notes?: string;
         tags?: string[];
       };
-      return await createSecret({
-        name,
-        value,
-        category: category as Parameters<typeof createSecret>[0]["category"],
-        notes,
-        tags,
-      });
+      return await createSecret(
+        {
+          name,
+          value,
+          category: category as Parameters<typeof createSecret>[0]["category"],
+          notes,
+          tags,
+        },
+        getAgentToolUserId(),
+      );
     },
   },
   {
@@ -82,7 +86,7 @@ export const vaultTools: AgentTool[] = [
     }),
     handler: async (params) => {
       const { id } = params as { id: string };
-      await deleteSecret(id);
+      await deleteSecret(id, getAgentToolUserId());
       return { success: true };
     },
   },

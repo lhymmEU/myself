@@ -1,7 +1,14 @@
 import { z } from "zod";
 import type { AgentTool } from "@/lib/core/types";
+import { getAgentToolUserId } from "@/lib/core/agent-tool-context";
 import { fetchOpenBB } from "./openbb-client";
-import type { OpenBBResponse, EquityHistorical, EquitySearchResult, CryptoHistorical, NewsArticle } from "./types";
+import type {
+  OpenBBResponse,
+  EquityHistorical,
+  EquitySearchResult,
+  CryptoHistorical,
+  NewsArticle,
+} from "./types";
 
 export const financeTools: AgentTool[] = [
   {
@@ -15,6 +22,7 @@ export const financeTools: AgentTool[] = [
       provider: z.string().optional().describe("Data provider, defaults to yfinance"),
     }),
     handler: async (params) => {
+      const uid = getAgentToolUserId();
       const { symbol, start_date, end_date, provider } = params as {
         symbol: string;
         start_date?: string;
@@ -29,6 +37,7 @@ export const financeTools: AgentTool[] = [
           ...(end_date && { end_date }),
           provider: provider ?? "yfinance",
         },
+        uid,
       );
       return data.results?.slice(-30) ?? [];
     },
@@ -40,10 +49,12 @@ export const financeTools: AgentTool[] = [
       query: z.string().describe("Search term, e.g. 'Apple' or 'AAPL'"),
     }),
     handler: async (params) => {
+      const uid = getAgentToolUserId();
       const { query } = params as { query: string };
       const data = await fetchOpenBB<OpenBBResponse<EquitySearchResult>>(
         "equity/search",
         { query },
+        uid,
       );
       return data.results?.slice(0, 10) ?? [];
     },
@@ -59,6 +70,7 @@ export const financeTools: AgentTool[] = [
       provider: z.string().optional(),
     }),
     handler: async (params) => {
+      const uid = getAgentToolUserId();
       const { symbol, start_date, end_date, provider } = params as {
         symbol: string;
         start_date?: string;
@@ -73,6 +85,7 @@ export const financeTools: AgentTool[] = [
           ...(end_date && { end_date }),
           provider: provider ?? "yfinance",
         },
+        uid,
       );
       return data.results?.slice(-30) ?? [];
     },
@@ -90,6 +103,7 @@ export const financeTools: AgentTool[] = [
       provider: z.string().optional(),
     }),
     handler: async (params) => {
+      const uid = getAgentToolUserId();
       const { symbol, country, provider } = params as {
         symbol?: string;
         country?: string;
@@ -102,6 +116,7 @@ export const financeTools: AgentTool[] = [
           ...(country && { country }),
           provider: provider ?? "econdb",
         },
+        uid,
       );
       return (data as OpenBBResponse).results?.slice(-30) ?? [];
     },
@@ -114,6 +129,7 @@ export const financeTools: AgentTool[] = [
       limit: z.number().optional().describe("Number of articles, default 10"),
     }),
     handler: async (params) => {
+      const uid = getAgentToolUserId();
       const { symbols, limit } = params as {
         symbols?: string;
         limit?: number;
@@ -124,7 +140,7 @@ export const financeTools: AgentTool[] = [
         ...(symbols && { symbol: symbols }),
         limit: String(limit ?? 10),
         provider,
-      });
+      }, uid);
       return (
         data.results?.map((a) => ({
           title: a.title,
@@ -145,6 +161,7 @@ export const financeTools: AgentTool[] = [
       provider: z.string().optional(),
     }),
     handler: async (params) => {
+      const uid = getAgentToolUserId();
       const { symbol, provider } = params as {
         symbol: string;
         provider?: string;
@@ -152,6 +169,7 @@ export const financeTools: AgentTool[] = [
       const data = await fetchOpenBB(
         "equity/profile",
         { symbol, provider: provider ?? "yfinance" },
+        uid,
       );
       return (data as OpenBBResponse).results?.[0] ?? null;
     },
@@ -165,6 +183,7 @@ export const financeTools: AgentTool[] = [
       provider: z.string().optional(),
     }),
     handler: async (params) => {
+      const uid = getAgentToolUserId();
       const { symbol, provider } = params as {
         symbol: string;
         provider?: string;
@@ -172,7 +191,7 @@ export const financeTools: AgentTool[] = [
       const data = await fetchOpenBB("etf/info", {
         symbol,
         provider: provider ?? "fmp",
-      });
+      }, uid);
       return (data as OpenBBResponse).results?.[0] ?? null;
     },
   },
@@ -184,6 +203,7 @@ export const financeTools: AgentTool[] = [
       provider: z.string().optional(),
     }),
     handler: async (params) => {
+      const uid = getAgentToolUserId();
       const { symbol, provider } = params as {
         symbol: string;
         provider?: string;
@@ -191,7 +211,7 @@ export const financeTools: AgentTool[] = [
       const data = await fetchOpenBB("etf/holdings", {
         symbol,
         provider: provider ?? "fmp",
-      });
+      }, uid);
       return (data as OpenBBResponse).results?.slice(0, 20) ?? [];
     },
   },
@@ -203,10 +223,12 @@ export const financeTools: AgentTool[] = [
       provider: z.string().optional(),
     }),
     handler: async (params) => {
+      const uid = getAgentToolUserId();
       const { provider } = params as { provider?: string };
       const data = await fetchOpenBB(
         "fixedincome/government/treasury_rates",
         { provider: provider ?? "federal_reserve" },
+        uid,
       );
       return (data as OpenBBResponse).results?.slice(-5) ?? [];
     },
@@ -219,6 +241,7 @@ export const financeTools: AgentTool[] = [
       provider: z.string().optional(),
     }),
     handler: async (params) => {
+      const uid = getAgentToolUserId();
       const { symbol, provider } = params as {
         symbol: string;
         provider?: string;
@@ -226,7 +249,7 @@ export const financeTools: AgentTool[] = [
       const data = await fetchOpenBB("derivatives/options/chains", {
         symbol,
         provider: provider ?? "tradier",
-      });
+      }, uid);
       return (data as OpenBBResponse).results?.slice(0, 30) ?? [];
     },
   },
@@ -237,10 +260,11 @@ export const financeTools: AgentTool[] = [
       limit: z.number().optional().describe("Number of bills to return"),
     }),
     handler: async (params) => {
+      const uid = getAgentToolUserId();
       const { limit } = params as { limit?: number };
       const data = await fetchOpenBB("uscongress/bills", {
         limit: String(limit ?? 10),
-      });
+      }, uid);
       return (data as OpenBBResponse).results?.slice(0, 20) ?? [];
     },
   },
@@ -250,9 +274,10 @@ export const financeTools: AgentTool[] = [
       "Get S&P 500 valuation multiples like PE ratio, dividend yield",
     parameters: z.object({}),
     handler: async () => {
+      const uid = getAgentToolUserId();
       const data = await fetchOpenBB("index/sp500_multiples", {
         provider: "multpl",
-      });
+      }, uid);
       return (data as OpenBBResponse).results?.slice(-5) ?? [];
     },
   },

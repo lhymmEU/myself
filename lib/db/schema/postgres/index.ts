@@ -1,7 +1,4 @@
-/**
- * Postgres schema barrel — used in cloud (Supabase) mode. Mirrors the SQLite
- * version one-to-one. The schema-parity test verifies they stay aligned.
- */
+/** Postgres schema barrel — Supabase / Drizzle source of truth. */
 export * from "./mind-map";
 export * from "./todos";
 export * from "./plans";
@@ -13,3 +10,4 @@ export * from "./claw";
 export * from "./finance";
 export * from "./vault";
 export * from "./insights";
+export * from "./wiki";

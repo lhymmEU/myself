@@ -1,87 +1,83 @@
 /**
- * One-shot smoke for the bento dashboard. Bootstraps the local DB, seeds a
- * demo card via publishDashboard(), then asserts:
- *   1. The wiki vault skeleton was created on disk.
- *   2. The dashboard_cards row was inserted.
- *   3. listActiveCards returns the seed.
- *   4. recordVerb("archive") soft-deletes it.
- * Intended for local sanity checks; not part of automated CI.
+ * Smoke test for the bento dashboard against Supabase Postgres.
  *
- * Run: `tsx scripts/smoke-bento.ts`
+ * Requires: DATABASE_URL, NEXT_PUBLIC_SUPABASE_* (for boot if needed),
+ * and MYSELF_SMOKE_USER_ID (a real auth.users uuid with rows permission).
+ *
+ * Run: `MYSELF_SMOKE_USER_ID=<uuid> tsx scripts/smoke-bento.ts`
  */
-import path from "path";
-import fs from "fs";
 import { initDatabase } from "../lib/core/init-db";
-import { ensureVault } from "../lib/modules/dashboard/wiki-vault";
+import { ensureVault, isVaultReady } from "../lib/modules/dashboard/wiki-vault";
 import {
   publishDashboard,
   listActiveCards,
   recordVerb,
 } from "../lib/modules/dashboard/insights-actions";
 
-async function main() {
-  process.env.NEXT_PUBLIC_DEPLOYMENT_MODE = "local";
-  process.env.DEPLOYMENT_MODE = "local";
-
-  initDatabase();
-  const paths = ensureVault();
-  if (!paths) throw new Error("vault not initialised");
-
-  const required = [
-    paths.agentsMd,
-    paths.indexMd,
-    paths.logMd,
-    paths.entitiesDir,
-    paths.synthesesDir,
-    paths.queriesDir,
-  ];
-  for (const p of required) {
-    if (!fs.existsSync(p)) throw new Error(`missing vault path: ${p}`);
+function requireSmokeUser(): string {
+  const id = process.env.MYSELF_SMOKE_USER_ID?.trim();
+  if (!id) {
+    throw new Error("Set MYSELF_SMOKE_USER_ID to a Supabase auth user uuid.");
   }
-  console.log(
-    `[1/4] vault ok at ${path.relative(process.cwd(), paths.root)}`,
-  );
+  return id;
+}
 
-  await publishDashboard([
-    {
-      id: "smoke-card-1",
-      kind: "synthesis",
-      title: "Smoke synthesis: Rust >> Go for embedded",
-      body: "After 3 sources you favoured Rust toolchain ergonomics. Confidence: thin (only 3 sources).",
-      hue: 25,
-      freshness: Date.now(),
-      confidence: "thin",
-      sources: [
-        { kind: "marked", id: "demo-md-1", label: "Embedded Rust handbook" },
-        { kind: "plan", id: "demo-pl-1", label: "Job hunt plan" },
-      ],
-      wikiSlug: "syntheses/rust-vs-go-embedded",
-      pinnedGoalId: null,
-      priority: 50,
-    },
-    {
-      id: "smoke-card-2",
-      kind: "heartbeat",
-      title: "Today: 0 ingests, 0 lints",
-      body: "Wiki idle. Add sources to see something here.",
-      hue: 210,
-      freshness: Date.now(),
-      confidence: "strong",
-      sources: [],
-      wikiSlug: "syntheses/heartbeat",
-      priority: 10,
-    },
-  ]);
+async function main() {
+  process.env.NEXT_PUBLIC_DEPLOYMENT_MODE =
+    process.env.NEXT_PUBLIC_DEPLOYMENT_MODE ?? "local";
+  process.env.DEPLOYMENT_MODE = process.env.DEPLOYMENT_MODE ?? "local";
+
+  const userId = requireSmokeUser();
+  initDatabase();
+  await ensureVault(userId);
+  if (!(await isVaultReady(userId))) {
+    throw new Error("wiki vault not ready after ensureVault");
+  }
+  console.log("[1/4] wiki vault ok (Supabase)");
+
+  await publishDashboard(
+    [
+      {
+        id: "smoke-card-1",
+        kind: "synthesis",
+        title: "Smoke synthesis: Rust >> Go for embedded",
+        body: "After 3 sources you favoured Rust toolchain ergonomics. Confidence: thin (only 3 sources).",
+        hue: 25,
+        freshness: Date.now(),
+        confidence: "thin",
+        sources: [
+          { kind: "marked", id: "demo-md-1", label: "Embedded Rust handbook" },
+          { kind: "plan", id: "demo-pl-1", label: "Job hunt plan" },
+        ],
+        wikiSlug: "syntheses/rust-vs-go-embedded",
+        pinnedGoalId: null,
+        priority: 50,
+      },
+      {
+        id: "smoke-card-2",
+        kind: "heartbeat",
+        title: "Today: 0 ingests, 0 lints",
+        body: "Wiki idle. Add sources to see something here.",
+        hue: 210,
+        freshness: Date.now(),
+        confidence: "strong",
+        sources: [],
+        wikiSlug: "syntheses/heartbeat",
+        priority: 10,
+      },
+    ],
+    userId,
+  );
   console.log("[2/4] publishDashboard ok");
 
-  const cards = await listActiveCards();
+  const cards = await listActiveCards(userId);
   if (cards.length < 2) {
     throw new Error(`expected 2+ active cards, got ${cards.length}`);
   }
   console.log(`[3/4] listActiveCards returned ${cards.length} card(s)`);
 
-  await recordVerb("smoke-card-1", "archive", null);
-  const afterArchive = await listActiveCards();
+  await recordVerb("smoke-card-1", "archive", null, userId);
+  const afterArchive = await listActiveCards(userId);
   if (afterArchive.find((c) => c.id === "smoke-card-1")) {
     throw new Error("archive verb did not soft-delete");
   }

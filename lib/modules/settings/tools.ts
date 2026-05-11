@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { AgentTool } from "@/lib/core/types";
+import { getAgentToolUserId } from "@/lib/core/agent-tool-context";
 import { getSetting, updateSetting, getAllSettings } from "./actions";
 
 export const settingsTools: AgentTool[] = [
@@ -9,7 +10,8 @@ export const settingsTools: AgentTool[] = [
     parameters: z.object({ key: z.string() }),
     handler: async (params) => {
       const { key } = params as { key: string };
-      return { key, value: await getSetting(key) };
+      const uid = getAgentToolUserId();
+      return { key, value: await getSetting(key, uid) };
     },
   },
   {
@@ -18,7 +20,8 @@ export const settingsTools: AgentTool[] = [
     parameters: z.object({ key: z.string(), value: z.string() }),
     handler: async (params) => {
       const { key, value } = params as { key: string; value: string };
-      await updateSetting(key, value);
+      const uid = getAgentToolUserId();
+      await updateSetting(key, value, uid);
       return { success: true, key, value };
     },
   },
@@ -27,7 +30,7 @@ export const settingsTools: AgentTool[] = [
     description: "Get all current settings",
     parameters: z.object({}),
     handler: async () => {
-      return await getAllSettings();
+      return await getAllSettings(getAgentToolUserId());
     },
   },
 ];

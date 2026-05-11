@@ -3,7 +3,7 @@ import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { LOCAL_USER_ID } from "@/lib/core/runtime";
 import { planMarkedAttachments } from "./schema";
-import { markedItems } from "@/lib/db/schema/sqlite/marked";
+import { markedItems } from "@/lib/db/schema/postgres/marked";
 import type { MarkedItem } from "@/lib/modules/marked/types";
 import type { PlanAttachedItem } from "./types";
 

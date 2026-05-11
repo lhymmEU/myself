@@ -18,7 +18,7 @@ import { nanoid } from "nanoid";
 import { and, desc, eq, sql } from "drizzle-orm";
 
 import { eventBus } from "@/lib/core/event-bus";
-import { vaultMeta, vaultSecrets } from "@/lib/db/schema/sqlite/vault";
+import { vaultMeta, vaultSecrets } from "@/lib/db/schema/postgres/vault";
 import { getVaultDb } from "./vault-db";
 import { VAULT_EVENTS } from "./events";
 import type {

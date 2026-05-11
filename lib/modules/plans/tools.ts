@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { AgentTool } from "@/lib/core/types";
+import { getAgentToolUserId } from "@/lib/core/agent-tool-context";
 import {
   createPlan,
   updatePlan,
@@ -29,7 +30,8 @@ export const planTools: AgentTool[] = [
         content?: unknown;
         linkedNodeId?: string;
       };
-      return await createPlan({ title, content, linkedNodeId });
+      const uid = getAgentToolUserId();
+      return await createPlan({ title, content, linkedNodeId }, uid);
     },
   },
   {
@@ -48,7 +50,8 @@ export const planTools: AgentTool[] = [
         content?: unknown;
         linkedNodeId?: string | null;
       };
-      return await updatePlan({ id, title, content, linkedNodeId });
+      const uid = getAgentToolUserId();
+      return await updatePlan({ id, title, content, linkedNodeId }, uid);
     },
   },
   {
@@ -59,11 +62,12 @@ export const planTools: AgentTool[] = [
     }),
     handler: async (params) => {
       const { id } = params as { id?: string };
+      const uid = getAgentToolUserId();
       if (id) {
-        const plan = await getPlan(id);
+        const plan = await getPlan(id, uid);
         return plan ?? { error: "Plan not found" };
       }
-      return await getAllPlans();
+      return await getAllPlans(uid);
     },
   },
   {
@@ -75,7 +79,10 @@ export const planTools: AgentTool[] = [
     }),
     handler: async (params) => {
       const { linkedNodeId } = params as { linkedNodeId: string };
-      const plan = await getPlanByLinkedNode(linkedNodeId);
+      const plan = await getPlanByLinkedNode(
+        linkedNodeId,
+        getAgentToolUserId(),
+      );
       return plan ?? { plan: null };
     },
   },
@@ -92,7 +99,10 @@ export const planTools: AgentTool[] = [
         planId: string;
         markedItemId: string;
       };
-      return await attachMarkedItem({ planId, markedItemId });
+      return await attachMarkedItem(
+        { planId, markedItemId },
+        getAgentToolUserId(),
+      );
     },
   },
   {
@@ -107,7 +117,10 @@ export const planTools: AgentTool[] = [
         planId: string;
         markedItemId: string;
       };
-      await detachMarkedItem({ planId, markedItemId });
+      await detachMarkedItem(
+        { planId, markedItemId },
+        getAgentToolUserId(),
+      );
       return { ok: true };
     },
   },
@@ -120,7 +133,7 @@ export const planTools: AgentTool[] = [
     }),
     handler: async (params) => {
       const { planId } = params as { planId: string };
-      return await listPlanAttachments(planId);
+      return await listPlanAttachments(planId, getAgentToolUserId());
     },
   },
 ];

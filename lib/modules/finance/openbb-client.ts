@@ -1,13 +1,10 @@
-import { getSettingSync } from "@/lib/modules/settings/actions";
+import { getSetting } from "@/lib/modules/settings/actions";
 import { isLocal } from "@/lib/core/runtime";
 
-// Use 127.0.0.1 instead of localhost: on Windows (and some Linux configs)
-// `localhost` resolves to ::1 first, but openbb-api binds to 0.0.0.0/127.0.0.1
-// only by default, producing instant ECONNREFUSED with a confusing error.
 const DEFAULT_URL = "http://127.0.0.1:6900";
 
 const CLOUD_DISABLED_MESSAGE =
-  "OpenBB market data is only available in local installs. Cloud users can install Life Dashboard locally and run openbb-api on the same box to enable Market Intelligence.";
+  "OpenBB market data is only available when DEPLOYMENT_MODE=local (self-hosted OpenBB on the same machine).";
 
 function ensureLocal(): void {
   if (!isLocal()) {
@@ -15,16 +12,17 @@ function ensureLocal(): void {
   }
 }
 
-function getBaseUrl(): string {
-  return getSettingSync("openbb_api_url") || DEFAULT_URL;
+async function getBaseUrl(userId: string): Promise<string> {
+  return (await getSetting("openbb_api_url", userId)) || DEFAULT_URL;
 }
 
 export async function fetchOpenBB<T = unknown>(
   endpoint: string,
-  params?: Record<string, string>,
+  params: Record<string, string> | undefined,
+  userId: string,
 ): Promise<T> {
   ensureLocal();
-  const base = getBaseUrl();
+  const base = await getBaseUrl(userId);
   const url = new URL(`/api/v1/${endpoint}`, base);
 
   if (params) {
@@ -50,10 +48,10 @@ export async function fetchOpenBB<T = unknown>(
   return res.json();
 }
 
-export async function checkConnection(): Promise<boolean> {
+export async function checkConnection(userId: string): Promise<boolean> {
   if (!isLocal()) return false;
   try {
-    const base = getBaseUrl();
+    const base = await getBaseUrl(userId);
     const res = await fetch(base, {
       signal: AbortSignal.timeout(5_000),
     });

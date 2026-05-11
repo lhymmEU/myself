@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { AgentTool } from "@/lib/core/types";
+import { getAgentToolUserId } from "@/lib/core/agent-tool-context";
 import {
   getOrCreateDefaultScene,
   getAllScenes,
@@ -16,13 +17,14 @@ export const mindMapTools: AgentTool[] = [
     }),
     handler: async (params) => {
       const { id } = params as { id?: string };
+      const uid = getAgentToolUserId();
       if (id) {
         const { getScene } = await import("./actions");
-        const scene = await getScene(id);
+        const scene = await getScene(id, uid);
         if (!scene) throw new Error(`Scene not found: ${id}`);
         return scene;
       }
-      return await getOrCreateDefaultScene();
+      return await getOrCreateDefaultScene(uid);
     },
   },
   {
@@ -30,7 +32,7 @@ export const mindMapTools: AgentTool[] = [
     description: "List all mind map scenes",
     parameters: z.object({}),
     handler: async () => {
-      return await getAllScenes();
+      return await getAllScenes(undefined, getAgentToolUserId());
     },
   },
   {
@@ -49,7 +51,10 @@ export const mindMapTools: AgentTool[] = [
         elements?: string;
         appState?: string;
       };
-      return await updateScene({ id, name, elements, appState });
+      return await updateScene(
+        { id, name, elements, appState },
+        getAgentToolUserId(),
+      );
     },
   },
 ];

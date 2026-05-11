@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
       }
       const result: Record<string, unknown> = { card };
       if (include === "wiki" && card.wikiSlug) {
-        result.wiki = readWikiPage(card.wikiSlug);
+        result.wiki = await readWikiPage(userId, card.wikiSlug);
       }
       return NextResponse.json(result);
     }

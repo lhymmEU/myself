@@ -30,11 +30,7 @@ const LOCAL_ONLY_NODE_MODULES = [
  * Drizzle ORM. They are reserved for `lib/db/**` and the small set of
  * legacy adapters that still own raw SQL.
  */
-const RESTRICTED_DB_NAMED_IMPORTS = [
-  "getSqlite",
-  "getPgClient",
-  "getVaultSqlite",
-];
+const RESTRICTED_DB_NAMED_IMPORTS = ["getPgClient"];
 
 /**
  * Files that legitimately need either local-only Node modules or raw
@@ -44,21 +40,10 @@ const RESTRICTED_DB_NAMED_IMPORTS = [
 const LOCAL_ONLY_FILE_PATTERNS = [
   "lib/db/**",
   "lib/core/db.ts",
-  "lib/core/init-db.ts",
   "lib/core/mailer.ts",
   "lib/claw/ssh.ts",
-  "lib/modules/vault/vault-db.ts",
   "lib/modules/vault/actions.ts",
-  // Karpathy LLM-wiki vault — fs writes gated by isLocal() inside the file.
-  "lib/modules/dashboard/wiki-vault.ts",
-  // Dev-only scripts that run on the local machine.
   "scripts/**",
-  // Hosts the local-only `getSettingSync` escape hatch used by mailer /
-  // OpenRouter / OpenBB clients that were never written async-aware. The
-  // sync read is gated by isLocal() inside the function itself.
-  "lib/modules/settings/actions.ts",
-  // API routes that are themselves gated with isLocal() at the top
-  // and only ship local features.
   "app/api/finance/openbb/credentials/route.ts",
   "app/api/vault/read-local-file/route.ts",
 ];
@@ -76,7 +61,7 @@ const restrictedImportsRule = {
       name: "@/lib/db",
       importNames: RESTRICTED_DB_NAMED_IMPORTS,
       message:
-        "Raw DB handles (getSqlite/getPgClient/getVaultSqlite) are forbidden outside lib/db/. Use the Drizzle ORM via getDb().",
+        "Raw DB handle getPgClient is forbidden outside lib/db/. Use Drizzle via getDb().",
       allowTypeImports: true,
     },
   ],

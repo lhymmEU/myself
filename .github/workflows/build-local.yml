@@ -15,7 +15,7 @@ env:
 
 jobs:
   build:
-    name: lint + typecheck + build (local / sqlite)
+    name: lint + typecheck + build (local capabilities)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,8 +34,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Schema parity (sqlite ↔ postgres)
-        run: npm run schema:check
-
-      - name: Build (local mode)
-        run: npm run build:local
+      - name: Build
+        env:
+          DATABASE_URL: postgres://placeholder:placeholder@localhost:5432/placeholder
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+        run: npm run build

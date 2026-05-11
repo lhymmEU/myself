@@ -13,7 +13,6 @@ import {
   updateSecret,
   deleteSecret,
   changePassword,
-  changeVaultPath,
 } from "@/lib/modules/vault/actions";
 import {
   getCloudVaultStatus,
@@ -304,14 +303,10 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (action === "change-path") {
-      if (isCloud()) {
-        return NextResponse.json(
-          { error: "Storage path is not configurable in cloud mode" },
-          { status: 400 },
-        );
-      }
-      changeVaultPath(body.newPath);
-      return NextResponse.json({ success: true });
+      return NextResponse.json(
+        { error: "Storage path is not configurable; vault lives in Supabase." },
+        { status: 400 },
+      );
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });

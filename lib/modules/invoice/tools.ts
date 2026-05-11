@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { AgentTool } from "@/lib/core/types";
+import { getAgentToolUserId } from "@/lib/core/agent-tool-context";
 import {
   createInvoice,
   getAllInvoices,
@@ -33,8 +34,10 @@ export const invoiceTools: AgentTool[] = [
       ),
     }),
     handler: async (params) => {
+      const uid = getAgentToolUserId();
       return await createInvoice(
-        params as Parameters<typeof createInvoice>[0]
+        params as Parameters<typeof createInvoice>[0],
+        uid,
       );
     },
   },
@@ -43,7 +46,7 @@ export const invoiceTools: AgentTool[] = [
     description: "List all invoices",
     parameters: z.object({}),
     handler: async () => {
-      return await getAllInvoices();
+      return await getAllInvoices(getAgentToolUserId());
     },
   },
   {
@@ -52,7 +55,7 @@ export const invoiceTools: AgentTool[] = [
     parameters: z.object({ id: z.string() }),
     handler: async (params) => {
       const { id } = params as { id: string };
-      return await getInvoice(id);
+      return await getInvoice(id, getAgentToolUserId());
     },
   },
   {
@@ -67,7 +70,8 @@ export const invoiceTools: AgentTool[] = [
     }),
     handler: async (params) => {
       return await createClient(
-        params as Parameters<typeof createClient>[0]
+        params as Parameters<typeof createClient>[0],
+        getAgentToolUserId(),
       );
     },
   },
@@ -76,7 +80,7 @@ export const invoiceTools: AgentTool[] = [
     description: "List all invoice clients",
     parameters: z.object({}),
     handler: async () => {
-      return await getAllClients();
+      return await getAllClients(getAgentToolUserId());
     },
   },
 ];

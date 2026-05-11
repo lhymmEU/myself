@@ -10,9 +10,8 @@
  *     ...
  *   }
  *
- * In local mode `userId` is the LOCAL_USER_ID sentinel and the path never
- * fails. In cloud mode the middleware already enforces login on /api/*
- * but we still re-check here as defence in depth (and to grab the uuid).
+ * `userId` is always the Supabase Auth subject (uuid). Middleware enforces
+ * login on protected routes; this helper re-checks as defence in depth.
  */
 
 import { NextResponse } from "next/server";

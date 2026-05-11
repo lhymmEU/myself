@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
 import { isLocal } from "@/lib/core/runtime";
+import { requireUserId } from "@/lib/core/route-helpers";
 import { fetchOpenBB, checkConnection } from "@/lib/modules/finance/openbb-client";
 
 export async function GET(req: NextRequest) {
@@ -9,16 +10,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         error:
-          "OpenBB market data is only available in local installs.",
+          "OpenBB market data is only available when DEPLOYMENT_MODE=local (self-hosted OpenBB).",
       },
       { status: 410 },
     );
   }
 
+  const auth = await requireUserId();
+  if ("response" in auth) return auth.response;
+  const { userId } = auth;
+
   const endpoint = req.nextUrl.searchParams.get("endpoint");
 
   if (endpoint === "__health") {
-    const ok = await checkConnection();
+    const ok = await checkConnection(userId);
     return NextResponse.json({ connected: ok });
   }
 
@@ -37,7 +42,7 @@ export async function GET(req: NextRequest) {
   });
 
   try {
-    const data = await fetchOpenBB(endpoint, params);
+    const data = await fetchOpenBB(endpoint, params, userId);
     return NextResponse.json(data);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
