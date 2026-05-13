@@ -50,18 +50,24 @@ export async function POST(req: NextRequest) {
   if ("response" in auth) return auth.response;
 
   let requestedConnectionId: string | undefined;
+  let supabaseAccessToken: string | undefined;
   const ct = req.headers.get("content-type") ?? "";
   if (ct.includes("application/json")) {
     try {
       const raw: unknown = await req.json();
-      if (
-        raw &&
-        typeof raw === "object" &&
-        "connectionId" in raw &&
-        typeof (raw as { connectionId: unknown }).connectionId === "string"
-      ) {
-        const id = (raw as { connectionId: string }).connectionId.trim();
-        if (id) requestedConnectionId = id;
+      if (raw && typeof raw === "object") {
+        const o = raw as {
+          connectionId?: unknown;
+          supabaseAccessToken?: unknown;
+        };
+        if (typeof o.connectionId === "string") {
+          const id = o.connectionId.trim();
+          if (id) requestedConnectionId = id;
+        }
+        if (typeof o.supabaseAccessToken === "string") {
+          const t = o.supabaseAccessToken.trim();
+          if (t) supabaseAccessToken = t;
+        }
       }
     } catch {
       /* empty or invalid body — fall back to default connection */
@@ -82,11 +88,12 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (!(await hasOpenclawRefreshToken(auth.userId))) {
+  const hasStoredRefresh = await hasOpenclawRefreshToken(auth.userId);
+  if (!hasStoredRefresh && !supabaseAccessToken) {
     return NextResponse.json(
       {
         error:
-          "Save your Supabase refresh token first (Dashboard → Settings → OpenClaw / wiki ingest). Wiki ingest is disabled until then.",
+          "Save your Supabase refresh token (Dashboard → Settings → OpenClaw / wiki ingest), or stay logged in so ingest can send a short-lived access token. Wiki ingest needs one of these.",
       },
       { status: 400 },
     );
@@ -106,7 +113,9 @@ export async function POST(req: NextRequest) {
   const userId = auth.userId;
 
   after(async () => {
-    await runWikiIngestJob(connectionId, userId);
+    await runWikiIngestJob(connectionId, userId, {
+      supabaseAccessToken,
+    });
   });
 
   return NextResponse.json(

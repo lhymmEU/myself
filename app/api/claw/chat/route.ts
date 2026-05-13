@@ -37,6 +37,8 @@ const bodySchema = z.object({
   connectionId: z.string().optional(),
   sessionId: z.string().optional(),
   bootstrap: z.boolean().optional(),
+  /** When wiki preamble is on: prefer passing the browser session access JWT (multi-script safe). */
+  supabaseAccessToken: z.string().optional(),
   /**
    * When true, prepend the wiki-maintainer preamble instead of (or in
    * addition to) the standard chat preamble. Used by the bento dashboard
@@ -113,12 +115,15 @@ export async function POST(req: NextRequest) {
 
   const parts: string[] = [];
   if (parsed.data.wikiPreamble === true) {
-    const refresh = await getOpenclawRefreshTokenPlain(auth.userId);
-    if (!refresh) {
+    const access = parsed.data.supabaseAccessToken?.trim();
+    const refresh = access
+      ? null
+      : await getOpenclawRefreshTokenPlain(auth.userId);
+    if (!access && !refresh) {
       return new Response(
         JSON.stringify({
           error:
-            "Save your Supabase refresh token under Dashboard → Settings → OpenClaw / wiki ingest before wiki maintainer chat.",
+            "Save your Supabase refresh token under Dashboard → Settings → OpenClaw / wiki ingest, or send supabaseAccessToken from the signed-in browser for wiki maintainer chat.",
         }),
         { status: 400, headers: { "Content-Type": "application/json" } },
       );
@@ -126,6 +131,7 @@ export async function POST(req: NextRequest) {
     const cred = formatWikiIngestSupabaseCredentialBlock({
       supabaseUrl: getSupabaseUrl(),
       supabaseAnonKey: getSupabaseAnonKey(),
+      accessToken: access ?? null,
       refreshToken: refresh,
     });
     parts.push(`${WIKI_PREAMBLE}\n\n${cred}`);

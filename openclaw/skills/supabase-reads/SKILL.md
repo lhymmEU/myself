@@ -15,33 +15,41 @@ The wiki-ingest job message includes delimited values **between these markers** 
 
 - `<<<MYSELF_SUPABASE_URL_START>>>` … `<<<MYSELF_SUPABASE_URL_END>>>` — project URL
 - `<<<MYSELF_SUPABASE_ANON_KEY_START>>>` … `<<<MYSELF_SUPABASE_ANON_KEY_END>>>` — anon / publishable key
-- `<<<MYSELF_SUPABASE_REFRESH_TOKEN_START>>>` … `<<<MYSELF_SUPABASE_REFRESH_TOKEN_END>>>` — user refresh token
+- **Preferred (multi-script safe):** `<<<MYSELF_SUPABASE_ACCESS_TOKEN_START>>>` … `<<<MYSELF_SUPABASE_ACCESS_TOKEN_END>>>` — short-lived user access JWT from the dashboard session
+- **Fallback:** `<<<MYSELF_SUPABASE_REFRESH_TOKEN_START>>>` … `<<<MYSELF_SUPABASE_REFRESH_TOKEN_END>>>` — user refresh token (Supabase **rotates** these on each successful `refreshSession`; do not run many scripts each calling `refreshSession` with the same value)
 
-**Before running any script**, export them (same names the scripts expect):
+**Before running any script**, export the variables your message includes:
 
 ```bash
 export SUPABASE_URL='<paste URL line>'
 export SUPABASE_ANON_KEY='<paste anon key line>'
-export SUPABASE_REFRESH_TOKEN='<paste refresh token line>'
+# Prefer when the access-token markers are present:
+export SUPABASE_ACCESS_TOKEN='<paste access token line>'
+# Only when there is no access token block (legacy / single-shot):
+# export SUPABASE_REFRESH_TOKEN='<paste refresh token line>'
 ```
 
 Never log these values, commit them to git, or paste them into unrelated services.
 
-In the dashboard, save the refresh token under **Settings → OpenClaw / wiki ingest** using **Get from session** (reads your Supabase auth cookie in this browser) or manual paste.
+When the dashboard sends an access token (normal **Wiki ingest** from a signed-in browser), you do not need a saved refresh token for that job. You can still save a refresh token under **Settings → OpenClaw / wiki ingest** as a fallback.
 
 ## How auth works
 
-Scripts call `refreshSession` with `SUPABASE_REFRESH_TOKEN` so PostgREST requests run as **your** user (`auth.uid()`). Never use `SUPABASE_SERVICE_ROLE_KEY` on the OpenClaw host.
+When **`SUPABASE_ACCESS_TOKEN`** is set, scripts attach it as the PostgREST `Authorization` bearer and **do not** call `refreshSession` — safe for many `npx tsx …` invocations in one ingest.
 
-## Repo layout
+When only **`SUPABASE_REFRESH_TOKEN`** is set, scripts call `refreshSession` once per process; that **invalidates** the refresh token value for reuse, so parallel or repeated script runs can fail with `Invalid Refresh Token: Already Used`.
 
-From the **repository root** (`myself` clone on the OpenClaw machine):
+Either path runs PostgREST as **your** user (`auth.uid()`). Never use `SUPABASE_SERVICE_ROLE_KEY` on the OpenClaw host.
+
+## Script location (OpenClaw host)
+
+Install the skill on the agent machine so TypeScript scripts live here:
 
 ```text
-openclaw/skills/supabase-reads/scripts/
+/root/skills/supabase-op/scripts/
 ```
 
-Run with `npx tsx` (Node 20+).
+(`SKILL.md` can sit alongside as `/root/skills/supabase-op/SKILL.md`.) Run scripts with `npx tsx` (Node 20+). Ensure `@supabase/supabase-js` is installed where Node resolves modules (for example a small `package.json` + `npm install` under `/root/skills/supabase-op/` or a parent directory).
 
 ## Scripts
 
@@ -61,9 +69,9 @@ Run with `npx tsx` (Node 20+).
 ### Example invocations
 
 ```bash
-npx tsx openclaw/skills/supabase-reads/scripts/read-raw-sources.ts
-npx tsx openclaw/skills/supabase-reads/scripts/read-wiki-page.ts syntheses/example
-npx tsx openclaw/skills/supabase-reads/scripts/publish-dashboard.ts /tmp/cards.json
+npx tsx /root/skills/supabase-op/scripts/read-raw-sources.ts
+npx tsx /root/skills/supabase-op/scripts/read-wiki-page.ts syntheses/example
+npx tsx /root/skills/supabase-op/scripts/publish-dashboard.ts /tmp/cards.json
 ```
 
 ## Ingest workflow (matches dashboard preamble)

@@ -1,6 +1,6 @@
 /**
  * Preamble used when the dashboard kicks off a wiki-maintainer session with
- * openclaw. Combined with `openclaw/skills/supabase-reads/SKILL.md` and the
+ * openclaw. Combined with `/root/skills/supabase-op/SKILL.md` and the
  * injected credential blocks, OpenClaw updates Supabase directly (no `/api/agent`).
  */
 export const WIKI_PREAMBLE = [
@@ -9,15 +9,12 @@ export const WIKI_PREAMBLE = [
   "This session is non-conversational: do the work, then stop. Do not chit-chat.",
   "",
   "## Where state lives",
-  "All data is in **Supabase Postgres** under the user's account (RLS). Use the repo skill **`openclaw/skills/supabase-reads/`** (SKILL.md + `scripts/`) with the credentials in this message.",
+  "All data is in **Supabase Postgres** under the user's account (RLS). Use the skill at **`/root/skills/supabase-op/`** (SKILL.md + `scripts/`) with the credentials in this message.",
   "",
   "## Credentials in this message",
-  "Between the `<<<MYSELF_SUPABASE_*_START>>>` / `<<<MYSELF_SUPABASE_*_END>>>` markers you will find three single-line values: project URL, anon key, and refresh token.",
-  "Export them before running scripts:",
-  "  export SUPABASE_URL='<url line>'",
-  "  export SUPABASE_ANON_KEY='<anon key line>'",
-  "  export SUPABASE_REFRESH_TOKEN='<refresh token line>'",
-  "Then run `npx tsx openclaw/skills/supabase-reads/scripts/<script>.ts` from the **repository root** of this app (the clone on this host). Never log these exports or paste them elsewhere.",
+  "Delimited markers below supply `SUPABASE_URL` and `SUPABASE_ANON_KEY`, plus **either** a short-lived **`SUPABASE_ACCESS_TOKEN`** (preferred — reuse it for every script in this job without calling `refreshSession` again) **or** `SUPABASE_REFRESH_TOKEN` (Supabase rotates refresh tokens; a token used in a successful refresh becomes invalid, so multiple scripts must not each refresh with the same value).",
+  "Export the provided variables before running scripts (see the exact `export` lines under the markers).",
+  "Then run `npx tsx /root/skills/supabase-op/scripts/<script>.ts`. Never log these exports or paste them elsewhere.",
   "",
   "## Three layers (Karpathy LLM-Wiki pattern)",
   "1) Raw layer — plans, marked items, wishes, skills. READ-ONLY via `read-raw-sources.ts`.",
@@ -58,29 +55,41 @@ const ANON_START = "<<<MYSELF_SUPABASE_ANON_KEY_START>>>";
 const ANON_END = "<<<MYSELF_SUPABASE_ANON_KEY_END>>>";
 const RT_START = "<<<MYSELF_SUPABASE_REFRESH_TOKEN_START>>>";
 const RT_END = "<<<MYSELF_SUPABASE_REFRESH_TOKEN_END>>>";
+const AT_START = "<<<MYSELF_SUPABASE_ACCESS_TOKEN_START>>>";
+const AT_END = "<<<MYSELF_SUPABASE_ACCESS_TOKEN_END>>>";
 
 export function formatWikiIngestSupabaseCredentialBlock(opts: {
   supabaseUrl: string;
   supabaseAnonKey: string;
-  refreshToken: string;
+  /** Prefer for multi-script jobs — avoids refresh-token rotation / "Already Used". */
+  accessToken?: string | null;
+  /** Legacy / fallback when no access token is available for this message. */
+  refreshToken?: string | null;
 }): string {
   const u = opts.supabaseUrl.trim();
   const a = opts.supabaseAnonKey.trim();
-  const r = opts.refreshToken.trim();
-  return [
-    "## Supabase credentials (this run only)",
-    URL_START,
-    u,
-    URL_END,
-    ANON_START,
-    a,
-    ANON_END,
-    RT_START,
-    r,
-    RT_END,
-    "",
-    "Export SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_REFRESH_TOKEN from the lines above, then follow SKILL.md under `openclaw/skills/supabase-reads/`.",
-  ].join("\n");
+  const access = opts.accessToken?.trim();
+  const refresh = opts.refreshToken?.trim();
+
+  const lines: string[] = ["## Supabase credentials (this run only)", URL_START, u, URL_END, ANON_START, a, ANON_END];
+
+  if (access) {
+    lines.push(AT_START, access, AT_END, "");
+    lines.push(
+      "Export `SUPABASE_URL` and `SUPABASE_ANON_KEY` from the URL/anon marker lines above, and `SUPABASE_ACCESS_TOKEN` from the access-token markers (single line each).",
+      "Follow SKILL.md under `/root/skills/supabase-op/`. Use the access token for every script in this job — do not call `refreshSession` per script.",
+    );
+  } else if (refresh) {
+    lines.push(RT_START, refresh, RT_END, "");
+    lines.push(
+      "Export `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_REFRESH_TOKEN` from the marker lines above (single line each).",
+      "Follow SKILL.md under `/root/skills/supabase-op/`. Refresh tokens rotate: if you see \"Already Used\", the job must use a fresh access token from the dashboard instead.",
+    );
+  } else {
+    lines.push("", "(No access or refresh token in this block — cannot authenticate.)");
+  }
+
+  return lines.join("\n");
 }
 
 /**
@@ -89,7 +98,8 @@ export function formatWikiIngestSupabaseCredentialBlock(opts: {
 export function buildWikiIngestMessage(opts: {
   supabaseUrl: string;
   supabaseAnonKey: string;
-  refreshToken: string;
+  accessToken?: string | null;
+  refreshToken?: string | null;
 }): string {
   const cred = formatWikiIngestSupabaseCredentialBlock(opts);
   return `${WIKI_PREAMBLE}\n\n${cred}\n\nExecute the full ingest → lint → publish workflow now (dismissals, raw sources, wiki updates, publish-dashboard, then the MYSELF_DASHBOARD_JSON stdout block).`;

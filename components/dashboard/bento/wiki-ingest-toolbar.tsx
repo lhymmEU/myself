@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { swrFetcher } from "@/lib/swr/config";
 import { useClawConnectionsList } from "@/lib/swr/hooks";
 import { CLAW_ACTIVE_CONNECTION_STORAGE_KEY } from "@/lib/claw/constants";
+import { createClient } from "@/lib/supabase/client";
 
 interface WikiIngestPayload {
   status: "idle" | "processing" | "done" | "error";
@@ -98,8 +99,17 @@ export function WikiIngestToolbar({
     !connError;
 
   const openclawReady = data?.openclawTokenConfigured === true;
+  const [supabaseSessionAccess, setSupabaseSessionAccess] = useState(false);
+  useEffect(() => {
+    void createClient()
+      .auth.getSession()
+      .then(({ data: d }) => {
+        setSupabaseSessionAccess(Boolean(d.session?.access_token));
+      });
+  }, []);
+  const ingestAuthReady = openclawReady || supabaseSessionAccess;
   const disableForMissingOpenclawToken =
-    !isLoading && data !== undefined && !openclawReady && !error;
+    !isLoading && data !== undefined && !ingestAuthReady && !error;
 
   /** Set after POST succeeds so we refresh the bento even when status stays `done` (new `updatedAt`). */
   const pendingInsightRefresh = useRef(false);
@@ -115,11 +125,20 @@ export function WikiIngestToolbar({
       return;
     }
     try {
+      const supabase = createClient();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const supabaseAccessToken = sessionData.session?.access_token;
+
       const res = await fetch("/api/dashboard/insights/wiki-ingest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ connectionId: effectiveConnectionId }),
+        body: JSON.stringify({
+          connectionId: effectiveConnectionId,
+          ...(supabaseAccessToken
+            ? { supabaseAccessToken }
+            : {}),
+        }),
       });
       const body = await res.json().catch(() => ({}));
       if (res.status === 409) {
@@ -245,8 +264,8 @@ export function WikiIngestToolbar({
                 ? "Could not load wiki ingest status. Use refresh or reload the page."
                 : connLoading
                   ? "Loading your Claw SSH connections…"
-                  : !openclawReady
-                    ? "Save your Supabase refresh token under Dashboard → Settings → OpenClaw / wiki ingest before running ingest."
+                  : !ingestAuthReady
+                    ? "Save your Supabase refresh token under Dashboard → Settings → OpenClaw / wiki ingest, or stay signed in here so ingest can send a short-lived access token to the agent."
                     : hasConnection
                       ? "Uses the same SSH connection as Claw chat when you have opened Claw in this browser (or your default). Runs openclaw on the remote host; up to ~15 min."
                       : "Configure a Claw SSH connection first (Dashboard → Claw)."}

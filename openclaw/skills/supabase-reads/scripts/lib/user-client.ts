@@ -10,7 +10,11 @@ function env(name: string, ...aliases: string[]): string {
 
 /**
  * Supabase client authenticated as the dashboard user (RLS uses auth.uid()).
- * Requires SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_REFRESH_TOKEN in the environment.
+ *
+ * Prefer `SUPABASE_ACCESS_TOKEN` when the wiki job injected a fresh access JWT
+ * (safe across many `tsx` script invocations). Otherwise falls back to
+ * `SUPABASE_REFRESH_TOKEN` + `refreshSession` — that rotates the refresh token,
+ * so it must not be called once per script with the same env token.
  */
 export async function createUserSupabase(): Promise<SupabaseClient> {
   const url = env(
@@ -22,9 +26,24 @@ export async function createUserSupabase(): Promise<SupabaseClient> {
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
   );
-  const refresh = env("SUPABASE_REFRESH_TOKEN");
 
-  const supabase = createClient(url, anon);
+  const access = process.env.SUPABASE_ACCESS_TOKEN?.trim();
+  if (access) {
+    return createClient(url, anon, {
+      global: {
+        headers: { Authorization: `Bearer ${access}` },
+      },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
+  }
+
+  const refresh = env("SUPABASE_REFRESH_TOKEN");
+  const supabase = createClient(url, anon, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
   const { data, error } = await supabase.auth.refreshSession({
     refresh_token: refresh,
   });

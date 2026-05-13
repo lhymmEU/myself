@@ -90,6 +90,7 @@ export async function upsertWikiIngestState(
 export async function runWikiIngestJob(
   connectionId: string,
   userId: string,
+  opts?: { supabaseAccessToken?: string | null },
 ): Promise<void> {
   const connCheck = await getClawConnection(connectionId, userId);
   if (!connCheck) {
@@ -100,18 +101,22 @@ export async function runWikiIngestJob(
     );
     return;
   }
-  const refresh = await getOpenclawRefreshTokenPlain(userId);
-  if (!refresh) {
+  const access = opts?.supabaseAccessToken?.trim() || null;
+  const refresh = access
+    ? null
+    : await getOpenclawRefreshTokenPlain(userId);
+  if (!access && !refresh) {
     await upsertWikiIngestState(
       userId,
       "error",
-      "OpenClaw refresh token missing. Save it under Dashboard → Settings → OpenClaw / wiki ingest.",
+      "OpenClaw Supabase session missing. Save a refresh token under Dashboard → Settings → OpenClaw / wiki ingest, or start ingest while logged in so the browser can send a session access token.",
     );
     return;
   }
   const message = buildWikiIngestMessage({
     supabaseUrl: getSupabaseUrl(),
     supabaseAnonKey: getSupabaseAnonKey(),
+    accessToken: access,
     refreshToken: refresh,
   });
   const command = buildOpenclawAgentCommand({
