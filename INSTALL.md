@@ -6,7 +6,7 @@ This guide is written for someone who has never opened a terminal before. It wal
 
 It works on **Windows 10/11** and **macOS**. Pick the section for your operating system in each step.
 
-> **Just want to try it without installing anything?** Open the hosted version at **https://lifedashboard.app** (or whichever URL is pinned in this repo's "About"), click **Sign in**, and use your email for a magic-link login. The hosted version doesn't have the live OpenBB market data, the embedded SSH terminal, or a built-in LLM — those are all in this local install. See [`README.md`](./README.md) for the side-by-side comparison.
+> **Just want to try it without installing anything?** Open the hosted version at **https://lifedashboard.app** (or whichever URL is pinned in this repo's "About"), click **Sign in**, and use your email for a magic-link login. The hosted version doesn't have the embedded SSH terminal or a built-in LLM — those are in this local install. See [`README.md`](./README.md) for the side-by-side comparison.
 
 ---
 
@@ -43,14 +43,6 @@ Git is what downloads the project from GitHub.
   ```
 
   If macOS pops up a window offering to install the "Command Line Developer Tools", click **Install** and wait for it to finish. That includes Git.
-
-### 1c. Python (optional — only if you want stock market data)
-
-The dashboard's **Personal Finance** features work without Python. Python is only needed if you also want **Market Intelligence** (live stock, crypto, and economic data via OpenBB).
-
-If you want it: install Python **3.9 to 3.12** from https://www.python.org/. On Windows, **check the box** that says "Add python.exe to PATH" on the first installer screen.
-
-You can skip this for now and add it later.
 
 ---
 
@@ -142,31 +134,7 @@ To stop the dashboard, return to the terminal and press **Ctrl+C** (on both Wind
 
 ---
 
-## Step 5. Optional — Live market data (OpenBB)
-
-Skip this section unless you specifically want the **Market Intelligence** view inside the Finance page.
-
-1. Install OpenBB. In a terminal type:
-
-   ```
-   pip3 install "openbb[all]"
-   ```
-
-   (On Windows you may need `pip` instead of `pip3`.)
-
-2. Open a **second** terminal and start the OpenBB API. Leave this terminal open while you use market data:
-
-   ```
-   openbb-api --host 127.0.0.1 --port 6900
-   ```
-
-3. Back in the dashboard, go to **Settings → OpenBB** and confirm the host/port match (`127.0.0.1` and `6900`).
-
-4. Some data providers require a free API key. Go to **Settings → Finance Data Providers**, click the registration link next to a provider (Alpha Vantage, FRED, Polygon, etc.), copy the key it gives you, and paste it into the matching field. Modules that use Yahoo Finance, SEC, and the Federal Reserve work without any key.
-
----
-
-## Step 6. Common errors and how to fix them
+## Step 5. Common errors and how to fix them
 
 ### "Cannot resolve module '@noble/hashes/scrypt'"
 

@@ -13,7 +13,6 @@ There are **two ways to use it**:
 | **Database** | Supabase Postgres (each user isolated) | SQLite file in `data/` |
 | **AI assistant (Claw)** | Connect your own cloud server or lobster | Built-in OpenRouter LLM |
 | **SSH terminal in Claw** | On — browser SSH for any cloud VM (no install) | On — direct SSH |
-| **Live market data (OpenBB)** | Off — local install only | On with OpenBB sidecar |
 | **Email (invoices)** | Resend (built-in) | Your SMTP (nodemailer) |
 | **Cost** | Free for the demo URL | Free, runs on your hardware |
 
@@ -34,7 +33,6 @@ There are **two ways to use it**:
 - Claw chat **once you pair a local lobster** (see below)
 
 ### What is **off by default** in the online version
-- **Live market data** (OpenBB sidecar binds to `127.0.0.1:6900` — local install only).
 - **Bundled LLM access** — the cloud build never ships an OpenRouter key. Connect your own server.
 - **Local file picker** in Claw (`/api/claw/read-local-file`).
 
@@ -82,7 +80,6 @@ The local install is the original single-user experience. Everything runs on you
 |----------|-----------|---------|----------|
 | **Node.js** | Yes | v20 or later | [nodejs.org](https://nodejs.org/) — pick **LTS** |
 | **Git** | Yes | any | [git-scm.com](https://git-scm.com/) |
-| **Python** | Optional | 3.9–3.12 | [python.org](https://www.python.org/) — only for OpenBB market data |
 
 ```bash
 node -v
@@ -117,15 +114,6 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). The SQLite databases (`data/dashboard.db`, `data/vault.db`) are created on first launch.
 
-### Step 4 — Live market data (optional)
-
-```bash
-pip3 install "openbb[all]"
-openbb-api --host 127.0.0.1 --port 6900   # leave this running
-```
-
-Then go to **Settings → OpenBB** in the app to confirm host/port. Some providers want a free API key — paste them under **Settings → Finance Data Providers**.
-
 For the full step-by-step install, see [`INSTALL.md`](./INSTALL.md). For a tour of every feature, see [`USER_MANUAL.md`](./USER_MANUAL.md).
 
 ---
@@ -135,7 +123,7 @@ For the full step-by-step install, see [`INSTALL.md`](./INSTALL.md). For a tour 
 **Data** always lives in **Supabase Postgres** (`DATABASE_URL`). **Auth** is always Supabase (email + password, magic link, OAuth — see login + Settings → Account security).
 
 ```
-DEPLOYMENT_MODE=local   # default — ssh2, nodemailer, OpenBB, OpenRouter LLM (optional)
+DEPLOYMENT_MODE=local   # default — ssh2, nodemailer, OpenRouter LLM (optional)
 DEPLOYMENT_MODE=cloud   # hosted-style — Resend, lobsterd relay, browser crypto vault, no bundled LLM
 ```
 
@@ -176,7 +164,6 @@ lib/modules/<feature>/
 - **shadcn/ui** + Tailwind CSS v4 + Lucide React
 - **Recharts**, **xterm.js**, **BlockNote**, **Excalidraw**
 - **OpenRouter** via OpenAI SDK (local mode only — cloud users connect their own lobster)
-- **OpenBB** Python sidecar for market intelligence (local mode only)
 - **Cloudflare Workers + Durable Objects** for the encrypted lobster relay (cloud mode)
 
 ## OpenClaw and Supabase

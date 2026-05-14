@@ -2,8 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
-import { OpenBBConfig } from "./openbb-config";
-import { FinanceProvidersConfig } from "./finance-providers-config";
 import { AppearanceConfig } from "./appearance-config";
 import { InvoiceConfig } from "./invoice-config";
 import { DataManagement } from "./data-management";
@@ -11,9 +9,6 @@ import { AccountSecurity } from "./account-security";
 import { OpenClawSupabaseSettings } from "./openclaw-supabase-settings";
 import { Loader2 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
-import { isLocal } from "@/lib/core/runtime";
-
-const SHOW_LOCAL_ONLY_SETTINGS = isLocal();
 
 export function SettingsForm() {
   const t = useT();
@@ -48,21 +43,18 @@ export function SettingsForm() {
         toast.error(t("settings.form.failedSave"));
       }
     },
-    [t]
+    [t],
   );
 
-  const handleUpdateSilent = useCallback(
-    async (key: string, value: string) => {
-      setSettings((prev) => ({ ...prev, [key]: value }));
-      const res = await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key, value }),
-      });
-      if (!res.ok) throw new Error("Failed to save");
-    },
-    []
-  );
+  const handleUpdateSilent = useCallback(async (key: string, value: string) => {
+    setSettings((prev) => ({ ...prev, [key]: value }));
+    const res = await fetch("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, value }),
+    });
+    if (!res.ok) throw new Error("Failed to save");
+  }, []);
 
   if (loading) {
     return (
@@ -78,14 +70,6 @@ export function SettingsForm() {
         <AccountSecurity />
       </div>
       <OpenClawSupabaseSettings />
-      {SHOW_LOCAL_ONLY_SETTINGS && (
-        <div className="md:col-span-2">
-          <FinanceProvidersConfig settings={settings} onUpdate={handleUpdate} />
-        </div>
-      )}
-      {SHOW_LOCAL_ONLY_SETTINGS && (
-        <OpenBBConfig settings={settings} onUpdate={handleUpdate} />
-      )}
       <AppearanceConfig settings={settings} onUpdate={handleUpdate} />
       <div className="md:col-span-2">
         <InvoiceConfig settings={settings} onUpdate={handleUpdateSilent} />

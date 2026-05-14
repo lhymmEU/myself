@@ -4,34 +4,11 @@ const LOCAL_ONLY_DEFAULTS: Record<string, string> = {
   openrouter_api_key: "",
   llm_model: "anthropic/claude-sonnet-4",
   llm_temperature: "0.7",
-  openbb_api_url: "http://127.0.0.1:6900",
-
-  fmp_api_key: "",
-  polygon_api_key: "",
-  benzinga_api_key: "",
-  fred_api_key: "",
-  nasdaq_api_key: "",
-  intrinio_api_key: "",
-  alpha_vantage_api_key: "",
-  biztoc_api_key: "",
-  tradier_api_key: "",
-  tradier_account_type: "sandbox",
-  tradingeconomics_api_key: "",
-  tiingo_token: "",
 };
 
 const COMMON_DEFAULTS: Record<string, string> = {
   theme: "system",
   accent_color: "#6366f1",
-  finance_default_mode: "market",
-  finance_enabled_modules: JSON.stringify([
-    "market-indices", "treasury-rates", "equity", "crypto",
-    "currency-snapshots", "economy-indicators", "news-world", "news-company",
-  ]),
-  finance_module_order: JSON.stringify([
-    "market-indices", "treasury-rates", "equity", "crypto",
-    "currency-snapshots", "economy-indicators", "news-world", "news-company",
-  ]),
 };
 
 export const SETTING_DEFAULTS: Record<string, string> = isLocal()

@@ -17,7 +17,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
 import { requireUserId } from "@/lib/core/route-helpers";
 import { listPendingDismissals } from "@/lib/modules/dashboard/insights-actions";
-import { ensureVault, appendLog } from "@/lib/modules/dashboard/wiki-vault";
 
 export async function POST(req: NextRequest) {
   bootApp();
@@ -32,12 +31,8 @@ export async function POST(req: NextRequest) {
     body = {};
   }
 
-  await ensureVault(userId);
   const reason = (body.reason ?? "sources-changed").toString().slice(0, 80);
   const module_ = (body.module ?? "unknown").toString().slice(0, 40);
-
-  const ts = new Date(Date.now()).toISOString().slice(0, 10);
-  await appendLog(userId, `## [${ts}] signal | ${module_} → ${reason}`);
 
   const pending = await listPendingDismissals(userId);
   return NextResponse.json({

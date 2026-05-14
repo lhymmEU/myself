@@ -9,7 +9,6 @@ import {
   unpinQuery,
   listPinnedQueries,
 } from "@/lib/modules/dashboard/insights-actions";
-import { readWikiPage } from "@/lib/modules/dashboard/wiki-vault";
 import type { CardVerb } from "@/lib/modules/dashboard/insights-types";
 
 const VERBS: readonly CardVerb[] = [
@@ -29,8 +28,8 @@ function isVerb(value: unknown): value is CardVerb {
 /**
  * GET /api/dashboard/insights
  *   → returns the active card list and the user's pinned queries.
- * GET /api/dashboard/insights?cardId=… &include=wiki
- *   → returns one card plus the markdown of its backing wiki page (if any).
+ * GET /api/dashboard/insights?cardId=…
+ *   → returns one card (backing wiki lives on the OpenClaw host only).
  */
 export async function GET(req: NextRequest) {
   bootApp();
@@ -39,7 +38,6 @@ export async function GET(req: NextRequest) {
   const { userId } = auth;
 
   const cardId = req.nextUrl.searchParams.get("cardId");
-  const include = req.nextUrl.searchParams.get("include");
 
   try {
     if (cardId) {
@@ -47,11 +45,7 @@ export async function GET(req: NextRequest) {
       if (!card) {
         return NextResponse.json({ error: "Card not found" }, { status: 404 });
       }
-      const result: Record<string, unknown> = { card };
-      if (include === "wiki" && card.wikiSlug) {
-        result.wiki = await readWikiPage(userId, card.wikiSlug);
-      }
-      return NextResponse.json(result);
+      return NextResponse.json({ card });
     }
 
     const [cards, pinned] = await Promise.all([

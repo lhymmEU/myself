@@ -1,35 +1,27 @@
 /**
- * Server-side handlers that record "sources changed" signals in the wiki log
- * (Supabase `wiki_log_entries`) so openclaw can prioritize re-ingest.
+ * Server-side handlers that react to dashboard data changes. Signals are
+ * lightweight: clients can use pending dismissal counts to decide when to
+ * nudge openclaw (wiki + card refresh on the agent host).
  */
 import type { EventHandler } from "@/lib/core/types";
 import { getUserId } from "@/lib/core/auth";
-import { ensureVault, appendLog } from "./wiki-vault";
-
-function nowIsoDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 let lastSignalAt = 0;
 const DEBOUNCE_MS = 5_000;
 
 async function logSignal(
-  module: string,
-  op: string,
-  summary: string,
+  _module: string,
+  _op: string,
+  _summary: string,
 ): Promise<void> {
   const now = Date.now();
   if (now - lastSignalAt < DEBOUNCE_MS) return;
   lastSignalAt = now;
   try {
-    const userId = await getUserId();
-    await ensureVault(userId);
-    await appendLog(
-      userId,
-      `## [${nowIsoDate()}] signal | ${module}:${op} | ${summary}`,
-    );
+    await getUserId();
+    /* Wiki log removed — vault lives on OpenClaw host only. */
   } catch {
-    /* no session or wiki unavailable */
+    /* no session */
   }
 }
 

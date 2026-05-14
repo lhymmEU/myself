@@ -13,6 +13,7 @@ const kinds =
         "wishlist_todos",
         "invoices",
         "mind_map",
+        "finance",
       ]);
 
 try {
@@ -97,6 +98,28 @@ if (kinds.has("mind_map")) {
   out.mind_map = {
     scenes: scenesRes.data ?? [],
     nodes: nodesRes.data ?? [],
+  };
+}
+
+if (kinds.has("finance")) {
+  const [accRes, txRes, budRes, invRes] = await Promise.all([
+    supabase.from("finance_accounts").select("*").order("created_at", { ascending: true }),
+    supabase
+      .from("finance_transactions")
+      .select("*")
+      .order("date", { ascending: false }),
+    supabase.from("finance_budgets").select("*").order("created_at", { ascending: true }),
+    supabase.from("finance_investments").select("*").order("created_at", { ascending: true }),
+  ]);
+  if (accRes.error) throw new Error(accRes.error.message);
+  if (txRes.error) throw new Error(txRes.error.message);
+  if (budRes.error) throw new Error(budRes.error.message);
+  if (invRes.error) throw new Error(invRes.error.message);
+  out.finance = {
+    accounts: accRes.data ?? [],
+    transactions: txRes.data ?? [],
+    budgets: budRes.data ?? [],
+    investments: invRes.data ?? [],
   };
 }
 

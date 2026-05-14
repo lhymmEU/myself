@@ -8,7 +8,7 @@
 
 - **思维导图** — 交互式的人生可视化地图。添加分类（健康、职业、财务等）和条目，自由拖拽、连接、组织。
 - **智能待办** — 根据思维导图自动生成，无需手动创建。
-- **财务终端** — 个人财务管理 + [OpenBB](https://github.com/OpenBB-finance/OpenBB) 驱动的市场数据。涵盖股票、加密货币、经济指标和财经新闻。
+- **财务终端** — 个人财务管理：账户、收支、预算与投资持仓。
 - **计划** — 富文本编辑器，用于记录想法、计划和笔记。
 - **Claw** — 内置 AI 助手，能理解你的面板数据。
 - **发票** — 轻松向客户开具发票。
@@ -27,7 +27,6 @@
 |------|-----------|---------|---------|
 | **Node.js** | 是 | v20 或更高 | [nodejs.org](https://nodejs.org/) — 选择 **LTS** 版本 |
 | **Git** | 是 | 任意版本 | [git-scm.com](https://git-scm.com/) |
-| **Python** | 可选 | 3.9–3.12 | [python.org](https://www.python.org/) — 仅在需要财务市场数据时安装 |
 
 **检查是否已安装：**
 
@@ -80,51 +79,6 @@ npm run dev
 
 在浏览器中打开 [http://localhost:3000](http://localhost:3000)。就这么简单 — 数据库会在首次启动时自动创建。
 
-### 第 5 步 — 财务市场数据（可选）
-
-财务页面有两个模式：**个人财务**（立即可用，无需配置）和 **市场资讯**（需要 OpenBB）。
-
-#### 5a. 安装 OpenBB
-
-```bash
-pip3 install "openbb[all]"
-```
-
-#### 5b. 启动 OpenBB API
-
-在一个 **单独的终端** 中运行：
-
-```bash
-openbb-api --host 127.0.0.1 --port 6900
-```
-
-使用财务功能时请保持此终端运行。
-
-#### 5c. 配置数据提供商 API 密钥
-
-部分市场数据模块需要数据提供商的免费 API 密钥。未配置密钥时，模块会显示提示信息，告知你需要哪个密钥。
-
-进入 **设置 → 财务数据提供商** 输入你的密钥。每个提供商的注册链接都直接显示在设置面板中。
-
-| 提供商 | 解锁的功能 | 有免费额度？ |
-|-------|-----------|------------|
-| [BizToc](https://api.biztoc.com) | 全球新闻 | 有 |
-| [Benzinga](https://www.benzinga.com/apis) | 公司新闻 | 有 |
-| [Financial Modeling Prep](https://financialmodelingprep.com) | ETF 数据、股票筛选器 | 有 |
-| [Tradier](https://developer.tradier.com) | 期权链 | 有（沙盒模式） |
-| [Polygon.io](https://polygon.io) | 额外市场数据 | 有 |
-| [Alpha Vantage](https://www.alphavantage.co) | 股票和外汇数据 | 有 |
-| [FRED](https://fred.stlouisfed.org/docs/api/api_key.html) | 美联储经济数据 | 有 |
-
-使用免费提供商（Yahoo Finance、SEC、美联储）的模块无需任何 API 密钥即可正常工作。
-
-#### 运行总览
-
-| 进程 | 命令 | 端口 | 用途 |
-|------|-----|------|------|
-| Next.js | `npm run dev` | 3000 | 面板主程序 |
-| OpenBB *（可选）* | `openbb-api --host 127.0.0.1 --port 6900` | 6900 | 市场数据 API |
-
 ---
 
 ## OpenClaw 与 Supabase
@@ -156,8 +110,7 @@ index.ts    — 模块注册
 - **shadcn/ui** + Tailwind CSS v4 + Lucide React
 - **SQLite**，基于 better-sqlite3 + Drizzle ORM（本地运行，零配置）
 - **OpenRouter** 提供 LLM 集成（OpenAI SDK）
-- **Recharts** 用于财务数据可视化
-- **[OpenBB](https://github.com/OpenBB-finance/OpenBB)** 提供市场数据（Python 侧车服务）
+- **Recharts** 用于图表
 
 ## 路线图
 

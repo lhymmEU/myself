@@ -5,7 +5,7 @@
  * - pinned_queries holds the user's saved questions.
  * - card_dismissals is the audit log of user verbs (confirm / contradict /
  *   expand / archive / dismiss / pin / unpin) — read by openclaw on the
- *   next ingest pass so user actions become first-class wiki maintenance.
+ *   next ingest pass so user actions fold into the file wiki on the agent host.
  */
 import { and, asc, desc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -16,7 +16,6 @@ import {
   pinnedQueries,
   cardDismissals,
 } from "@/lib/db/schema/postgres/insights";
-import { appendLog } from "./wiki-vault";
 import type {
   DashboardCard,
   PinnedQuery,
@@ -393,10 +392,6 @@ export async function pinQuery(
     createdAt: Date.now(),
   };
   await getDb().insert(pinnedQueries).values(row);
-  await appendLog(
-    userId,
-    `## [${formatDate(row.createdAt)}] query | ${question.replace(/\n+/g, " ")}`,
-  );
   return normalizePinned(row as typeof pinnedQueries.$inferSelect);
 }
 
@@ -432,8 +427,7 @@ export function formatDate(ts: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// Wiki-vault facade exposed from the same module so the API/tools can import
-// from one place.
+// Wiki-vault facade (no-op / null — wiki lives on OpenClaw host only).
 // ---------------------------------------------------------------------------
 
 export { readWikiPage, writeWikiPage, appendLog } from "./wiki-vault";

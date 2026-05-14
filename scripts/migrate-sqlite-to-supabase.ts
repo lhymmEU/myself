@@ -1,5 +1,5 @@
 /**
- * One-off migration: legacy SQLite `data/dashboard.db` (+ optional `data/wiki/`)
+ * One-off migration: legacy SQLite `data/dashboard.db` (+ optional vault)
  * → Supabase Postgres for a **single** target user.
  *
  * Environment:
@@ -7,11 +7,11 @@
  *   TARGET_USER_ID        — `auth.users.id` (uuid) to own imported rows.
  *   SQLITE_DASHBOARD      — path to dashboard.db (default: ./data/dashboard.db)
  *   SQLITE_VAULT          — optional path to vault.db (imports vault_meta + vault_secrets)
- *   WIKI_DIR              — optional path to wiki root (default: ./data/wiki) — imports *.md as wiki_pages
  *
  * Run: `TARGET_USER_ID=... DATABASE_URL=... tsx scripts/migrate-sqlite-to-supabase.ts`
  *
  * This script does **not** create the Supabase user. Sign up first, then copy your uuid.
+ * Wiki markdown is no longer imported into Postgres; copy `data/wiki/` to the OpenClaw host vault manually if needed.
  */
 import fs from "fs";
 import path from "path";
@@ -23,7 +23,6 @@ const SQLITE_DASH =
   process.env.SQLITE_DASHBOARD ?? path.join(process.cwd(), "data", "dashboard.db");
 const SQLITE_VAULT =
   process.env.SQLITE_VAULT ?? path.join(process.cwd(), "data", "vault.db");
-const WIKI_DIR = process.env.WIKI_DIR ?? path.join(process.cwd(), "data", "wiki");
 
 function requireEnv(): { sql: postgres.Sql; userId: string } {
   if (!DATABASE_URL) throw new Error("DATABASE_URL is required");
@@ -52,33 +51,6 @@ async function migrateSettings(
   return n;
 }
 
-async function migrateWikiDir(sql: postgres.Sql, userId: string): Promise<number> {
-  if (!fs.existsSync(WIKI_DIR)) return 0;
-  const files: { slug: string; markdown: string }[] = [];
-  const now = Date.now();
-  function walk(dir: string, rel: string) {
-    for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
-      const full = path.join(dir, ent.name);
-      const slug = rel ? `${rel}/${ent.name}` : ent.name;
-      if (ent.isDirectory()) {
-        walk(full, slug);
-      } else if (ent.name.endsWith(".md")) {
-        const slugKey = slug.replace(/\.md$/i, "");
-        files.push({ slug: slugKey, markdown: fs.readFileSync(full, "utf-8") });
-      }
-    }
-  }
-  walk(WIKI_DIR, "");
-  for (const f of files) {
-    await sql`
-      INSERT INTO wiki_pages (user_id, slug, markdown, updated_at)
-      VALUES (${userId}::uuid, ${f.slug}, ${f.markdown}, ${now})
-      ON CONFLICT (user_id, slug) DO UPDATE SET markdown = EXCLUDED.markdown, updated_at = EXCLUDED.updated_at
-    `;
-  }
-  return files.length;
-}
-
 async function main() {
   const { sql, userId } = requireEnv();
   /* eslint-disable @typescript-eslint/no-require-imports */
@@ -94,9 +66,6 @@ async function main() {
   console.log(`settings rows upserted: ${settingsCount}`);
 
   sqlite.close();
-
-  const wikiCount = await migrateWikiDir(sql, userId);
-  console.log(`wiki_pages upserted from disk: ${wikiCount}`);
 
   if (fs.existsSync(SQLITE_VAULT)) {
     const vdb = new Database(SQLITE_VAULT, { readonly: true });

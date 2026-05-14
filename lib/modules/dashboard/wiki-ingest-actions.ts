@@ -5,7 +5,6 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { wikiIngestState } from "@/lib/db/schema";
-import { extractDashboardJsonFromWikiIngestStdout } from "@/lib/claw/dashboard-stdout";
 import { executeCommand } from "@/lib/claw/ssh";
 import { buildOpenclawAgentCommand } from "@/lib/claw/openclaw-agent";
 import { buildWikiIngestMessage } from "@/lib/claw/wiki-preamble";
@@ -13,10 +12,7 @@ import { getClawConnection } from "@/lib/claw/db";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
 import { getOpenclawRefreshTokenPlain } from "@/lib/modules/dashboard/openclaw-token-actions";
 import { WIKI_MAINTAINER_SESSION_ID } from "@/lib/claw/constants";
-import {
-  importDashboardJsonString,
-  listActiveCards,
-} from "@/lib/modules/dashboard/insights-actions";
+import { listActiveCards } from "@/lib/modules/dashboard/insights-actions";
 
 export type WikiIngestStatusValue = "idle" | "processing" | "done" | "error";
 
@@ -144,28 +140,11 @@ export async function runWikiIngestJob(
       400,
     );
 
-    let ingestNotes = "";
-    const jsonRaw = extractDashboardJsonFromWikiIngestStdout(result.stdout);
-    if (jsonRaw) {
-      const imp = await importDashboardJsonString(userId, jsonRaw);
-      if (imp.ok) {
-        ingestNotes = ` Imported ${imp.count} card(s) from agent stdout handoff.`;
-      } else {
-        ingestNotes = ` Dashboard JSON in stdout but not imported (${imp.reason}).`;
-      }
-    } else {
-      ingestNotes =
-        " No <<<MYSELF_DASHBOARD_JSON_*>>> block found in openclaw stdout.";
-    }
-
     const cardCount = (await listActiveCards(userId)).length;
-    const okHint =
-      cardCount === 0
-        ? clampDetail(
-            `${stdoutBrief}${ingestNotes} The wiki-maintainer preamble requires a MYSELF_DASHBOARD_JSON block in stdout after tools complete.`,
-            1200,
-          )
-        : clampDetail(`${stdoutBrief}${ingestNotes}`, 1200);
+    const okHint = clampDetail(
+      `${stdoutBrief} Ingest finished. The dashboard reads **dashboard_cards** from Supabase via the app API; cards must be written with \`publish-dashboard.ts\` (not stdout). Active cards: ${cardCount}.`,
+      1200,
+    );
     await upsertWikiIngestState(userId, "done", okHint);
   } catch (err) {
     const msg =
