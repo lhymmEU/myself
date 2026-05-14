@@ -32,6 +32,32 @@ import type {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** Allowed ingest `slot` values → stable per-user card ids. */
+const DASHBOARD_CARD_SLOT_RE = /^[a-z0-9_]{1,48}$/;
+
+export function resolveDashboardCardId(
+  userId: string,
+  input: Pick<PublishCardInput, "id" | "slot">,
+): string {
+  const explicit = typeof input.id === "string" ? input.id.trim() : "";
+  if (explicit) return explicit;
+  const slot = typeof input.slot === "string" ? input.slot.trim() : "";
+  if (slot && DASHBOARD_CARD_SLOT_RE.test(slot)) {
+    return `${userId}_dash_${slot}`;
+  }
+  return nanoid();
+}
+
+function ingestSlotFromCardId(
+  userId: string,
+  cardId: string,
+): string | null {
+  const prefix = `${userId}_dash_`;
+  if (!cardId.startsWith(prefix)) return null;
+  const slot = cardId.slice(prefix.length);
+  return slot && DASHBOARD_CARD_SLOT_RE.test(slot) ? slot : null;
+}
+
 function parseSources(raw: string | null | undefined): SourceRef[] {
   if (!raw) return [];
   try {
@@ -48,6 +74,7 @@ function normalizeCard(
 ): DashboardCard {
   return {
     id: row.id,
+    ingestSlot: ingestSlotFromCardId(row.userId, row.id),
     kind: row.kind as CardKind,
     title: row.title,
     body: row.body,
@@ -179,7 +206,7 @@ export async function publishDashboard(
   const incomingIds = new Set<string>();
 
   for (const input of truncated) {
-    const id = input.id ?? nanoid();
+    const id = resolveDashboardCardId(userId, input);
     incomingIds.add(id);
     const sources = JSON.stringify(input.sources ?? []);
     const row = {

@@ -3,6 +3,21 @@ import { readFile } from "node:fs/promises";
 import { createUserSupabase } from "./lib/user-client";
 
 const CARD_LIMIT = 9;
+const DASHBOARD_CARD_SLOT_RE = /^[a-z0-9_]{1,48}$/;
+
+function resolveDashboardCardId(
+  userId: string,
+  c: Record<string, unknown>,
+): string {
+  const explicit = typeof c.id === "string" ? c.id.trim() : "";
+  if (explicit) return explicit;
+  const slot = typeof c.slot === "string" ? c.slot.trim() : "";
+  if (slot && DASHBOARD_CARD_SLOT_RE.test(slot)) {
+    return `${userId}_dash_${slot}`;
+  }
+  return newCardId();
+}
+
 const path = process.argv[2];
 if (!path) {
   console.error(
@@ -39,7 +54,7 @@ const now = Date.now();
 const incomingIds = new Set<string>();
 
 for (const c of cards as Record<string, unknown>[]) {
-  const id = (typeof c.id === "string" && c.id ? c.id : newCardId()) as string;
+  const id = resolveDashboardCardId(userId, c);
   incomingIds.add(id);
   const row = {
     id,

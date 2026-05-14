@@ -18,6 +18,11 @@ export interface SourceRef {
 
 export interface DashboardCard {
   id: string;
+  /**
+   * When the card id was derived from wiki ingest `slot` (`${userId}_dash_${slot}`),
+   * the slot name for layout and ordering. Otherwise null.
+   */
+  ingestSlot: string | null;
   kind: CardKind;
   title: string;
   body: string;
@@ -53,6 +58,8 @@ export interface CardDismissal {
 /** Shape openclaw passes to publishDashboard. */
 export interface PublishCardInput {
   id?: string;
+  /** Stable logical tile; server maps to `${userId}_dash_${slot}` when `id` is omitted. */
+  slot?: string;
   kind: CardKind;
   title: string;
   body?: string;

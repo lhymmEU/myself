@@ -12,9 +12,10 @@ import {
 import { cn } from "@/lib/utils";
 import {
   freshnessDecay,
-  bentoSpan,
+  bentoSpanForCard,
   confidenceLabel,
   kindLabel,
+  ingestSlotDisplayLabel,
 } from "./visual";
 import type {
   DashboardCard,
@@ -52,7 +53,8 @@ export function BentoCard({
   onClick,
   onHover,
 }: BentoCardProps) {
-  const span = bentoSpan(card.kind);
+  const span = bentoSpanForCard(card.kind, card.ingestSlot);
+  const slotLabel = ingestSlotDisplayLabel(card.ingestSlot);
   const Icon = KIND_ICON[card.kind] ?? Sparkles;
 
   const decay = freshnessDecay(card.freshness, 14, now);
@@ -151,9 +153,18 @@ export function BentoCard({
       </span>
 
       <header className="px-5 pt-4 pb-2 flex items-center gap-2">
-        <Icon className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-          {kindLabel(card.kind)}
+        <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" aria-hidden />
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground min-w-0">
+          {slotLabel ? (
+            <span className="flex flex-col gap-0.5 leading-tight">
+              <span>{slotLabel}</span>
+              <span className="text-[9px] font-normal opacity-80 normal-case tracking-normal">
+                {kindLabel(card.kind)}
+              </span>
+            </span>
+          ) : (
+            kindLabel(card.kind)
+          )}
         </span>
         <span className="ml-auto pr-7 flex items-center gap-1.5 text-muted-foreground">
           {confidenceDot}

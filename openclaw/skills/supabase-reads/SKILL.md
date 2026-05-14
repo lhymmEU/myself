@@ -2,9 +2,10 @@
 name: myself-supabase-wiki
 description: >-
   Supabase-backed wiki ingest for OpenClaw: read/write wiki_pages, wiki_log_entries,
-  dashboard_cards, card_dismissals, and raw sources (plans, marked, wishes, skills)
-  using supabase-js as the authenticated user (RLS). Use with credentials supplied
-  in the wiki-ingest message (delimited blocks), exported to env for the scripts below.
+  dashboard_cards, card_dismissals, and raw sources (plans, marked, wishes, skills,
+  todos, wishlist todos, invoices, mind map) using supabase-js as the authenticated
+  user (RLS). Use with credentials supplied in the wiki-ingest message (delimited
+  blocks), exported to env for the scripts below.
 ---
 
 # Myself — Supabase wiki ingest (OpenClaw)
@@ -55,7 +56,7 @@ Install the skill on the agent machine so TypeScript scripts live here:
 
 | Script | Purpose |
 |--------|---------|
-| `read-raw-sources.ts` | JSON to stdout: `plans`, `marked`, `wishes`, `skills` (optional arg: comma kinds or `all`) |
+| `read-raw-sources.ts` `[kinds]` | JSON to stdout. **No arg or `all`:** full bundle (`plans`, `marked`, `wishes`, `skills`, `todos`, `wishlist_todos`, `invoices`, `mind_map`). Otherwise comma-separated subset (e.g. `plans,wishes`). `invoices` returns `{ invoices, clients }`; `mind_map` returns `{ scenes, nodes }` (Postgres: `mind_map_scenes`, `life_nodes`). |
 | `read-wiki-page.ts` `<slug>` | Markdown body to stdout |
 | `write-wiki-page.ts` `<slug>` `<file.md>` | Upsert wiki page |
 | `append-wiki-log.ts` `<text>` | Append one log line |
@@ -64,12 +65,13 @@ Install the skill on the agent machine so TypeScript scripts live here:
 | `list-wiki-slugs.ts` | JSON array of slugs |
 | `dismissals-pending.ts` | JSON `{ dismissals: [...] }` where `ingested === 0` |
 | `dismissals-mark-ingested.ts` `<id>…` | Mark dismissal rows ingested |
-| `publish-dashboard.ts` `<cards.json>` | JSON file must be `{ "cards": [ … ] }` (max 9 cards); archives active cards not in the new set |
+| `publish-dashboard.ts` `<cards.json>` | JSON `{ "cards": [ … ] }` (max 9). Upserts by `id` or by **`slot`** (stable per user). Archives active rows not in the payload. |
 
 ### Example invocations
 
 ```bash
 npx tsx /root/skills/supabase-op/scripts/read-raw-sources.ts
+npx tsx /root/skills/supabase-op/scripts/read-raw-sources.ts plans,wishes
 npx tsx /root/skills/supabase-op/scripts/read-wiki-page.ts syntheses/example
 npx tsx /root/skills/supabase-op/scripts/publish-dashboard.ts /tmp/cards.json
 ```
@@ -77,16 +79,35 @@ npx tsx /root/skills/supabase-op/scripts/publish-dashboard.ts /tmp/cards.json
 ## Ingest workflow (matches dashboard preamble)
 
 1. `dismissals-pending.ts` → fold user verbs into wiki → `dismissals-mark-ingested.ts`
-2. `read-raw-sources.ts` → decide stale pages
+2. **`read-raw-sources.ts`** (no args = full raw bundle) → you must reason from **all** `user_wishes` rows (`learn`, `place`, `goal`) plus activity: `plan_pages`, `marked_*`, `user_skills`, `todos`, `wishlist_todos`, `invoices`, `mind_map` — then decide stale/missing wiki syntheses.
 3. Read/write wiki pages + `append-wiki-log.ts`
-4. Build card list (≤9, exactly one `heartbeat`, every card has `wikiSlug`)
+4. Build **≤9** dashboard cards (exactly one `kind: "heartbeat"`). **Every card** must include:
+   - `wikiSlug` (non-null string)
+   - **`slot`**: lowercase `[a-z0-9_]{1,48}` — **required** unless you intentionally reuse a legacy explicit `id`. Slots map server-side to stable row ids so each ingest **updates** the same tiles instead of minting random ids.
 5. Write `/tmp/cards.json` then `publish-dashboard.ts /tmp/cards.json`
-6. Print the **stdout dashboard JSON block** exactly as instructed in the main wiki-ingest message (`<<<MYSELF_DASHBOARD_JSON_*>>>`)
+6. Print the **stdout dashboard JSON block** (`<<<MYSELF_DASHBOARD_JSON_*>>>`) with the **same** `cards` array as publish.
+
+### Canonical `slot` names (eagle-view set)
+
+Use these first so the UI can order and label tiles:
+
+| `slot` | Role | Typical `kind` |
+|--------|------|----------------|
+| `wishes_compass` | Wishes-first summary: all categories, where attention is going | `synthesis` |
+| `alignment` | Evidence whether activity (plans, marked, todos, invoices, mind map, skills) **matches or drifts** from stated wishes | `synthesis` or `lint` |
+| `keep_doing` | 2–5 bullets: behaviours to **continue** (each tied to sources in `sources` with clear `label`) | `synthesis` |
+| `stop_doing` | 2–5 bullets: behaviours to **pull back** (evidence-backed, non-judgmental tone) | `synthesis` |
+| `heartbeat` | Single pulse card: cadence, freshness, “what changed this ingest” | `heartbeat` |
+| `signals` | Optional: notable clips, skills, or queries not covered above | `synthesis`, `gap`, or `query` |
+
+You may add more slots (same pattern) for remaining tiles; prefer reusing stable slots over inventing one-off ids.
 
 ## Tables (snake_case in Postgres)
 
 - `wiki_pages`: `user_id`, `slug`, `markdown`, `updated_at`
 - `wiki_log_entries`: `id`, `user_id`, `body`, `created_at`
-- `dashboard_cards`: see app `PublishCardInput` / `publishDashboard`
+- `dashboard_cards`: see app `PublishCardInput` / `publishDashboard` — include `slot` for stable upserts
 - `card_dismissals`: `id`, `user_id`, `card_id`, `verb`, `payload_json`, `created_at`, `ingested`
-- Raw: `plan_pages`, `marked_collections`, `marked_items`, `user_wishes`, `user_skills`
+- Raw: `plan_pages`, `marked_collections`, `marked_items`, `user_wishes`, `user_skills`, `todos`, `wishlist_todos`, `invoices`, `invoice_clients`, `mind_map_scenes`, `life_nodes`
+
+**RLS:** Ingest only reads raw tables the app already exposes to `authenticated`. If a query returns “permission denied” or empty when the UI shows data, fix policies in Supabase — do not escalate to service role.

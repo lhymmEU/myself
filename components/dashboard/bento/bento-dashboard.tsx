@@ -12,6 +12,7 @@ import { GoalPinBar } from "./goal-pin-bar";
 import { IngestDropzone } from "./ingest-dropzone";
 import { AskTheWiki } from "./ask-the-wiki";
 import { WikiIngestToolbar } from "./wiki-ingest-toolbar";
+import { sortDashboardCardsForBento } from "./visual";
 import type { DashboardCard, PinnedQuery } from "./types";
 
 interface InsightsResponse {
@@ -54,23 +55,18 @@ export function BentoDashboard() {
     setHoveredEvidence(ids);
   };
 
-  const visibleCards = useMemo(() => {
-    if (!pinnedGoalId) return cards;
-    // Pin a goal: cards belonging to that goal go first; others fade.
-    return [...cards].sort((a, b) => {
-      const aMatch = a.pinnedGoalId === pinnedGoalId ? 0 : 1;
-      const bMatch = b.pinnedGoalId === pinnedGoalId ? 0 : 1;
-      if (aMatch !== bMatch) return aMatch - bMatch;
-      return b.priority - a.priority;
-    });
-  }, [cards, pinnedGoalId]);
+  const visibleCards = useMemo(
+    () => sortDashboardCardsForBento(cards, pinnedGoalId),
+    [cards, pinnedGoalId],
+  );
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-wrap items-center gap-3 border-b border-border px-6 py-3 sm:px-8">
         <Sparkles className="h-4 w-4 text-muted-foreground shrink-0" />
         <p className="text-sm text-muted-foreground min-w-0 flex-1">
-          Your wiki, made visible.
+          Eagle view of your wishes, wiki, and recent activity — refreshed each
+          wiki ingest.
         </p>
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           <WikiIngestToolbar
