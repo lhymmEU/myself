@@ -30,6 +30,7 @@ import {
   freshnessDecay,
   kindLabel,
 } from "./visual";
+import { GenerativeCardBody } from "./generative-card-body";
 import type { CardVerb, DashboardCard, SourceRef } from "./types";
 
 interface Props {
@@ -125,9 +126,13 @@ export function CardDetailSheet({
               <SheetTitle className="text-lg leading-snug pr-6">
                 {card.title}
               </SheetTitle>
-              {card.body && (
-                <SheetDescription className="whitespace-pre-line">
-                  {card.body}
+              {(card.presentation?.blocks?.length ||
+                card.richMarkdown ||
+                card.body) && (
+                <SheetDescription asChild>
+                  <div className="text-muted-foreground">
+                    <GenerativeCardBody card={card} mode="sheet" />
+                  </div>
                 </SheetDescription>
               )}
             </SheetHeader>

@@ -1,18 +1,14 @@
 /**
- * DB-backed actions for the bento dashboard insights layer.
- *
- * - dashboard_cards is the cache openclaw writes via publishDashboard().
- * - pinned_queries holds the user's saved questions.
- * - card_dismissals is the audit log of user verbs (confirm / contradict /
- *   expand / archive / dismiss / pin / unpin) — read by openclaw on the
- *   next ingest pass so user actions fold into the file wiki on the agent host.
+ * Dashboard insights: generative cards from wiki ingest JSON (stored on
+ * `wiki_ingest_state.generative_cards_json`), pinned queries, and card
+ * dismissals for the agent. Cards are no longer stored in `dashboard_cards`.
  */
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { getDb } from "@/lib/db";
 import { LOCAL_USER_ID } from "@/lib/core/runtime";
 import {
-  dashboardCards,
+  wikiIngestState,
   pinnedQueries,
   cardDismissals,
 } from "@/lib/db/schema/postgres/insights";
@@ -26,6 +22,8 @@ import type {
   CardKind,
   CardVerb,
 } from "./insights-types";
+import { coerceGenerativePresentation } from "./coerce-generative-presentation";
+import { coerceCardsJsonBlock } from "@/lib/claw/dashboard-cards-stdout";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -33,6 +31,51 @@ import type {
 
 /** Allowed ingest `slot` values → stable per-user card ids. */
 const DASHBOARD_CARD_SLOT_RE = /^[a-z0-9_]{1,48}$/;
+
+const CARD_KINDS: ReadonlySet<CardKind> = new Set([
+  "synthesis",
+  "lint",
+  "gap",
+  "query",
+  "heartbeat",
+]);
+
+const HIDE_CARD_VERBS: readonly CardVerb[] = ["archive", "dismiss"];
+
+/** When the model omits or mis-sets `kind`, infer from canonical ingest `slot`. */
+function inferKindFromSlot(slot: string): CardKind | null {
+  if (slot === "heartbeat") return "heartbeat";
+  if (slot === "deviating") return "lint";
+  if (
+    slot === "current_status" ||
+    slot === "going_right" ||
+    slot === "suggestions" ||
+    slot === "wishes_compass" ||
+    slot === "alignment" ||
+    slot === "keep_doing" ||
+    slot === "stop_doing" ||
+    slot === "signals"
+  ) {
+    return "synthesis";
+  }
+  return null;
+}
+
+function defaultTitleForSlot(slot: string): string {
+  const map: Record<string, string> = {
+    current_status: "Current status",
+    going_right: "What's going right",
+    deviating: "What's deviating",
+    suggestions: "Suggestions",
+    heartbeat: "Heartbeat",
+    wishes_compass: "Wishes compass",
+    alignment: "Alignment",
+    keep_doing: "Keep doing",
+    stop_doing: "Stop doing",
+    signals: "Signals",
+  };
+  return map[slot] || slot.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 export function resolveDashboardCardId(
   userId: string,
@@ -57,37 +100,123 @@ function ingestSlotFromCardId(
   return slot && DASHBOARD_CARD_SLOT_RE.test(slot) ? slot : null;
 }
 
-function parseSources(raw: string | null | undefined): SourceRef[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (Array.isArray(parsed)) return parsed as SourceRef[];
-    return [];
-  } catch {
-    return [];
-  }
+function parseSourcesFromUnknown(s: unknown): SourceRef[] {
+  if (!Array.isArray(s)) return [];
+  return s as SourceRef[];
 }
 
-function normalizeCard(
-  row: typeof dashboardCards.$inferSelect,
-): DashboardCard {
+function coerceConfidence(v: unknown): CardConfidence {
+  if (v === "strong" || v === "thin" || v === "contradicted") return v;
+  return "thin";
+}
+
+function looseObjectToPublishInput(o: Record<string, unknown>): PublishCardInput | null {
+  const slot = typeof o.slot === "string" ? o.slot.trim() : "";
+  let kindStr = typeof o.kind === "string" ? o.kind.trim().toLowerCase() : "";
+  if (kindStr && !CARD_KINDS.has(kindStr as CardKind)) {
+    kindStr = "";
+  }
+  if (!kindStr) {
+    const inferred = slot ? inferKindFromSlot(slot) : null;
+    if (inferred) kindStr = inferred;
+  }
+  if (!kindStr || !CARD_KINDS.has(kindStr as CardKind)) return null;
+
+  const titleRaw = typeof o.title === "string" ? o.title.trim() : "";
+  const title =
+    titleRaw || (slot ? defaultTitleForSlot(slot) : "") || "Insight";
+
   return {
-    id: row.id,
-    ingestSlot: ingestSlotFromCardId(row.userId, row.id),
-    kind: row.kind as CardKind,
-    title: row.title,
-    body: row.body,
-    hue: Number(row.hue),
-    freshness: Number(row.freshness),
-    confidence: row.confidence as CardConfidence,
-    sources: parseSources(row.sourcesJson),
-    wikiSlug: row.wikiSlug ?? null,
-    pinnedGoalId: row.pinnedGoalId ?? null,
-    priority: Number(row.priority),
-    state: row.state as DashboardCard["state"],
-    createdAt: Number(row.createdAt),
-    updatedAt: Number(row.updatedAt),
+    id: typeof o.id === "string" ? o.id : undefined,
+    slot: slot || undefined,
+    kind: kindStr as CardKind,
+    title,
+    body: typeof o.body === "string" ? o.body : undefined,
+    hue: typeof o.hue === "number" ? o.hue : undefined,
+    freshness: typeof o.freshness === "number" ? o.freshness : undefined,
+    confidence: coerceConfidence(o.confidence),
+    sources: parseSourcesFromUnknown(o.sources),
+    wikiSlug:
+      o.wikiSlug === null || typeof o.wikiSlug === "string"
+        ? (o.wikiSlug as string | null)
+        : undefined,
+    pinnedGoalId:
+      o.pinnedGoalId === null || typeof o.pinnedGoalId === "string"
+        ? (o.pinnedGoalId as string | null)
+        : undefined,
+    priority: typeof o.priority === "number" ? o.priority : undefined,
+    presentation: coerceGenerativePresentation(o.presentation),
+    richMarkdown: o.richMarkdown === true,
   };
+}
+
+function publishInputToDashboardCard(
+  userId: string,
+  input: PublishCardInput,
+  materializeAt: number,
+): DashboardCard {
+  const id = resolveDashboardCardId(userId, input);
+  const now = materializeAt;
+  return {
+    id,
+    ingestSlot: ingestSlotFromCardId(userId, id),
+    kind: input.kind,
+    title: input.title,
+    body: input.body ?? "",
+    hue: input.hue ?? 210,
+    freshness: input.freshness ?? now,
+    confidence: input.confidence ?? "thin",
+    sources: input.sources ?? [],
+    wikiSlug: input.wikiSlug ?? null,
+    pinnedGoalId: input.pinnedGoalId ?? null,
+    priority: input.priority ?? 0,
+    state: "active",
+    createdAt: now,
+    updatedAt: now,
+    presentation: input.presentation ?? null,
+    richMarkdown: input.richMarkdown === true,
+  };
+}
+
+async function listHiddenCardIds(userId: string): Promise<Set<string>> {
+  const rows = await getDb()
+    .select({ cardId: cardDismissals.cardId })
+    .from(cardDismissals)
+    .where(
+      and(
+        eq(cardDismissals.userId, userId),
+        inArray(cardDismissals.verb, HIDE_CARD_VERBS),
+      ),
+    );
+  return new Set(rows.map((r) => r.cardId));
+}
+
+async function persistGenerativeCardsPayload(
+  userId: string,
+  payload: { cards: PublishCardInput[] },
+): Promise<void> {
+  const json = JSON.stringify(payload);
+  const db = getDb();
+  const existing = await db
+    .select()
+    .from(wikiIngestState)
+    .where(eq(wikiIngestState.userId, userId))
+    .limit(1);
+
+  if (existing[0]) {
+    await db
+      .update(wikiIngestState)
+      .set({ generativeCardsJson: json })
+      .where(eq(wikiIngestState.userId, userId));
+  } else {
+    await db.insert(wikiIngestState).values({
+      userId,
+      status: "idle",
+      detail: "",
+      generativeCardsJson: json,
+      updatedAt: Date.now(),
+    });
+  }
 }
 
 function normalizePinned(
@@ -107,7 +236,9 @@ function normalizeDismissal(
 ): CardDismissal {
   let payload: Record<string, unknown> | null = null;
   try {
-    payload = row.payloadJson ? (JSON.parse(row.payloadJson) as Record<string, unknown>) : null;
+    payload = row.payloadJson
+      ? (JSON.parse(row.payloadJson) as Record<string, unknown>)
+      : null;
   } catch {
     payload = null;
   }
@@ -125,29 +256,48 @@ function normalizeDismissal(
 // Read
 // ---------------------------------------------------------------------------
 
+const CARD_LIMIT = 5;
+
 export async function listActiveCards(
   userId: string = LOCAL_USER_ID,
 ): Promise<DashboardCard[]> {
+  const hidden = await listHiddenCardIds(userId);
   const rows = await getDb()
-    .select()
-    .from(dashboardCards)
-    .where(
-      and(eq(dashboardCards.userId, userId), eq(dashboardCards.state, "active")),
-    )
-    .orderBy(desc(dashboardCards.priority), desc(dashboardCards.freshness));
-  return rows.map(normalizeCard);
+    .select({ g: wikiIngestState.generativeCardsJson })
+    .from(wikiIngestState)
+    .where(eq(wikiIngestState.userId, userId))
+    .limit(1);
+  const raw = rows[0]?.g;
+  if (!raw) return [];
+
+  let parsed: { cards?: unknown[] };
+  try {
+    parsed = JSON.parse(raw) as { cards?: unknown[] };
+  } catch {
+    return [];
+  }
+
+  const materializeAt = Date.now();
+  const inputs: PublishCardInput[] = [];
+  for (const item of parsed.cards ?? []) {
+    if (!item || typeof item !== "object") continue;
+    const conv = looseObjectToPublishInput(item as Record<string, unknown>);
+    if (conv) inputs.push(conv);
+    if (inputs.length >= CARD_LIMIT) break;
+  }
+
+  return inputs
+    .map((input) => publishInputToDashboardCard(userId, input, materializeAt))
+    .filter((c) => !hidden.has(c.id))
+    .sort((a, b) => b.priority - a.priority || b.freshness - a.freshness);
 }
 
 export async function getCard(
   id: string,
   userId: string = LOCAL_USER_ID,
 ): Promise<DashboardCard | null> {
-  const rows = await getDb()
-    .select()
-    .from(dashboardCards)
-    .where(and(eq(dashboardCards.id, id), eq(dashboardCards.userId, userId)))
-    .limit(1);
-  return rows[0] ? normalizeCard(rows[0]) : null;
+  const cards = await listActiveCards(userId);
+  return cards.find((c) => c.id === id) ?? null;
 }
 
 export async function listPinnedQueries(
@@ -178,115 +328,25 @@ export async function listPendingDismissals(
 // Write
 // ---------------------------------------------------------------------------
 
-const CARD_LIMIT = 9;
-
 /**
- * Bulk replace the active card set. openclaw calls this after every ingest
- * or lint pass. We:
- *   - Cap to CARD_LIMIT cards.
- *   - Soft-delete (state="archived") any active cards not present in the new
- *     set so the UI stops showing them but the dismissal/lint history stays.
- * Wiki/dashboard files are maintained by openclaw on its host only — no local
- * dashboard.json mirror here.
+ * Replace the active generative card set (from wiki ingest / smoke tests).
+ * Empty input is a no-op so accidental clears never wipe the last good set.
  */
 export async function publishDashboard(
   cards: PublishCardInput[],
   userId: string = LOCAL_USER_ID,
 ): Promise<{ count: number }> {
   const truncated = cards.slice(0, CARD_LIMIT);
-  /** Empty publish must not archive existing tiles (openclaw may exit 0 without calling tools). */
   if (truncated.length === 0) {
     return { count: 0 };
   }
-
-  const now = Date.now();
-  const db = getDb();
-
-  const incomingIds = new Set<string>();
-
-  for (const input of truncated) {
-    const id = resolveDashboardCardId(userId, input);
-    incomingIds.add(id);
-    const sources = JSON.stringify(input.sources ?? []);
-    const row = {
-      id,
-      userId,
-      kind: input.kind,
-      title: input.title,
-      body: input.body ?? "",
-      hue: input.hue ?? 210,
-      freshness: input.freshness ?? now,
-      confidence: input.confidence ?? "thin",
-      sourcesJson: sources,
-      wikiSlug: input.wikiSlug ?? null,
-      pinnedGoalId: input.pinnedGoalId ?? null,
-      priority: input.priority ?? 0,
-      state: "active" as const,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const existing = await db
-      .select()
-      .from(dashboardCards)
-      .where(and(eq(dashboardCards.id, id), eq(dashboardCards.userId, userId)))
-      .limit(1);
-
-    if (existing[0]) {
-      await db
-        .update(dashboardCards)
-        .set({
-          kind: row.kind,
-          title: row.title,
-          body: row.body,
-          hue: row.hue,
-          freshness: row.freshness,
-          confidence: row.confidence,
-          sourcesJson: row.sourcesJson,
-          wikiSlug: row.wikiSlug,
-          pinnedGoalId: row.pinnedGoalId,
-          priority: row.priority,
-          state: "active",
-          updatedAt: now,
-        })
-        .where(
-          and(
-            eq(dashboardCards.id, id),
-            eq(dashboardCards.userId, userId),
-          ),
-        );
-    } else {
-      await db.insert(dashboardCards).values(row);
-    }
-  }
-
-  // Soft-archive cards that aren't in the new set.
-  const stale = await db
-    .select()
-    .from(dashboardCards)
-    .where(
-      and(eq(dashboardCards.userId, userId), eq(dashboardCards.state, "active")),
-    );
-  for (const row of stale) {
-    if (!incomingIds.has(row.id)) {
-      await db
-        .update(dashboardCards)
-        .set({ state: "archived", updatedAt: now })
-        .where(
-          and(
-            eq(dashboardCards.id, row.id),
-            eq(dashboardCards.userId, userId),
-          ),
-        );
-    }
-  }
-
+  await persistGenerativeCardsPayload(userId, { cards: truncated });
   return { count: truncated.length };
 }
 
 /**
- * Parsed dashboard JSON payload (e.g. from agent stdout handoff) applied via
- * {@link publishDashboard}.
+ * Parsed dashboard JSON (e.g. remote `cards.json` or smoke payloads) persisted to
+ * {@link wikiIngestState.generativeCardsJson}.
  */
 export async function importDashboardJsonString(
   userId: string,
@@ -294,11 +354,20 @@ export async function importDashboardJsonString(
 ): Promise<
   { ok: true; count: number } | { ok: false; reason: string }
 > {
+  const trimmed = raw.replace(/^\uFEFF/, "").trim();
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw) as unknown;
+    parsed = JSON.parse(trimmed) as unknown;
   } catch {
-    return { ok: false, reason: "invalid JSON" };
+    const coerced = coerceCardsJsonBlock(trimmed);
+    if (!coerced) {
+      return { ok: false, reason: "invalid JSON" };
+    }
+    try {
+      parsed = JSON.parse(coerced) as unknown;
+    } catch {
+      return { ok: false, reason: "invalid JSON" };
+    }
   }
   if (!parsed || typeof parsed !== "object") {
     return { ok: false, reason: "expected a JSON object" };
@@ -307,28 +376,25 @@ export async function importDashboardJsonString(
   if (!Array.isArray(cards) || cards.length === 0) {
     return { ok: false, reason: "no cards in file" };
   }
+  const inputs: PublishCardInput[] = [];
+  for (const item of cards) {
+    if (!item || typeof item !== "object") continue;
+    const conv = looseObjectToPublishInput(item as Record<string, unknown>);
+    if (conv) inputs.push(conv);
+    if (inputs.length >= CARD_LIMIT) break;
+  }
+  if (inputs.length === 0) {
+    return { ok: false, reason: "no valid cards" };
+  }
   try {
-    const result = await publishDashboard(cards as PublishCardInput[], userId);
-    if (result.count === 0) {
-      return { ok: false, reason: "no cards applied" };
-    }
-    return { ok: true, count: result.count };
+    await persistGenerativeCardsPayload(userId, { cards: inputs });
+    return { ok: true, count: inputs.length };
   } catch (e) {
     return {
       ok: false,
       reason: e instanceof Error ? e.message : "publish failed",
     };
   }
-}
-
-export async function archiveCard(
-  id: string,
-  userId: string = LOCAL_USER_ID,
-): Promise<void> {
-  await getDb()
-    .update(dashboardCards)
-    .set({ state: "archived", updatedAt: Date.now() })
-    .where(and(eq(dashboardCards.id, id), eq(dashboardCards.userId, userId)));
 }
 
 export async function recordVerb(
@@ -348,9 +414,6 @@ export async function recordVerb(
     ingested: 0,
   };
   await getDb().insert(cardDismissals).values(row);
-  if (verb === "archive" || verb === "dismiss") {
-    await archiveCard(cardId, userId);
-  }
   return normalizeDismissal(row as typeof cardDismissals.$inferSelect);
 }
 

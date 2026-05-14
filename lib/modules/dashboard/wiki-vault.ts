@@ -1,6 +1,6 @@
 /**
  * Wiki content lives on the OpenClaw host (markdown vault; see
- * `openclaw/skills/myself-wiki/SKILL.md`). Postgres `wiki_pages` /
+ * `openclaw/skills/supabase-reads/SKILL.md` file-wiki section). Postgres `wiki_pages` /
  * `wiki_log_entries` were removed — these facades are no-ops or return null so
  * legacy call sites keep compiling.
  */

@@ -1,23 +1,5 @@
 import { pgTable, text, bigint, uuid } from "drizzle-orm/pg-core";
 
-export const dashboardCards = pgTable("dashboard_cards", {
-  id: text("id").primaryKey(),
-  userId: uuid("user_id").notNull(),
-  kind: text("kind").notNull(),
-  title: text("title").notNull(),
-  body: text("body").notNull().default(""),
-  hue: bigint("hue", { mode: "number" }).notNull().default(210),
-  freshness: bigint("freshness", { mode: "number" }).notNull(),
-  confidence: text("confidence").notNull().default("thin"),
-  sourcesJson: text("sources_json").notNull().default("[]"),
-  wikiSlug: text("wiki_slug"),
-  pinnedGoalId: text("pinned_goal_id"),
-  priority: bigint("priority", { mode: "number" }).notNull().default(0),
-  state: text("state").notNull().default("active"),
-  createdAt: bigint("created_at", { mode: "number" }).notNull(),
-  updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
-});
-
 export const pinnedQueries = pgTable("pinned_queries", {
   id: text("id").primaryKey(),
   userId: uuid("user_id").notNull(),
@@ -41,6 +23,8 @@ export const wikiIngestState = pgTable("wiki_ingest_state", {
   userId: uuid("user_id").primaryKey(),
   status: text("status").notNull().default("idle"),
   detail: text("detail").notNull().default(""),
+  /** Raw `{ "cards": PublishCardInput[] }` from wiki ingest (remote `cards.json`). */
+  generativeCardsJson: text("generative_cards_json"),
   updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
 });
 

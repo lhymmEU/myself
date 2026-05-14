@@ -116,10 +116,8 @@ export async function POST(req: NextRequest) {
   const parts: string[] = [];
   if (parsed.data.wikiPreamble === true) {
     const access = parsed.data.supabaseAccessToken?.trim();
-    const refresh = access
-      ? null
-      : await getOpenclawRefreshTokenPlain(auth.userId);
-    if (!access && !refresh) {
+    const storedRefresh = await getOpenclawRefreshTokenPlain(auth.userId);
+    if (!access && !storedRefresh) {
       return new Response(
         JSON.stringify({
           error:
@@ -132,7 +130,7 @@ export async function POST(req: NextRequest) {
       supabaseUrl: getSupabaseUrl(),
       supabaseAnonKey: getSupabaseAnonKey(),
       accessToken: access ?? null,
-      refreshToken: refresh,
+      refreshToken: storedRefresh,
     });
     parts.push(`${WIKI_PREAMBLE}\n\n${cred}`);
   }

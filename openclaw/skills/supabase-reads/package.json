@@ -1,0 +1,14 @@
+{
+  "name": "myself-openclaw-supabase-reads",
+  "private": true,
+  "description": "OpenClaw skill: Supabase read scripts and dashboard card stdout for myself.",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.104.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0"
+  }
+}
