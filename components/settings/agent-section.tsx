@@ -377,13 +377,56 @@ function ConnectWizard({
               n={3}
               title="Start the watcher. Keep it running."
               body={
-                <div className="space-y-2">
-                  <CopyBlock language="bash" text="node myself-op.js start" />
-                  <p className="text-xs text-muted-foreground">
-                    Use <code>systemd</code>, <code>pm2</code>, or{" "}
-                    <code>nohup ... &amp;</code> so it survives reboots — recipes
-                    in the watcher&apos;s README.
-                  </p>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1.5">
+                      Quick test (foreground — Ctrl-C to stop):
+                    </p>
+                    <CopyBlock language="bash" text="node myself-op.js start" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1.5">
+                      Production (Linux + systemd, survives logout &amp;
+                      reboots):
+                    </p>
+                    <CopyBlock
+                      language="bash"
+                      text={`sudo tee /etc/systemd/system/myself-op.service >/dev/null <<EOF
+[Unit]
+Description=myself-op watcher
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=$USER
+WorkingDirectory=$HOME
+ExecStart=$(command -v node) $HOME/myself-op.js start
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl daemon-reload
+sudo systemctl enable --now myself-op
+sudo systemctl status myself-op --no-pager`}
+                    />
+                    <p className="text-[11px] text-muted-foreground mt-1.5">
+                      View logs with{" "}
+                      <code>journalctl -u myself-op -f</code>. Reboot-safe.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1.5">
+                      Or quick-and-dirty (no auto-restart, no reboot
+                      survival):
+                    </p>
+                    <CopyBlock
+                      language="bash"
+                      text="nohup node myself-op.js start > ~/myself-op.log 2>&1 &"
+                    />
+                  </div>
                 </div>
               }
             />
