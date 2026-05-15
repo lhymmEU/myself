@@ -1,7 +1,6 @@
 import { nanoid } from "nanoid";
 import { and, eq, asc, sql, isNull } from "drizzle-orm";
 import { getDb } from "@/lib/db";
-import { LOCAL_USER_ID } from "@/lib/core/runtime";
 import { eventBus } from "@/lib/core/event-bus";
 import { markedCollections, markedItems } from "./schema";
 import { MARKED_EVENTS } from "./events";
@@ -57,7 +56,7 @@ function normalizeItem(row: typeof markedItems.$inferSelect): MarkedItem {
 // ---------------------------------------------------------------------------
 
 export async function listCollections(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<MarkedCollection[]> {
   const db = getDb();
   const rows = await db
@@ -70,7 +69,7 @@ export async function listCollections(
 
 export async function getCollection(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<MarkedCollection | null> {
   const db = getDb();
   const rows = await db
@@ -86,7 +85,7 @@ export async function getCollection(
 
 export async function createCollection(
   input: CreateCollectionInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<MarkedCollection> {
   const db = getDb();
   const now = Date.now();
@@ -116,7 +115,7 @@ export async function createCollection(
 
 export async function updateCollection(
   input: UpdateCollectionInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<MarkedCollection> {
   const db = getDb();
   const existingRows = await db
@@ -166,7 +165,7 @@ export async function updateCollection(
 
 export async function deleteCollection(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db
@@ -191,7 +190,7 @@ export async function deleteCollection(
 
 export async function reorderCollections(
   ids: string[],
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   for (let index = 0; index < ids.length; index++) {
@@ -214,7 +213,7 @@ export async function reorderCollections(
 
 export async function listItems(
   collectionId?: string | null,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<MarkedItem[]> {
   const db = getDb();
   if (collectionId === "__uncollected__") {
@@ -250,7 +249,7 @@ export async function listItems(
 
 export async function getItem(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<MarkedItem | null> {
   const db = getDb();
   const rows = await db
@@ -264,7 +263,7 @@ export async function getItem(
 
 export async function createItem(
   input: CreateItemInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<MarkedItem> {
   const db = getDb();
   const now = Date.now();
@@ -299,7 +298,7 @@ export async function createItem(
 
 export async function updateItem(
   input: UpdateItemInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<MarkedItem> {
   const db = getDb();
   const existingRows = await db
@@ -339,7 +338,7 @@ export async function updateItem(
 
 export async function deleteItem(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db
@@ -351,7 +350,7 @@ export async function deleteItem(
 export async function moveItemToCollection(
   itemId: string,
   collectionId: string | null,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db
@@ -362,7 +361,7 @@ export async function moveItemToCollection(
 
 export async function reorderItems(
   ids: string[],
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   for (let index = 0; index < ids.length; index++) {

@@ -23,10 +23,6 @@ function requireSmokeUser(): string {
 }
 
 async function main() {
-  process.env.NEXT_PUBLIC_DEPLOYMENT_MODE =
-    process.env.NEXT_PUBLIC_DEPLOYMENT_MODE ?? "local";
-  process.env.DEPLOYMENT_MODE = process.env.DEPLOYMENT_MODE ?? "local";
-
   const userId = requireSmokeUser();
   initDatabase();
   await ensureVault(userId);

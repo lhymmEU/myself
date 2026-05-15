@@ -18,13 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Loader2, Eye, EyeOff, Upload, FileCheck, FolderOpen } from "lucide-react";
+import { Plus, Loader2, Eye, EyeOff, Upload, FileCheck } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
 import type { TranslationKey } from "@/lib/i18n/types";
 import { SECRET_CATEGORIES } from "@/lib/modules/vault/types";
 import type { SecretCategory } from "@/lib/modules/vault/types";
 import { createSecretUi } from "@/lib/modules/vault/api";
-import { isLocal } from "@/lib/core/runtime";
 
 interface AddSecretProps {
   onCreated: () => void;
@@ -42,39 +41,7 @@ export function AddSecret({ onCreated }: AddSecretProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
-  const [pathInput, setPathInput] = useState("");
-  const [showPathInput, setShowPathInput] = useState(false);
-  const [loadingPath, setLoadingPath] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleLoadFromPath = useCallback(async () => {
-    if (!pathInput.trim()) return;
-    setLoadingPath(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/vault/read-local-file", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: pathInput.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? t("vault.addSecret.failedReadFile"));
-        return;
-      }
-      setValue(data.contents);
-      setUploadedFileName(data.fileName);
-      setShowPathInput(false);
-      setPathInput("");
-      if (!name.trim() && data.fileName) {
-        setName(data.fileName);
-      }
-    } catch {
-      setError(t("vault.addSecret.failedLoadFile"));
-    } finally {
-      setLoadingPath(false);
-    }
-  }, [pathInput, name, t]);
 
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -101,9 +68,6 @@ export function AddSecret({ onCreated }: AddSecretProps) {
     setShowValue(false);
     setError(null);
     setUploadedFileName(null);
-    setPathInput("");
-    setShowPathInput(false);
-    setLoadingPath(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -216,18 +180,6 @@ export function AddSecret({ onCreated }: AddSecretProps) {
                     <Upload className="h-3 w-3 mr-1" />
                     {t("common.browse")}
                   </Button>
-                  {isLocal() && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={showPathInput ? "secondary" : "outline"}
-                      className="h-6 px-2 text-[11px]"
-                      onClick={() => setShowPathInput(!showPathInput)}
-                    >
-                      <FolderOpen className="h-3 w-3 mr-1" />
-                      {t("vault.addSecret.fromPath")}
-                    </Button>
-                  )}
                 </div>
               )}
             </div>
@@ -238,31 +190,6 @@ export function AddSecret({ onCreated }: AddSecretProps) {
               accept=".pem,.key,.pub,.crt,.cer,.txt,*"
               onChange={handleFileUpload}
             />
-            {showPathInput && (
-              <div className="space-y-1.5">
-                <div className="flex gap-1.5">
-                  <Input
-                    className="font-mono text-xs h-8"
-                    placeholder={t("vault.addSecret.placeholderSshKey")}
-                    value={pathInput}
-                    onChange={(e) => setPathInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleLoadFromPath())}
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-8 px-3 shrink-0"
-                    disabled={!pathInput.trim() || loadingPath}
-                    onClick={handleLoadFromPath}
-                  >
-                    {loadingPath ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("common.load")}
-                  </Button>
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  {t("vault.addSecret.pathTip")} <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">{t("vault.addSecret.pathTipKey")}</kbd> {t("vault.addSecret.pathTipSuffix")}
-                </p>
-              </div>
-            )}
             <div className="relative">
               {isLargeValue ? (
                 <textarea

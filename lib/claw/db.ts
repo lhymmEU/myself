@@ -1,7 +1,6 @@
 import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { getDb } from "@/lib/db";
-import { LOCAL_USER_ID } from "@/lib/core/runtime";
 import { clawConnections } from "@/lib/db/schema/postgres/claw";
 
 export type ClawAuthMethod = "password" | "key";
@@ -55,7 +54,7 @@ function normalize(row: typeof clawConnections.$inferSelect): ClawConnection {
 }
 
 export async function listClawConnections(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<ClawConnection[]> {
   const rows = await getDb()
     .select()
@@ -66,7 +65,7 @@ export async function listClawConnections(
 
 export async function getClawConnection(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<ClawConnection | null> {
   const rows = await getDb()
     .select()
@@ -79,7 +78,7 @@ export async function getClawConnection(
 }
 
 export async function getDefaultClawConnection(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<ClawConnection | null> {
   const all = await listClawConnections(userId);
   if (all.length === 0) return null;
@@ -95,7 +94,7 @@ async function clearDefault(userId: string) {
 
 export async function createClawConnection(
   input: CreateClawConnectionInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<ClawConnection> {
   const now = Date.now();
   const id = nanoid();
@@ -127,7 +126,7 @@ export async function createClawConnection(
 export async function updateClawConnection(
   id: string,
   patch: UpdateClawConnectionInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<ClawConnection | null> {
   if (patch.isDefault) {
     await clearDefault(userId);
@@ -155,7 +154,7 @@ export async function updateClawConnection(
 
 export async function deleteClawConnection(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   await getDb()
     .delete(clawConnections)

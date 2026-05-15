@@ -10,23 +10,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 import {
   Eye,
   EyeOff,
   Loader2,
   AlertTriangle,
   Check,
-  FolderOpen,
   KeyRound,
 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
 import type { VaultStatus } from "@/lib/modules/vault/types";
-import { isLocal } from "@/lib/core/runtime";
-import {
-  changeVaultPasswordUi,
-  changeVaultStoragePathUi,
-} from "@/lib/modules/vault/api";
+import { changeVaultPasswordUi } from "@/lib/modules/vault/api";
 
 interface VaultSettingsProps {
   open: boolean;
@@ -38,8 +32,6 @@ interface VaultSettingsProps {
 export function VaultSettings({
   open,
   onOpenChange,
-  status,
-  onStatusChange,
 }: VaultSettingsProps) {
   const t = useT();
   return (
@@ -49,106 +41,10 @@ export function VaultSettings({
           <DialogTitle>{t("vault.settings.dialogTitle")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-6">
-          {isLocal() && (
-            <>
-              <StoragePathSection
-                currentPath={status.storagePath}
-                onChanged={onStatusChange}
-              />
-              <Separator />
-            </>
-          )}
           <ChangePasswordSection />
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function StoragePathSection({
-  currentPath,
-  onChanged,
-}: {
-  currentPath: string;
-  onChanged: () => void;
-}) {
-  const t = useT();
-  const [newPath, setNewPath] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleChangePath(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newPath.trim()) return;
-
-    setSubmitting(true);
-    setError(null);
-    setSuccess(false);
-
-    try {
-      await changeVaultStoragePathUi(newPath.trim());
-      setSuccess(true);
-      setNewPath("");
-      onChanged();
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : t("vault.settings.errorNetwork"),
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <FolderOpen className="h-4 w-4 text-muted-foreground" />
-        <h3 className="text-sm font-medium">{t("vault.settings.storageLocation")}</h3>
-      </div>
-      <div className="rounded-md border bg-muted/30 p-2.5">
-        <p className="text-xs font-mono text-muted-foreground break-all">
-          {currentPath}
-        </p>
-      </div>
-      <form onSubmit={handleChangePath} className="space-y-2">
-        <Label htmlFor="new-path" className="text-xs">
-          {t("vault.settings.newLocation")}
-        </Label>
-        <div className="flex gap-2">
-          <Input
-            id="new-path"
-            placeholder={t("vault.settings.placeholderPath")}
-            value={newPath}
-            onChange={(e) => setNewPath(e.target.value)}
-            className="font-mono text-xs flex-1"
-          />
-          <Button
-            type="submit"
-            size="sm"
-            disabled={!newPath.trim() || submitting}
-          >
-            {submitting ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : success ? (
-              <Check className="h-3.5 w-3.5" />
-            ) : (
-              t("vault.settings.move")
-            )}
-          </Button>
-        </div>
-        {error && (
-          <p className="text-xs text-destructive flex items-center gap-1">
-            <AlertTriangle className="h-3 w-3" />
-            {error}
-          </p>
-        )}
-        <p className="text-xs text-muted-foreground">
-          {t("vault.settings.moveHelp")}
-        </p>
-      </form>
-    </div>
   );
 }
 

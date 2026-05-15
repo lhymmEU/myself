@@ -1,5 +1,3 @@
-import type { DeploymentMode } from "./runtime";
-
 export interface EventPayload {
   type: string;
   module: string;
@@ -19,9 +17,4 @@ export interface FeatureModule {
   description: string;
   eventHandlers: Record<string, EventHandler>;
   init?: (ctx: ModuleContext) => void;
-  /**
-   * Deployment modes this module is available in. Defaults to both modes
-   * when omitted to preserve backwards-compatibility for unmigrated modules.
-   */
-  availableIn?: DeploymentMode[];
 }

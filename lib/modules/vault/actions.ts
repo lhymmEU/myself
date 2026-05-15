@@ -2,7 +2,6 @@ import { nanoid } from "nanoid";
 import { and, desc, eq, sql } from "drizzle-orm";
 
 import { eventBus } from "@/lib/core/event-bus";
-import { LOCAL_USER_ID } from "@/lib/core/runtime";
 import { vaultMeta, vaultSecrets } from "@/lib/db/schema/postgres/vault";
 import { getVaultDb, getVaultPathSetting, moveVaultDb } from "./vault-db";
 import { VAULT_EVENTS } from "./events";
@@ -28,14 +27,14 @@ import type {
  */
 const _masterKeys: Map<string, Uint8Array> = new Map();
 
-function requireUnlocked(userId: string = LOCAL_USER_ID): Uint8Array {
+function requireUnlocked(userId: string): Uint8Array {
   const key = _masterKeys.get(userId);
   if (!key) throw new Error("Vault is locked");
   return key;
 }
 
 export async function isVaultInitialized(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<boolean> {
   const db = getVaultDb();
   const rows = await db
@@ -46,12 +45,12 @@ export async function isVaultInitialized(
   return !!rows[0];
 }
 
-export function isVaultUnlocked(userId: string = LOCAL_USER_ID): boolean {
+export function isVaultUnlocked(userId: string): boolean {
   return _masterKeys.has(userId);
 }
 
 export async function getVaultStatus(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<VaultStatus> {
   const initialized = await isVaultInitialized(userId);
   let secretCount = 0;
@@ -74,7 +73,7 @@ export async function getVaultStatus(
 export async function setupVault(
   password: string,
   storagePath?: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   if (storagePath) {
     moveVaultDb(storagePath);
@@ -103,7 +102,7 @@ export async function setupVault(
 
 export async function unlockVault(
   password: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<boolean> {
   const db = getVaultDb();
   const saltRows = await db
@@ -135,7 +134,7 @@ export async function unlockVault(
   return true;
 }
 
-export function lockVault(userId: string = LOCAL_USER_ID): void {
+export function lockVault(userId: string): void {
   const existing = _masterKeys.get(userId);
   if (existing) {
     existing.fill(0);
@@ -178,7 +177,7 @@ function rowToFull(row: SecretRow, key: Uint8Array): VaultSecretWithValue {
 }
 
 export async function getAllSecrets(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<VaultSecretMeta[]> {
   requireUnlocked(userId);
   const db = getVaultDb();
@@ -192,7 +191,7 @@ export async function getAllSecrets(
 
 export async function getSecret(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<VaultSecretWithValue | null> {
   const key = requireUnlocked(userId);
   const db = getVaultDb();
@@ -208,7 +207,7 @@ export async function getSecret(
 
 export async function createSecret(
   input: CreateSecretInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<VaultSecretMeta> {
   const key = requireUnlocked(userId);
   const db = getVaultDb();
@@ -253,7 +252,7 @@ export async function createSecret(
 
 export async function updateSecret(
   input: UpdateSecretInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<VaultSecretMeta> {
   const key = requireUnlocked(userId);
   const db = getVaultDb();
@@ -321,7 +320,7 @@ export async function updateSecret(
 
 export async function deleteSecret(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   requireUnlocked(userId);
   const db = getVaultDb();
@@ -334,7 +333,7 @@ export async function deleteSecret(
 export async function changePassword(
   currentPassword: string,
   newPassword: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<boolean> {
   const db = getVaultDb();
   const saltRows = await db

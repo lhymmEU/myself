@@ -1,7 +1,6 @@
 import { nanoid } from "nanoid";
 import { and, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
-import { LOCAL_USER_ID } from "@/lib/core/runtime";
 import {
   pmUserProfiles,
   pmFeatures,
@@ -37,7 +36,7 @@ function parseUserRow(
 }
 
 export async function getAllUserProfiles(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PmUserProfile[]> {
   const db = getDb();
   const rows = await db
@@ -49,7 +48,7 @@ export async function getAllUserProfiles(
 
 export async function getUserProfile(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PmUserProfile | null> {
   const db = getDb();
   const rows = await db
@@ -63,7 +62,7 @@ export async function getUserProfile(
 
 export async function createUserProfile(
   input: CreateUserProfileInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PmUserProfile> {
   const db = getDb();
   const now = Date.now();
@@ -84,7 +83,7 @@ export async function createUserProfile(
 
 export async function updateUserProfile(
   input: UpdateUserProfileInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PmUserProfile> {
   const db = getDb();
   const existing = await db
@@ -132,7 +131,7 @@ export async function updateUserProfile(
 
 export async function deleteUserProfile(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db
@@ -153,7 +152,7 @@ function parseFeatureRow(row: typeof pmFeatures.$inferSelect): PmFeature {
 }
 
 export async function getAllFeatures(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PmFeature[]> {
   const db = getDb();
   const rows = await db
@@ -165,7 +164,7 @@ export async function getAllFeatures(
 
 export async function getFeature(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PmFeature | null> {
   const db = getDb();
   const rows = await db
@@ -179,7 +178,7 @@ export async function getFeature(
 
 export async function createFeature(
   input: CreateFeatureInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PmFeature> {
   const db = getDb();
   const now = Date.now();
@@ -200,7 +199,7 @@ export async function createFeature(
 
 export async function updateFeature(
   input: UpdateFeatureInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PmFeature> {
   const db = getDb();
   const existing = await db
@@ -233,7 +232,7 @@ export async function updateFeature(
 
 export async function deleteFeature(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db
@@ -254,7 +253,7 @@ function parseDemandRow(row: typeof pmDemands.$inferSelect): PmDemand {
 }
 
 export async function getAllDemands(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PmDemand[]> {
   const db = getDb();
   const rows = await db
@@ -266,7 +265,7 @@ export async function getAllDemands(
 
 export async function getDemand(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PmDemand | null> {
   const db = getDb();
   const rows = await db
@@ -280,7 +279,7 @@ export async function getDemand(
 
 export async function createDemand(
   input: CreateDemandInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PmDemand> {
   const db = getDb();
   const now = Date.now();
@@ -301,7 +300,7 @@ export async function createDemand(
 
 export async function updateDemand(
   input: UpdateDemandInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PmDemand> {
   const db = getDb();
   const existing = await db
@@ -334,7 +333,7 @@ export async function updateDemand(
 
 export async function deleteDemand(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db
@@ -369,7 +368,7 @@ function parseStakeholderRow(
 }
 
 export async function getAllStakeholders(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PmStakeholder[]> {
   const db = getDb();
   const rows = await db
@@ -381,7 +380,7 @@ export async function getAllStakeholders(
 
 export async function getStakeholder(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PmStakeholder | null> {
   const db = getDb();
   const rows = await db
@@ -395,7 +394,7 @@ export async function getStakeholder(
 
 export async function createStakeholder(
   input: CreateStakeholderInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PmStakeholder> {
   const db = getDb();
   const now = Date.now();
@@ -417,7 +416,7 @@ export async function createStakeholder(
 
 export async function updateStakeholder(
   input: UpdateStakeholderInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PmStakeholder> {
   const db = getDb();
   const existingRows = await db
@@ -474,7 +473,7 @@ export async function updateStakeholder(
 
 export async function deleteStakeholder(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db

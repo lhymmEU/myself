@@ -1,7 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { getDb } from "@/lib/db";
-import { LOCAL_USER_ID } from "@/lib/core/runtime";
 import { eventBus } from "@/lib/core/event-bus";
 import { userSkills, userWishes } from "./schema";
 import type { SkillLevel } from "./schema";
@@ -14,7 +13,7 @@ function normalizeSkill<T extends { createdAt: number | string }>(row: T): T {
   return { ...row, createdAt: Number(row.createdAt) };
 }
 
-export async function listUserSkills(userId: string = LOCAL_USER_ID) {
+export async function listUserSkills(userId: string) {
   const rows = await getDb()
     .select()
     .from(userSkills)
@@ -28,7 +27,7 @@ export async function createUserSkill(
     level?: SkillLevel;
     category?: string;
   },
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ) {
   const id = nanoid();
   await getDb()
@@ -47,7 +46,7 @@ export async function createUserSkill(
 export async function updateUserSkill(
   id: string,
   data: Partial<{ name: string; level: SkillLevel; category: string }>,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   await getDb()
     .update(userSkills)
@@ -57,7 +56,7 @@ export async function updateUserSkill(
 
 export async function deleteUserSkill(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   await getDb()
     .delete(userSkills)
@@ -79,7 +78,7 @@ function normalizeUserWishRow<
   };
 }
 
-export async function listUserWishes(userId: string = LOCAL_USER_ID) {
+export async function listUserWishes(userId: string) {
   const rows = await getDb()
     .select()
     .from(userWishes)
@@ -93,7 +92,7 @@ export async function createUserWish(
     userDescription: string;
     planData: Record<string, string>;
   },
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ) {
   const id = nanoid();
   const now = Date.now();
@@ -128,7 +127,7 @@ export async function createUserWish(
 export async function updateUserWishPlanData(
   id: string,
   planData: Record<string, string>,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   await getDb()
     .update(userWishes)
@@ -142,7 +141,7 @@ export async function updateUserWishPlanData(
 
 export async function deleteUserWish(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   await getDb()
     .delete(userWishes)

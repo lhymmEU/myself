@@ -4,5 +4,4 @@ export const financeModule: FeatureModule = {
   name: "finance",
   description: "Personal finance — accounts, transactions, budgets, and investments",
   eventHandlers: {},
-  availableIn: ["local", "cloud"],
 };

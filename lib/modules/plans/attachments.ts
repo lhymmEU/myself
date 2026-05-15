@@ -1,7 +1,6 @@
 import { nanoid } from "nanoid";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
-import { LOCAL_USER_ID } from "@/lib/core/runtime";
 import { planMarkedAttachments } from "./schema";
 import { markedItems } from "@/lib/db/schema/postgres/marked";
 import type { MarkedItem } from "@/lib/modules/marked/types";
@@ -18,7 +17,7 @@ function normalizeMarkedItem(row: typeof markedItems.$inferSelect): MarkedItem {
 
 export async function listPlanAttachments(
   planId: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PlanAttachedItem[]> {
   const db = getDb();
   const rows = await db
@@ -66,7 +65,7 @@ export async function listPlanAttachments(
  */
 export async function attachMarkedItem(
   input: { planId: string; markedItemId: string },
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<{ id: string; created: boolean }> {
   const db = getDb();
   const existing = await db
@@ -110,7 +109,7 @@ export async function attachMarkedItem(
 
 export async function detachMarkedItem(
   input: { planId: string; markedItemId: string },
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db
@@ -127,7 +126,7 @@ export async function detachMarkedItem(
 export async function reorderPlanAttachments(
   planId: string,
   ids: string[],
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   for (let index = 0; index < ids.length; index++) {
@@ -148,7 +147,7 @@ export async function reorderPlanAttachments(
 /** Used by deletePlan() to keep the join table tidy. */
 export async function deleteAttachmentsForPlan(
   planId: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db

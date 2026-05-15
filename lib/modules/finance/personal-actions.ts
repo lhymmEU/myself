@@ -2,7 +2,6 @@ import { randomUUID } from "crypto";
 import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
-import { LOCAL_USER_ID } from "@/lib/core/runtime";
 import {
   financeAccounts,
   financeBudgets,
@@ -107,7 +106,7 @@ const investmentToApi = (
 // --- Accounts ---
 
 export async function getAccounts(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<FinanceAccount[]> {
   const db = getDb();
   const rows = await db
@@ -120,7 +119,7 @@ export async function getAccounts(
 
 export async function getAccount(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<FinanceAccount | undefined> {
   const db = getDb();
   const rows = await db
@@ -135,7 +134,7 @@ export async function getAccount(
 
 export async function createAccount(
   data: Omit<FinanceAccount, "id" | "created_at">,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<FinanceAccount> {
   const db = getDb();
   const id = randomUUID();
@@ -157,7 +156,7 @@ export async function createAccount(
 export async function updateAccount(
   id: string,
   data: Partial<FinanceAccount>,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const updates: Partial<typeof financeAccounts.$inferInsert> = {};
   if (data.name !== undefined) updates.name = data.name;
@@ -179,7 +178,7 @@ export async function updateAccount(
 
 export async function deleteAccount(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db
@@ -200,7 +199,7 @@ export async function getTransactions(
     to_date?: string;
     limit?: number;
   },
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<FinanceTransaction[]> {
   const db = getDb();
   const where = [eq(financeTransactions.userId, userId)];
@@ -231,7 +230,7 @@ export async function getTransactions(
 
 export async function createTransaction(
   data: Omit<FinanceTransaction, "id" | "created_at">,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<FinanceTransaction> {
   const db = getDb();
   const id = randomUUID();
@@ -268,7 +267,7 @@ export async function createTransaction(
 
 export async function deleteTransaction(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   const txRows = await db
@@ -309,7 +308,7 @@ export async function deleteTransaction(
 // --- Budgets ---
 
 export async function getBudgets(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<FinanceBudget[]> {
   const db = getDb();
   const rows = await db
@@ -322,7 +321,7 @@ export async function getBudgets(
 
 export async function createBudget(
   data: Omit<FinanceBudget, "id" | "created_at">,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<FinanceBudget> {
   const db = getDb();
   const id = randomUUID();
@@ -341,7 +340,7 @@ export async function createBudget(
 export async function updateBudget(
   id: string,
   data: Partial<FinanceBudget>,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const updates: Partial<typeof financeBudgets.$inferInsert> = {};
   if (data.category !== undefined) updates.category = data.category;
@@ -359,7 +358,7 @@ export async function updateBudget(
 
 export async function deleteBudget(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db
@@ -373,7 +372,7 @@ export async function getBudgetSpending(
   category: string,
   year: number,
   month: number,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<number> {
   const db = getDb();
   const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
@@ -402,7 +401,7 @@ export async function getBudgetSpending(
 // --- Investments ---
 
 export async function getInvestments(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<FinanceInvestment[]> {
   const db = getDb();
   const rows = await db
@@ -415,7 +414,7 @@ export async function getInvestments(
 
 export async function createInvestment(
   data: Omit<FinanceInvestment, "id" | "created_at">,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<FinanceInvestment> {
   const db = getDb();
   const id = randomUUID();
@@ -436,7 +435,7 @@ export async function createInvestment(
 export async function updateInvestment(
   id: string,
   data: Partial<FinanceInvestment>,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const updates: Partial<typeof financeInvestments.$inferInsert> = {};
   if (data.account_id !== undefined) updates.accountId = data.account_id;
@@ -460,7 +459,7 @@ export async function updateInvestment(
 
 export async function deleteInvestment(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db
@@ -475,7 +474,7 @@ export async function deleteInvestment(
 
 // --- Summary ---
 
-export async function getFinanceSummary(userId: string = LOCAL_USER_ID) {
+export async function getFinanceSummary(userId: string) {
   const db = getDb();
   const accounts = await getAccounts(userId);
   const netWorth = accounts.reduce(

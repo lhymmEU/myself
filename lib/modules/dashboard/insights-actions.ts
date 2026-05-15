@@ -6,7 +6,6 @@
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { getDb } from "@/lib/db";
-import { LOCAL_USER_ID } from "@/lib/core/runtime";
 import {
   wikiIngestState,
   pinnedQueries,
@@ -259,7 +258,7 @@ function normalizeDismissal(
 const CARD_LIMIT = 5;
 
 export async function listActiveCards(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<DashboardCard[]> {
   const hidden = await listHiddenCardIds(userId);
   const rows = await getDb()
@@ -294,14 +293,14 @@ export async function listActiveCards(
 
 export async function getCard(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<DashboardCard | null> {
   const cards = await listActiveCards(userId);
   return cards.find((c) => c.id === id) ?? null;
 }
 
 export async function listPinnedQueries(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PinnedQuery[]> {
   const rows = await getDb()
     .select()
@@ -312,7 +311,7 @@ export async function listPinnedQueries(
 }
 
 export async function listPendingDismissals(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<CardDismissal[]> {
   const rows = await getDb()
     .select()
@@ -334,7 +333,7 @@ export async function listPendingDismissals(
  */
 export async function publishDashboard(
   cards: PublishCardInput[],
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<{ count: number }> {
   const truncated = cards.slice(0, CARD_LIMIT);
   if (truncated.length === 0) {
@@ -401,7 +400,7 @@ export async function recordVerb(
   cardId: string,
   verb: CardVerb,
   payload: Record<string, unknown> | null,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<CardDismissal> {
   const id = nanoid();
   const row = {
@@ -419,7 +418,7 @@ export async function recordVerb(
 
 export async function markDismissalsIngested(
   ids: string[],
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   if (ids.length === 0) return;
   const db = getDb();
@@ -443,7 +442,7 @@ export async function markDismissalsIngested(
 export async function pinQuery(
   question: string,
   wikiSlug: string | null,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PinnedQuery> {
   const id = nanoid();
   const row = {
@@ -460,7 +459,7 @@ export async function pinQuery(
 
 export async function unpinQuery(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   await getDb()
     .delete(pinnedQueries)
@@ -469,7 +468,7 @@ export async function unpinQuery(
 
 export async function touchPinnedQuery(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   await getDb()
     .update(pinnedQueries)

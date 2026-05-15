@@ -11,14 +11,12 @@ import {
   Eye,
   EyeOff,
   Loader2,
-  FolderOpen,
   AlertTriangle,
 } from "lucide-react";
 import { SecretList } from "./secret-list";
 import { useT } from "@/lib/i18n/context";
 import type { TranslationKey } from "@/lib/i18n/types";
 import type { VaultStatus } from "@/lib/modules/vault/types";
-import { isCloud } from "@/lib/core/runtime";
 import {
   fetchVaultStatus,
   setupVaultUi,
@@ -80,9 +78,7 @@ function SetupForm({ onComplete }: { onComplete: () => void }) {
   const t = useT();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [storagePath, setStoragePath] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -103,9 +99,7 @@ function SetupForm({ onComplete }: { onComplete: () => void }) {
 
     setSubmitting(true);
     try {
-      await setupVaultUi(password, {
-        storagePath: storagePath.trim() || undefined,
-      });
+      await setupVaultUi(password);
       onComplete();
     } catch (err) {
       setError(
@@ -187,39 +181,6 @@ function SetupForm({ onComplete }: { onComplete: () => void }) {
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
               />
-            </div>
-
-            <div>
-              {!isCloud() && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-muted-foreground px-0"
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                >
-                  <FolderOpen className="h-3 w-3 mr-1" />
-                  {showAdvanced ? t("vault.manager.hideStoragePath") : t("vault.manager.customStoragePath")}
-                </Button>
-              )}
-              {!isCloud() && showAdvanced && (
-                <div className="mt-2 space-y-2">
-                  <Label htmlFor="setup-path">
-                    {t("vault.manager.storagePath")}
-                  </Label>
-                  <Input
-                    id="setup-path"
-                    type="text"
-                    placeholder={t("vault.manager.placeholderStoragePath")}
-                    value={storagePath}
-                    onChange={(e) => setStoragePath(e.target.value)}
-                    className="font-mono text-xs"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {t("vault.manager.storagePathHelp")}
-                  </p>
-                </div>
-              )}
             </div>
 
             {error && (
