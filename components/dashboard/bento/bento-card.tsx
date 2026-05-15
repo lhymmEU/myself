@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GenerativeCardBody } from "./generative-card-body";
 import {
   freshnessDecay,
   bentoSpanForCard,
@@ -175,11 +176,9 @@ export function BentoCard({
         <h3 className="text-base font-semibold leading-snug line-clamp-3">
           {card.title}
         </h3>
-        {card.body && (
-          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-6 whitespace-pre-line">
-            {card.body}
-          </p>
-        )}
+        {(card.presentation?.blocks?.length ||
+          card.richMarkdown ||
+          card.body) && <GenerativeCardBody card={card} mode="tile" />}
       </div>
 
       {card.sources.length > 0 && (

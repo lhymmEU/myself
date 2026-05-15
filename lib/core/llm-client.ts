@@ -1,20 +1,9 @@
 import OpenAI from "openai";
 import { getSetting } from "@/lib/modules/settings/actions";
-import { isLocal } from "@/lib/core/runtime";
 
 const clients = new Map<string, OpenAI>();
 
-const CLOUD_DISABLED_MESSAGE =
-  "LLM features are disabled when DEPLOYMENT_MODE is not local. Use OpenClaw with your own model keys.";
-
-function ensureLocal(): void {
-  if (!isLocal()) {
-    throw new Error(CLOUD_DISABLED_MESSAGE);
-  }
-}
-
 async function getClient(userId: string): Promise<OpenAI> {
-  ensureLocal();
   const key = await getSetting("openrouter_api_key", userId);
   if (!key) {
     throw new Error(
@@ -32,7 +21,7 @@ async function getClient(userId: string): Promise<OpenAI> {
 }
 
 export function isLlmAvailable(): boolean {
-  return isLocal();
+  return true;
 }
 
 export async function chatCompletion(

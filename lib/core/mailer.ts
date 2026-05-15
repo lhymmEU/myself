@@ -1,20 +1,3 @@
-/**
- * Mailer abstraction.
- *
- * - Local mode: returns a `nodemailer` transport configured from the user's
- *   SMTP settings (Settings → SMTP). No external deps beyond what they
- *   already have.
- * - Cloud mode: returns a thin wrapper around the Resend HTTP API
- *   (`RESEND_API_KEY` env). Cloud users can't run their own SMTP server,
- *   and we don't want to ship their credentials to a hosted relay anyway.
- *
- * Callers should depend ONLY on the `Mailer.send()` interface so they can
- * stay mode-agnostic.
- */
-
-import { isLocal } from "@/lib/core/runtime";
-import { getSetting } from "@/lib/modules/settings/actions";
-
 export interface MailAttachment {
   filename: string;
   content: Buffer;
@@ -32,43 +15,6 @@ export interface SendMailInput {
 
 export interface Mailer {
   send(input: SendMailInput): Promise<void>;
-}
-
-class NodemailerMailer implements Mailer {
-  constructor(private userId: string) {}
-
-  async send(input: SendMailInput): Promise<void> {
-    const smtpHost = await getSetting("smtp_host", this.userId);
-    const smtpUser = await getSetting("smtp_user", this.userId);
-    const smtpPass = await getSetting("smtp_pass", this.userId);
-    if (!smtpHost || !smtpUser || !smtpPass) {
-      throw new Error(
-        "SMTP not configured. Go to Settings → SMTP to set up email.",
-      );
-    }
-    const smtpPort = await getSetting("smtp_port", this.userId);
-    const smtpSecure = await getSetting("smtp_secure", this.userId);
-
-    /* eslint-disable @typescript-eslint/no-require-imports */
-    const nodemailer = require("nodemailer") as typeof import("nodemailer");
-    /* eslint-enable @typescript-eslint/no-require-imports */
-
-    const transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: parseInt(smtpPort || "587", 10),
-      secure: smtpSecure === "true",
-      auth: { user: smtpUser, pass: smtpPass },
-    });
-
-    await transporter.sendMail({
-      from: `"${input.fromName ?? smtpUser}" <${smtpUser}>`,
-      to: input.to,
-      subject: input.subject,
-      text: input.text,
-      html: input.html,
-      attachments: input.attachments,
-    });
-  }
 }
 
 class ResendMailer implements Mailer {
@@ -105,6 +51,7 @@ class ResendMailer implements Mailer {
   }
 }
 
-export function getMailer(userId: string): Mailer {
-  return isLocal() ? new NodemailerMailer(userId) : new ResendMailer();
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function getMailer(_userId?: string): Mailer {
+  return new ResendMailer();
 }

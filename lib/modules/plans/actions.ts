@@ -1,7 +1,6 @@
 import { nanoid } from "nanoid";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
-import { LOCAL_USER_ID } from "@/lib/core/runtime";
 import { eventBus } from "@/lib/core/event-bus";
 import { planPages, planFolders } from "./schema";
 import { PLAN_EVENTS } from "./events";
@@ -44,7 +43,7 @@ function parseFolderRow(row: typeof planFolders.$inferSelect): PlanFolder {
 // --- Plan Pages ---
 
 export async function getAllPlans(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PlanPage[]> {
   const db = getDb();
   const rows = await db
@@ -57,7 +56,7 @@ export async function getAllPlans(
 
 export async function getPlan(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PlanPage | null> {
   const db = getDb();
   const rows = await db
@@ -76,7 +75,7 @@ export async function getPlan(
  */
 export async function getPlanByLinkedNode(
   linkedNodeId: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PlanPage | null> {
   const db = getDb();
   const rows = await db
@@ -100,7 +99,7 @@ export async function getPlanByLinkedNode(
  */
 export async function getPlansByLinkedNodes(
   ids: string[],
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<Record<string, PlanPage>> {
   if (ids.length === 0) return {};
   const db = getDb();
@@ -119,7 +118,7 @@ export async function getPlansByLinkedNodes(
 
 export async function createPlan(
   input: CreatePlanInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PlanPage> {
   const db = getDb();
   const now = Date.now();
@@ -152,7 +151,7 @@ export async function createPlan(
 
 export async function updatePlan(
   input: UpdatePlanInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PlanPage> {
   const db = getDb();
   const existingRows = await db
@@ -188,7 +187,7 @@ export async function updatePlan(
 
 export async function deletePlan(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   const existing = await getPlan(id, userId);
@@ -203,7 +202,7 @@ export async function deletePlan(
 
 export async function reorderPlans(
   ids: string[],
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   for (let index = 0; index < ids.length; index++) {
@@ -218,7 +217,7 @@ export async function reorderPlans(
 // --- Plan Folders ---
 
 export async function listFolders(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PlanFolder[]> {
   const db = getDb();
   const rows = await db
@@ -231,7 +230,7 @@ export async function listFolders(
 
 export async function createFolder(
   name: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<PlanFolder> {
   const db = getDb();
   const now = Date.now();
@@ -258,7 +257,7 @@ export async function createFolder(
 export async function renameFolder(
   id: string,
   name: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db
@@ -269,7 +268,7 @@ export async function renameFolder(
 
 export async function deleteFolder(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db
@@ -283,7 +282,7 @@ export async function deleteFolder(
 
 export async function reorderFolders(
   ids: string[],
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   for (let index = 0; index < ids.length; index++) {

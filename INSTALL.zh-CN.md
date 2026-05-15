@@ -42,14 +42,6 @@ Git 用来从 GitHub 下载项目源代码。
 
   如果系统弹窗提示安装 "命令行开发者工具"，点击 **安装**，等待安装完成即可（其中已经包含 Git）。
 
-### 1c. Python（可选 —— 仅用于股票/加密市场数据）
-
-面板里的 **个人理财** 功能不需要 Python。只有当你想使用 **市场情报**（OpenBB 提供的实时股票、加密货币、宏观经济数据）时才需要它。
-
-如果需要：从 https://www.python.org/ 安装 **3.9 到 3.12** 之间的版本。Windows 用户在安装第一屏务必**勾选** "Add python.exe to PATH"。
-
-也可以先跳过，以后想用再装。
-
 ---
 
 ## 第 2 步：下载项目
@@ -115,7 +107,7 @@ PowerShell 默认会拦截未签名的脚本。**必须**用下面这种方式�
 powershell -ExecutionPolicy Bypass -File setup.ps1
 ```
 
-如果最后看到绿色的 **"Setup complete!"** 就成功了。如果看到红色错误，跳到下面的 **第 6 步 — 常见错误**。
+如果最后看到绿色的 **"Setup complete!"** 就成功了。如果看到红色错误，跳到下面的 **第 5 步 — 常见错误**。
 
 ---
 
@@ -140,31 +132,7 @@ npm run dev
 
 ---
 
-## 第 5 步（可选）：实时市场数据（OpenBB）
-
-如果你不打算使用 Finance 页里的 **市场情报** 视图，可以直接跳过本节。
-
-1. 安装 OpenBB。在终端输入：
-
-   ```
-   pip3 install "openbb[all]"
-   ```
-
-   （Windows 上若 `pip3` 不可用，用 `pip` 即可。）
-
-2. 打开**第二个**终端，启动 OpenBB API。使用市场数据期间这个终端要一直保持开启：
-
-   ```
-   openbb-api --host 127.0.0.1 --port 6900
-   ```
-
-3. 回到面板，进入 **设置 → OpenBB**，确认主机/端口与上面一致（`127.0.0.1` / `6900`）。
-
-4. 部分数据源需要免费的 API Key。进入 **设置 → 财经数据源**，点击对应数据源旁的注册链接（Alpha Vantage、FRED、Polygon 等），把拿到的 Key 粘回对应输入框即可。Yahoo Finance、SEC、美联储这几个数据源**无需任何 Key**。
-
----
-
-## 第 6 步：常见错误及解决方法
+## 第 5 步：常见错误及解决方法
 
 ### "Cannot resolve module '@noble/hashes/scrypt'"
 

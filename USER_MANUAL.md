@@ -77,35 +77,19 @@ In the **local install**, your data lives in `data/dashboard.db` and `data/vault
 
 ## Finance
 
-The Finance page has **two modes**, switchable from a tab at the top.
+**What it is.** Personal finance: accounts, transactions, budgets, and manually tracked investments. Data is stored per user in Postgres (same as the rest of the app).
 
-### Personal Finance
+**Core actions.**
 
-Works immediately, no setup required. Stored in your local database.
-
-- **Budget view** — set monthly budgets per category and see how much you have left.
-- **Transaction list** — log income and expenses; filter and search.
-- **Investment portfolio** — track holdings (manually entered or imported).
-
-### Market Intelligence  🖥 Local install only
-
-Live market data via the optional OpenBB sidecar (see `INSTALL.md` Step 5). When OpenBB is not running, the page shows a connection banner instead of widgets. **In the hosted version this tab is hidden** — OpenBB binds to `127.0.0.1:6900` on your own machine, so it can't be reached from a serverless cloud. Run the local install if you want it.
-
-The page is organised as a customizable grid of widgets:
-
-- **Overview** — a summary of indices, top movers, etc.
-- **Equity** — quotes, charts, screener results.
-- **Crypto** — coin quotes, market caps.
-- **Economy** — macro indicators, treasury rates, S&P 500 multiples, congressional trades.
-- **News** — financial news feed.
-- Specialty widgets: ETF, forex, derivatives, fixed income, commodities, regulators, quantitative, technical (see `components/finance/market/widgets/`).
-
-Click the **Customize** drawer to choose which widgets appear and in what order. The **search input** at the top lets you query a specific symbol.
+- **Dashboard** tab — net worth summary, cash-flow chart, expense breakdown, account list.
+- **Transactions** tab — add and filter income, expenses, and transfers.
+- **Budget** tab — monthly limits per category.
+- **Investments** tab — holdings by symbol (manual entry).
 
 **Tips.**
 
-- Modules backed by Yahoo Finance, the SEC, and the Federal Reserve work without any API keys. Other providers need a free key — the widget tells you which one.
-- The **Ask Claw** button on this page sends the current data context into the AI assistant so it can answer questions about what you are looking at.
+- Create at least one account before adding transactions.
+- Categories on transactions power the budget and expense charts.
 
 ---
 
@@ -233,9 +217,6 @@ The Claw page has a basic chat **DM panel** and a much richer **advanced view** 
 The settings page is divided into tabs:
 
 - **Appearance** — light / dark / system theme, language (English / 简体中文), accent color.
-- **Finance Display** — pick which currency you see, decimal precision, default time range.
-- **Finance Data Providers**  🖥 Local install only — paste API keys for BizToc, Benzinga, Financial Modeling Prep, Tradier, Polygon.io, Alpha Vantage, FRED. Each row links to the provider's free signup page. The hosted version doesn't show this section because OpenBB doesn't run on Vercel.
-- **OpenBB**  🖥 Local install only — host and port for your local OpenBB API (defaults to `127.0.0.1:6900`). Hidden in the hosted version.
 - **Invoice** — your business name, logo, address, tax rate, currency, payment details. These pre-fill every new invoice.
 - **Claw Access**  🖥 Local install only — OpenRouter API key, model selection, per-tool approval defaults. The hosted version doesn't ship a bundled LLM, so this tab is hidden — pair a lobster from the Claw page instead.
 - **Data Management** — export everything to JSON, import a previous export, or wipe the database.
@@ -243,7 +224,7 @@ The settings page is divided into tabs:
 **Tips.**
 
 - The dashboard never reads from a `.env` file. Everything you would normally put in environment variables lives here in Settings.
-- After changing the OpenRouter key or OpenBB port, no restart is needed — the change applies immediately.
+- After changing the OpenRouter key, no restart is needed — the change applies immediately.
 
 ---
 
@@ -251,7 +232,7 @@ The settings page is divided into tabs:
 
 All application data lives in **Supabase Postgres**, partitioned per user by `user_id` and enforced by Row-Level Security (`auth.uid() = user_id`). That includes the mind map, todos, plans, invoices, marked items, settings, finance rows, claw connections, **wiki pages** (`wiki_pages` / `wiki_log_entries`), and dashboard cards.
 
-**Self-hosted** installs use the same stack: set `DATABASE_URL`, Supabase Auth env vars, and run the app; optional `DEPLOYMENT_MODE=local` still enables OpenBB and bundled LLM features on the machine that runs Next.
+**Self-hosted** installs use the same stack: set `DATABASE_URL`, Supabase Auth env vars, and run the app; optional `DEPLOYMENT_MODE=local` still enables bundled LLM features on the machine that runs Next.
 
 Vault secrets are encrypted in the browser (hosted-style) when `DEPLOYMENT_MODE=cloud`, or handled server-side when `DEPLOYMENT_MODE=local` — see **Vault** in the UI.
 

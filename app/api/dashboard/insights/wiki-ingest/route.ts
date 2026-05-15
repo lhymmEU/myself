@@ -33,6 +33,7 @@ export async function GET() {
       status: state.status,
       detail: state.detail,
       updatedAt: state.updatedAt,
+      generativeCardsJson: state.generativeCardsJson,
       hasConnection: conns.length > 0,
       openclawTokenConfigured,
     },
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
 
   let requestedConnectionId: string | undefined;
   let supabaseAccessToken: string | undefined;
+  let supabaseRefreshToken: string | undefined;
   const ct = req.headers.get("content-type") ?? "";
   if (ct.includes("application/json")) {
     try {
@@ -59,6 +61,7 @@ export async function POST(req: NextRequest) {
         const o = raw as {
           connectionId?: unknown;
           supabaseAccessToken?: unknown;
+          supabaseRefreshToken?: unknown;
         };
         if (typeof o.connectionId === "string") {
           const id = o.connectionId.trim();
@@ -67,6 +70,10 @@ export async function POST(req: NextRequest) {
         if (typeof o.supabaseAccessToken === "string") {
           const t = o.supabaseAccessToken.trim();
           if (t) supabaseAccessToken = t;
+        }
+        if (typeof o.supabaseRefreshToken === "string") {
+          const t = o.supabaseRefreshToken.trim();
+          if (t) supabaseRefreshToken = t;
         }
       }
     } catch {
@@ -89,11 +96,11 @@ export async function POST(req: NextRequest) {
   }
 
   const hasStoredRefresh = await hasOpenclawRefreshToken(auth.userId);
-  if (!hasStoredRefresh && !supabaseAccessToken) {
+  if (!hasStoredRefresh && !supabaseAccessToken && !supabaseRefreshToken) {
     return NextResponse.json(
       {
         error:
-          "Save your Supabase refresh token (Dashboard → Settings → OpenClaw / wiki ingest), or stay logged in so ingest can send a short-lived access token. Wiki ingest needs one of these.",
+          "Save your Supabase refresh token (Dashboard → Settings → OpenClaw / wiki ingest), or stay logged in so ingest can send session tokens (access + refresh). Wiki ingest needs one of these.",
       },
       { status: 400 },
     );
@@ -115,6 +122,7 @@ export async function POST(req: NextRequest) {
   after(async () => {
     await runWikiIngestJob(connectionId, userId, {
       supabaseAccessToken,
+      supabaseRefreshToken,
     });
   });
 

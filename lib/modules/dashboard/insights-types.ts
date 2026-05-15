@@ -16,6 +16,17 @@ export interface SourceRef {
   label?: string;
 }
 
+export type GenerativeBlock =
+  | { t: "heading"; text: string }
+  | { t: "paragraph"; text: string }
+  | { t: "bullets"; items: string[] }
+  | { t: "callout"; tone: "info" | "warn" | "success"; text: string }
+  | { t: "metric"; label: string; value: string };
+
+export interface GenerativePresentation {
+  blocks: GenerativeBlock[];
+}
+
 export interface DashboardCard {
   id: string;
   /**
@@ -36,6 +47,10 @@ export interface DashboardCard {
   state: CardState;
   createdAt: number;
   updatedAt: number;
+  /** Optional structured layout parsed from agent card JSON. */
+  presentation?: GenerativePresentation | null;
+  /** When true, `body` is rendered as Markdown in the bento tile. */
+  richMarkdown?: boolean;
 }
 
 export interface PinnedQuery {
@@ -70,4 +85,6 @@ export interface PublishCardInput {
   wikiSlug?: string | null;
   pinnedGoalId?: string | null;
   priority?: number;
+  presentation?: GenerativePresentation | null;
+  richMarkdown?: boolean;
 }

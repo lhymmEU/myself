@@ -1,7 +1,6 @@
 import { nanoid } from "nanoid";
 import { and, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
-import { LOCAL_USER_ID } from "@/lib/core/runtime";
 import { lifeNodes, mindMapScenes } from "./schema";
 import type {
   LifeNode,
@@ -41,7 +40,7 @@ function parseRow(row: typeof lifeNodes.$inferSelect): LifeNode {
 }
 
 export async function getAllNodes(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<LifeNode[]> {
   const db = getDb();
   const rows = await db
@@ -53,7 +52,7 @@ export async function getAllNodes(
 
 export async function getNode(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<LifeNode | null> {
   const db = getDb();
   const rows = await db
@@ -67,7 +66,7 @@ export async function getNode(
 
 export async function createNode(
   input: CreateNodeInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<LifeNode> {
   const db = getDb();
   const now = Date.now();
@@ -92,7 +91,7 @@ export async function createNode(
 
 export async function updateNode(
   input: UpdateNodeInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<LifeNode> {
   const db = getDb();
   const existing = await db
@@ -129,7 +128,7 @@ export async function updateNode(
 
 export async function deleteNode(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db
@@ -140,7 +139,7 @@ export async function deleteNode(
 export async function connectNodes(
   sourceId: string,
   targetId: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<LifeNode> {
   const node = await getNode(sourceId, userId);
   if (!node) throw new Error(`Node not found: ${sourceId}`);
@@ -154,7 +153,7 @@ export async function connectNodes(
 export async function disconnectNodes(
   sourceId: string,
   targetId: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<LifeNode> {
   const node = await getNode(sourceId, userId);
   if (!node) throw new Error(`Node not found: ${sourceId}`);
@@ -184,7 +183,7 @@ function parseSceneRow(
 
 export async function getScene(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<MindMapScene | null> {
   const db = getDb();
   const rows = await db
@@ -197,7 +196,7 @@ export async function getScene(
 }
 
 export async function getOrCreateDefaultScene(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<MindMapScene> {
   const existing = await getScene(DEFAULT_SCENE_ID, userId);
   if (existing) return existing;
@@ -206,7 +205,7 @@ export async function getOrCreateDefaultScene(
 
 export async function getAllScenes(
   mode?: "mind" | "product",
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<MindMapScene[]> {
   const db = getDb();
   if (mode) {
@@ -228,7 +227,7 @@ export async function getAllScenes(
 export async function createScene(
   input: CreateSceneInput,
   id?: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<MindMapScene> {
   const db = getDb();
   const now = Date.now();
@@ -251,7 +250,7 @@ export async function createScene(
 
 export async function updateScene(
   input: UpdateSceneInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<MindMapScene> {
   const db = getDb();
   const existing = await db
@@ -289,7 +288,7 @@ export async function updateScene(
 
 export async function deleteScene(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db
@@ -298,7 +297,7 @@ export async function deleteScene(
 }
 
 export async function getTodoSourceScene(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<MindMapScene | null> {
   const db = getDb();
   const rows = await db
@@ -318,7 +317,7 @@ export async function getTodoSourceScene(
 export async function setTodoSource(
   id: string,
   enabled: boolean,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<MindMapScene> {
   const db = getDb();
   if (enabled) {

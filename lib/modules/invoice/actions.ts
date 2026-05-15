@@ -1,7 +1,6 @@
 import { nanoid } from "nanoid";
 import { and, eq, desc } from "drizzle-orm";
 import { getDb } from "@/lib/db";
-import { LOCAL_USER_ID } from "@/lib/core/runtime";
 import { eventBus } from "@/lib/core/event-bus";
 import {
   invoiceClients,
@@ -26,7 +25,7 @@ import type {
 // ── Clients ──
 
 export async function getAllClients(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<InvoiceClient[]> {
   const db = getDb();
   const rows = await db
@@ -48,7 +47,7 @@ export async function getAllClients(
 
 export async function getClient(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<InvoiceClient | undefined> {
   const db = getDb();
   const rows = await db
@@ -74,7 +73,7 @@ export async function getClient(
 
 export async function createClient(
   input: CreateClientInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<InvoiceClient> {
   const db = getDb();
   const id = nanoid();
@@ -89,7 +88,7 @@ export async function createClient(
 
 export async function updateClient(
   input: UpdateClientInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<InvoiceClient> {
   const db = getDb();
   const { id, ...data } = input;
@@ -106,7 +105,7 @@ export async function updateClient(
 
 export async function deleteClient(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db
@@ -120,7 +119,7 @@ export async function deleteClient(
 // ── Signatures ──
 
 export async function getAllSignatures(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<InvoiceSignature[]> {
   const db = getDb();
   const rows = await db
@@ -139,7 +138,7 @@ export async function getAllSignatures(
 
 export async function createSignature(
   input: CreateSignatureInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<InvoiceSignature> {
   const db = getDb();
   const id = nanoid();
@@ -169,7 +168,7 @@ export async function createSignature(
 
 export async function setDefaultSignature(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db
@@ -189,7 +188,7 @@ export async function setDefaultSignature(
 
 export async function deleteSignature(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db
@@ -205,7 +204,7 @@ export async function deleteSignature(
 // ── Invoice number ──
 
 export async function getNextInvoiceNumber(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<string> {
   const db = getDb();
   const rows = await db
@@ -225,7 +224,7 @@ export async function getNextInvoiceNumber(
 // ── Invoices ──
 
 export async function getAllInvoices(
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<Invoice[]> {
   const db = getDb();
   const rows = await db
@@ -238,7 +237,7 @@ export async function getAllInvoices(
 
 export async function getInvoice(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<InvoiceWithDetails | undefined> {
   const db = getDb();
   const rows = await db
@@ -290,7 +289,7 @@ export async function getInvoice(
 
 export async function createInvoice(
   input: CreateInvoiceInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<InvoiceWithDetails> {
   const db = getDb();
   const id = nanoid();
@@ -378,7 +377,7 @@ export async function createInvoice(
 
 export async function updateInvoice(
   input: UpdateInvoiceInput,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<InvoiceWithDetails> {
   const db = getDb();
   const now = Date.now();
@@ -453,7 +452,7 @@ export async function updateInvoice(
 
 export async function deleteInvoice(
   id: string,
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db.delete(invoiceItems).where(eq(invoiceItems.invoiceId, id));
@@ -466,7 +465,7 @@ export async function deleteInvoice(
 export async function markInvoiceStatus(
   id: string,
   status: "draft" | "sent" | "paid" | "overdue",
-  userId: string = LOCAL_USER_ID,
+  userId: string,
 ): Promise<void> {
   const db = getDb();
   await db

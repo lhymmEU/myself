@@ -6,5 +6,4 @@ export const dashboardModule: FeatureModule = {
   description:
     "Dashboard features: skills + wishes (raw layer) and bento wiki ingest via OpenClaw + Supabase.",
   eventHandlers: insightEventHandlers,
-  availableIn: ["local", "cloud"],
 };

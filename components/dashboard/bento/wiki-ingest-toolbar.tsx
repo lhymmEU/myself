@@ -21,6 +21,7 @@ interface WikiIngestPayload {
   status: "idle" | "processing" | "done" | "error";
   detail: string;
   updatedAt: number;
+  generativeCardsJson?: string | null;
   /** Legacy — prefer deriving eligibility from `/api/claw/connections` (same cache as Claw). */
   hasConnection?: boolean;
   openclawTokenConfigured?: boolean;
@@ -104,7 +105,7 @@ export function WikiIngestToolbar({
     void createClient()
       .auth.getSession()
       .then(({ data: d }) => {
-        setSupabaseSessionAccess(Boolean(d.session?.access_token));
+        setSupabaseSessionAccess(Boolean(d.session));
       });
   }, []);
   const ingestAuthReady = openclawReady || supabaseSessionAccess;
@@ -126,8 +127,12 @@ export function WikiIngestToolbar({
     }
     try {
       const supabase = createClient();
+      await supabase.auth.refreshSession().catch(() => {
+        /* offline or no refresh — still attempt ingest with existing session */
+      });
       const { data: sessionData } = await supabase.auth.getSession();
       const supabaseAccessToken = sessionData.session?.access_token;
+      const supabaseRefreshToken = sessionData.session?.refresh_token;
 
       const res = await fetch("/api/dashboard/insights/wiki-ingest", {
         method: "POST",
@@ -137,6 +142,9 @@ export function WikiIngestToolbar({
           connectionId: effectiveConnectionId,
           ...(supabaseAccessToken
             ? { supabaseAccessToken }
+            : {}),
+          ...(supabaseRefreshToken
+            ? { supabaseRefreshToken }
             : {}),
         }),
       });
@@ -264,8 +272,8 @@ export function WikiIngestToolbar({
                 ? "Could not load wiki ingest status. Use refresh or reload the page."
                 : connLoading
                   ? "Loading your Claw SSH connections…"
-                  : !ingestAuthReady
-                    ? "Save your Supabase refresh token under Dashboard → Settings → OpenClaw / wiki ingest, or stay signed in here so ingest can send a short-lived access token to the agent."
+                    : !ingestAuthReady
+                    ? "Save your Supabase refresh token under Dashboard → Settings → OpenClaw / wiki ingest, or stay signed in here so ingest can send session tokens (access + refresh) to the agent."
                     : hasConnection
                       ? "Uses the same SSH connection as Claw chat when you have opened Claw in this browser (or your default). Runs openclaw on the remote host; up to ~15 min."
                       : "Configure a Claw SSH connection first (Dashboard → Claw)."}

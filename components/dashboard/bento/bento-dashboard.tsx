@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import useSWR from "swr";
 import {
   Loader2,
   Sparkles,
 } from "lucide-react";
 import { useDashboardInsights } from "@/lib/swr/hooks";
+import { swrFetcher } from "@/lib/swr/config";
+import { summarizeGenerativePayload } from "@/lib/modules/dashboard/client-parse-generative-cards";
 import { BentoCard } from "./bento-card";
 import { CardDetailSheet } from "./card-detail-sheet";
 import { GoalPinBar } from "./goal-pin-bar";
@@ -20,8 +23,25 @@ interface InsightsResponse {
   pinned: PinnedQuery[];
 }
 
+interface WikiIngestApiPayload {
+  status: string;
+  detail: string;
+  updatedAt: number;
+  generativeCardsJson?: string | null;
+}
+
 export function BentoDashboard() {
   const { data, isLoading, mutate } = useDashboardInsights();
+  const { data: ingestPayload } = useSWR<WikiIngestApiPayload>(
+    "/api/dashboard/insights/wiki-ingest",
+    swrFetcher,
+    { revalidateOnFocus: false },
+  );
+  const genSummary = useMemo(
+    () =>
+      summarizeGenerativePayload(ingestPayload?.generativeCardsJson ?? null),
+    [ingestPayload?.generativeCardsJson],
+  );
   const payload = data as InsightsResponse | undefined;
   const cards: DashboardCard[] = useMemo(
     () => payload?.cards ?? [],
@@ -86,6 +106,20 @@ export function BentoDashboard() {
               onPin={setPinnedGoalId}
             />
 
+            {genSummary.blockCount > 0 ? (
+              <p className="text-xs text-muted-foreground rounded-lg border border-dashed border-border/80 bg-muted/15 px-3 py-2">
+                Generative layout:{" "}
+                <span className="font-medium text-foreground">
+                  {genSummary.blockCount}
+                </span>{" "}
+                block(s) across{" "}
+                <span className="font-medium text-foreground">
+                  {genSummary.cardCount}
+                </span>{" "}
+                card(s) — parsed client-side from the last ingest payload.
+              </p>
+            ) : null}
+
             {isLoading && cards.length === 0 ? (
               <div className="flex items-center justify-center py-20 text-muted-foreground">
                 <Loader2 className="h-5 w-5 animate-spin" />
@@ -139,7 +173,9 @@ function EmptyState({ pinnedQueries }: { pinnedQueries: PinnedQuery[] }) {
         <span className="font-medium">Marked</span>, connect{" "}
         <span className="font-medium">Claw</span>, then use{" "}
         <span className="font-medium">Wiki ingest</span> above — openclaw runs
-        in the background (no timeout) and fills this grid from your sources.
+        in the background (no timeout) and writes{" "}
+        <span className="font-mono text-xs">cards.json</span> on the OpenClaw
+        host; the app pulls that file into this grid.
       </p>
       {pinnedQueries.length > 0 && (
         <div className="mt-6 text-left max-w-md mx-auto space-y-2">

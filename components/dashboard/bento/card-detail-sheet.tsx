@@ -10,8 +10,6 @@ import {
   Archive,
   ExternalLink,
 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { mutate as globalMutate } from "swr";
 import { toast } from "sonner";
 import {
@@ -32,6 +30,7 @@ import {
   freshnessDecay,
   kindLabel,
 } from "./visual";
+import { GenerativeCardBody } from "./generative-card-body";
 import type { CardVerb, DashboardCard, SourceRef } from "./types";
 
 interface Props {
@@ -42,7 +41,6 @@ interface Props {
 
 interface DetailResponse {
   card: DashboardCard;
-  wiki?: string | null;
 }
 
 export function CardDetailSheet({
@@ -89,7 +87,7 @@ export function CardDetailSheet({
       await Promise.all([
         globalMutate("/api/dashboard/insights"),
         globalMutate(
-          `/api/dashboard/insights?cardId=${encodeURIComponent(cardId)}&include=wiki`,
+          `/api/dashboard/insights?cardId=${encodeURIComponent(cardId)}`,
         ),
       ]);
       onAfterVerb?.(verb);
@@ -128,9 +126,13 @@ export function CardDetailSheet({
               <SheetTitle className="text-lg leading-snug pr-6">
                 {card.title}
               </SheetTitle>
-              {card.body && (
-                <SheetDescription className="whitespace-pre-line">
-                  {card.body}
+              {(card.presentation?.blocks?.length ||
+                card.richMarkdown ||
+                card.body) && (
+                <SheetDescription asChild>
+                  <div className="text-muted-foreground">
+                    <GenerativeCardBody card={card} mode="sheet" />
+                  </div>
                 </SheetDescription>
               )}
             </SheetHeader>
@@ -138,19 +140,12 @@ export function CardDetailSheet({
             <ScrollArea className="flex-1 px-4 py-3">
               <div className="space-y-5">
                 <ProvenanceList sources={sources} />
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  {detail?.wiki ? (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {detail.wiki}
-                    </ReactMarkdown>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">
-                      {card.wikiSlug
-                        ? `No wiki page yet at data/wiki/${card.wikiSlug}.md.`
-                        : "This card isn't backed by a wiki page yet. Use the verbs below — openclaw will create one on the next ingest."}
-                    </p>
-                  )}
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  Long-form notes and the LLM wiki live on your OpenClaw host
+                  only. This panel shows the card summary and provenance chips
+                  above; run wiki ingest from the dashboard to refresh tiles
+                  from that vault.
+                </p>
               </div>
             </ScrollArea>
 

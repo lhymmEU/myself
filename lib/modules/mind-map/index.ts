@@ -4,5 +4,4 @@ export const mindMapModule: FeatureModule = {
   name: "mind-map",
   description: "Excalidraw-powered canvas for freeform visual thinking",
   eventHandlers: {},
-  availableIn: ["local", "cloud"],
 };

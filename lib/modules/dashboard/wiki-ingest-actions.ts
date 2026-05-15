@@ -5,14 +5,19 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { wikiIngestState } from "@/lib/db/schema";
-import { extractDashboardJsonFromWikiIngestStdout } from "@/lib/claw/dashboard-stdout";
 import { executeCommand } from "@/lib/claw/ssh";
-import { buildOpenclawAgentCommand } from "@/lib/claw/openclaw-agent";
+import {
+  buildOpenclawAgentCommand,
+  shellEscape,
+} from "@/lib/claw/openclaw-agent";
 import { buildWikiIngestMessage } from "@/lib/claw/wiki-preamble";
 import { getClawConnection } from "@/lib/claw/db";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
 import { getOpenclawRefreshTokenPlain } from "@/lib/modules/dashboard/openclaw-token-actions";
-import { WIKI_MAINTAINER_SESSION_ID } from "@/lib/claw/constants";
+import {
+  OPENCLAW_REMOTE_SUPABASE_READS_CARDS_JSON,
+  WIKI_MAINTAINER_SESSION_ID,
+} from "@/lib/claw/constants";
 import {
   importDashboardJsonString,
   listActiveCards,
@@ -24,6 +29,8 @@ export interface WikiIngestStateRow {
   status: WikiIngestStatusValue;
   detail: string;
   updatedAt: number;
+  /** Raw `{ "cards": [...] }` string persisted after a successful remote `cards.json` read. */
+  generativeCardsJson: string | null;
 }
 
 /** SSH/exec budget — keep in sync with `openclaw agent --timeout` below. */
@@ -46,12 +53,18 @@ export async function getWikiIngestState(
     .limit(1);
   const row = rows[0];
   if (!row) {
-    return { status: "idle", detail: "", updatedAt: 0 };
+    return {
+      status: "idle",
+      detail: "",
+      updatedAt: 0,
+      generativeCardsJson: null,
+    };
   }
   return {
     status: row.status as WikiIngestStatusValue,
     detail: row.detail,
     updatedAt: Number(row.updatedAt),
+    generativeCardsJson: row.generativeCardsJson ?? null,
   };
 }
 
@@ -90,7 +103,11 @@ export async function upsertWikiIngestState(
 export async function runWikiIngestJob(
   connectionId: string,
   userId: string,
-  opts?: { supabaseAccessToken?: string | null },
+  opts?: {
+    supabaseAccessToken?: string | null;
+    /** Same-browser Supabase session refresh token (pairs with access; survives long ingests). */
+    supabaseRefreshToken?: string | null;
+  },
 ): Promise<void> {
   const connCheck = await getClawConnection(connectionId, userId);
   if (!connCheck) {
@@ -102,14 +119,14 @@ export async function runWikiIngestJob(
     return;
   }
   const access = opts?.supabaseAccessToken?.trim() || null;
-  const refresh = access
-    ? null
-    : await getOpenclawRefreshTokenPlain(userId);
+  const refreshFromSession = opts?.supabaseRefreshToken?.trim() || null;
+  const refreshStored = await getOpenclawRefreshTokenPlain(userId);
+  const refresh = refreshFromSession || refreshStored || null;
   if (!access && !refresh) {
     await upsertWikiIngestState(
       userId,
       "error",
-      "OpenClaw Supabase session missing. Save a refresh token under Dashboard → Settings → OpenClaw / wiki ingest, or start ingest while logged in so the browser can send a session access token.",
+      "OpenClaw Supabase session missing. Save a refresh token under Dashboard → Settings → OpenClaw / wiki ingest, or start ingest while logged in so the browser can send session tokens.",
     );
     return;
   }
@@ -144,29 +161,48 @@ export async function runWikiIngestJob(
       400,
     );
 
-    let ingestNotes = "";
-    const jsonRaw = extractDashboardJsonFromWikiIngestStdout(result.stdout);
-    if (jsonRaw) {
-      const imp = await importDashboardJsonString(userId, jsonRaw);
-      if (imp.ok) {
-        ingestNotes = ` Imported ${imp.count} card(s) from agent stdout handoff.`;
-      } else {
-        ingestNotes = ` Dashboard JSON in stdout but not imported (${imp.reason}).`;
-      }
-    } else {
-      ingestNotes =
-        " No <<<MYSELF_DASHBOARD_JSON_*>>> block found in openclaw stdout.";
+    const catInner = `test -f ${OPENCLAW_REMOTE_SUPABASE_READS_CARDS_JSON} && cat ${OPENCLAW_REMOTE_SUPABASE_READS_CARDS_JSON}`;
+    const catCmd = `bash -lc ${shellEscape(catInner)}`;
+    const fileRes = await executeCommand(
+      connectionId,
+      catCmd,
+      120_000,
+      userId,
+    );
+    const rawFile = fileRes.stdout?.replace(/^\uFEFF/, "").trim() ?? "";
+
+    let importResult:
+      | { ok: true; count: number }
+      | { ok: false; reason: string }
+      | null = null;
+    if (fileRes.code === 0 && rawFile) {
+      importResult = await importDashboardJsonString(userId, rawFile);
     }
 
+    let cardNote: string;
+    if (fileRes.code !== 0) {
+      cardNote = `Could not read remote cards file (${OPENCLAW_REMOTE_SUPABASE_READS_CARDS_JSON}); shell exit ${fileRes.code}.`;
+    } else if (!rawFile) {
+      cardNote = `Remote cards file was empty (${OPENCLAW_REMOTE_SUPABASE_READS_CARDS_JSON}).`;
+    } else if (!importResult?.ok) {
+      cardNote = `Remote cards.json was invalid (${importResult?.reason ?? "unknown"}).`;
+    } else {
+      cardNote = `Imported ${importResult.count} dashboard card(s) from remote cards.json.`;
+    }
+
+    const cardsOk =
+      fileRes.code === 0 && rawFile.length > 0 && importResult?.ok === true;
+
     const cardCount = (await listActiveCards(userId)).length;
-    const okHint =
-      cardCount === 0
-        ? clampDetail(
-            `${stdoutBrief}${ingestNotes} The wiki-maintainer preamble requires a MYSELF_DASHBOARD_JSON block in stdout after tools complete.`,
-            1200,
-          )
-        : clampDetail(`${stdoutBrief}${ingestNotes}`, 1200);
-    await upsertWikiIngestState(userId, "done", okHint);
+    const detailHint = clampDetail(
+      `${stdoutBrief} Ingest finished. ${cardNote} Active cards: ${cardCount}.`,
+      1200,
+    );
+    await upsertWikiIngestState(
+      userId,
+      cardsOk ? "done" : "error",
+      detailHint,
+    );
   } catch (err) {
     const msg =
       err instanceof Error ? err.message : "Wiki ingest failed unexpectedly.";

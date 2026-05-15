@@ -49,20 +49,6 @@ export function usePlansByLinkedNodes(ids: string[]) {
   return useSWR(key, swrFetcher);
 }
 
-// --- Finance / OpenBB hooks ---
-
-export function useOpenBB<T = unknown>(
-  endpoint: string | null,
-  params?: Record<string, string>,
-) {
-  const qs = new URLSearchParams({ endpoint: endpoint ?? "", ...params });
-  return useSWR<T>(
-    endpoint ? `/api/finance/openbb?${qs}` : null,
-    swrFetcher,
-    { dedupingInterval: 30_000 },
-  );
-}
-
 // --- Mind Map hooks ---
 
 export function useMindMapScenes(mode: string) {
@@ -101,7 +87,7 @@ export function useDashboardInsights() {
 
 export function useCardDetail(cardId: string | null) {
   return useSWR(
-    cardId ? `/api/dashboard/insights?cardId=${encodeURIComponent(cardId)}&include=wiki` : null,
+    cardId ? `/api/dashboard/insights?cardId=${encodeURIComponent(cardId)}` : null,
     swrFetcher,
   );
 }

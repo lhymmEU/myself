@@ -5,8 +5,11 @@
  */
 import { initDatabase } from "../lib/core/init-db";
 import { getDb } from "../lib/db";
-import { dashboardCards, cardDismissals } from "../lib/db/schema/postgres/insights";
-import { eq, and, like } from "drizzle-orm";
+import {
+  cardDismissals,
+  wikiIngestState,
+} from "../lib/db/schema/postgres/insights";
+import { eq, and } from "drizzle-orm";
 
 function requireSmokeUser(): string {
   const id = process.env.MYSELF_SMOKE_USER_ID?.trim();
@@ -23,21 +26,15 @@ async function main() {
   const ids = ["smoke-card-1", "smoke-card-2"];
   for (const id of ids) {
     await db
-      .delete(dashboardCards)
-      .where(
-        and(eq(dashboardCards.id, id), eq(dashboardCards.userId, userId)),
-      );
-    await db
       .delete(cardDismissals)
       .where(
         and(eq(cardDismissals.cardId, id), eq(cardDismissals.userId, userId)),
       );
   }
   await db
-    .delete(dashboardCards)
-    .where(
-      and(eq(dashboardCards.userId, userId), like(dashboardCards.id, "smoke-%")),
-    );
+    .update(wikiIngestState)
+    .set({ generativeCardsJson: null })
+    .where(eq(wikiIngestState.userId, userId));
   console.log("smoke seeds removed");
 }
 

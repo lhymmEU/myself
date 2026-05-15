@@ -2,7 +2,9 @@
 -- Matches lib/db/schema/postgres/insights.ts and drizzle/postgres/0007_wiki_ingest_state.sql.
 -- Safe to run in Supabase SQL Editor (idempotent).
 --
--- If GET /api/dashboard/insights still fails, create dashboard_cards + friends via
+-- If GET /api/dashboard/insights still fails, create pinned_queries +
+-- card_dismissals via scripts/dashboard-insights-tables-supabase.sql (omit
+-- dashboard_cards — tiles come from wiki ingest stdout / generative_cards_json).
 -- scripts/dashboard-insights-tables-supabase.sql (drizzle/postgres/0006_insights.sql).
 
 CREATE TABLE IF NOT EXISTS public.wiki_ingest_state (
