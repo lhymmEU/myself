@@ -10,6 +10,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|icons|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|otf)$).*)",
+    // Agent watcher bundle (`myself-op.js`) must be downloadable by curl
+    // with no auth — that's the pairing entry point.
+    "/((?!_next/static|_next/image|favicon.ico|icons|myself-op\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|otf)$).*)",
   ],
 };
