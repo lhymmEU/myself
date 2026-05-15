@@ -21931,8 +21931,15 @@ async function runStart() {
   const runAgent = () => {
     agentInFlight = true;
     const cmd = agentCommand(config.agentCmd);
+    const sessionId = process.env.MYSELF_OP_SESSION_ID || "myself-op-watcher";
+    const timeoutSec = Number(process.env.MYSELF_OP_AGENT_TIMEOUT_SEC || 600);
     const args = [
       "agent",
+      "--local",
+      "--session-id",
+      sessionId,
+      "--timeout",
+      String(timeoutSec),
       "--message",
       "Process all pending events in the agent_events queue using the myself-op skill. Mark each event as done when complete."
     ];

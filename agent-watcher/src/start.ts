@@ -62,8 +62,20 @@ export async function runStart(): Promise<void> {
   const runAgent = () => {
     agentInFlight = true;
     const cmd = agentCommand(config.agentCmd);
+    // openclaw requires a session selector (`--to`, `--session-id`, or
+    // `--agent`) and runs against a remote Gateway by default — `--local`
+    // forces the embedded Claude Code runtime, which is what hosts the
+    // `myself-op` skill we shipped to ~/.claude/skills/.
+    const sessionId =
+      process.env.MYSELF_OP_SESSION_ID || "myself-op-watcher";
+    const timeoutSec = Number(process.env.MYSELF_OP_AGENT_TIMEOUT_SEC || 600);
     const args = [
       "agent",
+      "--local",
+      "--session-id",
+      sessionId,
+      "--timeout",
+      String(timeoutSec),
       "--message",
       "Process all pending events in the agent_events queue using the myself-op skill. " +
         "Mark each event as done when complete.",
