@@ -62,13 +62,14 @@ export async function runStart(): Promise<void> {
   const runAgent = () => {
     agentInFlight = true;
     const cmd = agentCommand(config.agentCmd);
-    // openclaw requires a session selector (`--to`, `--session-id`, or
-    // `--agent`) and runs against a remote Gateway by default — `--local`
-    // forces the embedded Claude Code runtime, which is what hosts the
-    // `myself-op` skill we shipped to ~/.claude/skills/.
+    // openclaw does NOT auto-register skill manifests the way Claude Code
+    // does — we have to hand it the absolute skill path in the message and
+    // tell it which file to read first. `--local` forces the embedded
+    // runtime; `--session-id` is required by the agent command.
     const sessionId =
       process.env.MYSELF_OP_SESSION_ID || "myself-op-watcher";
     const timeoutSec = Number(process.env.MYSELF_OP_AGENT_TIMEOUT_SEC || 600);
+    const message = buildAgentPrompt(skillDir);
     const args = [
       "agent",
       "--local",
@@ -77,10 +78,9 @@ export async function runStart(): Promise<void> {
       "--timeout",
       String(timeoutSec),
       "--message",
-      "Process all pending events in the agent_events queue using the myself-op skill. " +
-        "Mark each event as done when complete.",
+      message,
     ];
-    console.log(`[agent] invoking: ${cmd} ${args.map(quote).join(" ")}`);
+    console.log(`[agent] invoking: ${cmd} agent --local --session-id ${sessionId} --timeout ${timeoutSec} --message <…>`);
     const child = spawn(cmd, args, { stdio: "inherit" });
     child.on("exit", (code) => {
       agentInFlight = false;
@@ -164,4 +164,36 @@ function agentCommand(override?: string): string {
 
 function quote(s: string): string {
   return /[^\w\-.,@/=:]/.test(s) ? JSON.stringify(s) : s;
+}
+
+/**
+ * The message we send to openclaw on every run. Self-contained on purpose:
+ * openclaw doesn't auto-discover skills, so we hand it the skill root and
+ * tell it which file to read first. Modeled after the old wiki-preamble.
+ */
+function buildAgentPrompt(skillDir: string): string {
+  return [
+    "[CHANNEL=myself-op]",
+    "You are this user's myself-op agent. The web app pushes events (page upserts, marked items, wishes, dismissals, regen requests, bootstrap) to a Supabase queue; drain the queue, integrate items into the local file wiki, and regenerate dashboard cards when asked.",
+    "",
+    "## Read this FIRST",
+    `Your full playbook lives at \`${skillDir}/SKILL.md\`. Open and follow it — it documents the wiki layout, every event type, the five-card contract, and the exact scripts to call.`,
+    "",
+    "## Where things live on this machine",
+    `- Skill scripts:   \`${skillDir}/scripts/\`  (run with \`npx tsx <script>.ts\`)`,
+    "- Config:          `~/.myself-op/config.json`  (supabaseUrl, anonKey, userId, token — DO NOT log)",
+    "- Wiki vault:      `~/.myself-op/wiki/`",
+    "",
+    "## Workflow this run",
+    `1. Read \`${skillDir}/SKILL.md\` if you haven't this session.`,
+    `2. \`npx tsx ${skillDir}/scripts/list-pending-events.ts\` — fetch all pending rows from \`agent_events\` (ordered by created_at).`,
+    `3. For each event in order: \`npx tsx ${skillDir}/scripts/fetch-payload.ts <event_id>\` to load the payload (inline or from blob storage), update the wiki per the SKILL playbook, then \`npx tsx ${skillDir}/scripts/mark-event.ts <event_id> done\` (or \`error <msg>\` on failure).`,
+    `4. If any event was a \`regen.cards\` or the run included a \`bootstrap.full\`, regenerate the five dashboard cards per the SKILL contract and \`npx tsx ${skillDir}/scripts/publish-cards.ts --file <json>\` to push them.`,
+    "",
+    "## Hard rules",
+    "- This session is non-conversational. Do the work, then stop.",
+    "- Never log credentials from `config.json`.",
+    "- Process events strictly in `created_at` order.",
+    "- If nothing is pending and no regen was requested, exit immediately.",
+  ].join("\n");
 }

@@ -4,20 +4,23 @@ import os from "node:os";
 import { spawn } from "node:child_process";
 import { SKILL_ASSETS } from "./generated/assets";
 
-const SKILL_NAME = "myself-op";
-
-function skillsDir(): string {
-  return process.env.CLAUDE_SKILLS_DIR ?? path.join(os.homedir(), ".claude", "skills");
-}
-
+/**
+ * The skill is a plain directory of scripts + SKILL.md that the agent
+ * reads by absolute path (openclaw does not auto-register skill manifests
+ * the way Claude Code does). We co-locate it with the watcher's config and
+ * wiki under `~/.myself-op/` so the agent only has to know one root.
+ */
 export function skillTargetPath(): string {
-  return path.join(skillsDir(), SKILL_NAME);
+  return (
+    process.env.MYSELF_OP_SKILL_DIR ??
+    path.join(os.homedir(), ".myself-op", "skill")
+  );
 }
 
 /**
- * Decode embedded assets and write them under ~/.claude/skills/myself-op/.
- * Overwrites existing files so re-running `init` always pins the bundle
- * version that came with this watcher binary.
+ * Decode embedded assets and write them under `skillTargetPath()` (default
+ * `~/.myself-op/skill/`). Overwrites existing files so re-running `init`
+ * always pins the bundle version that came with this watcher binary.
  */
 export async function installSkill(): Promise<{ target: string; fileCount: number }> {
   const target = skillTargetPath();

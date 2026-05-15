@@ -29,9 +29,9 @@ per ingest cycle by a watcher daemon that lives on this machine.
     └── changelog.md             one line per ingest run
 ```
 
-The skill itself is at `~/.claude/skills/myself-op/` with scripts at
-`scripts/`. Run them with `npx tsx scripts/<name>.ts`. All scripts read
-`~/.myself-op/config.json` for credentials; you never see the token.
+The skill itself is at `~/.myself-op/skill/` with scripts at `scripts/`.
+Run them with `npx tsx ~/.myself-op/skill/scripts/<name>.ts`. All scripts
+read `~/.myself-op/config.json` for credentials; you never see the token.
 
 ## Workflow (every invocation)
 

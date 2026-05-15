@@ -365,8 +365,9 @@ function ConnectWizard({
                   />
                   <p className="text-xs text-muted-foreground">
                     The watcher saves <code>~/.myself-op/config.json</code> and
-                    installs the <code>myself-op</code> skill into your agent
-                    skills directory automatically.
+                    drops the skill scripts at <code>~/.myself-op/skill/</code>.
+                    Your agent reads them by absolute path — no skill registry
+                    setup needed.
                   </p>
                 </div>
               }

@@ -9,9 +9,12 @@ myself-op watcher
   node myself-op.js help     Show this message.
 
 Environment overrides:
-  MYSELF_SUPABASE_URL    Override the Supabase URL (default: baked in at build).
-  MYSELF_AGENT_CMD       Command to invoke for processing events (default: "openclaw").
-  CLAUDE_SKILLS_DIR      Where to install the skill (default: ~/.claude/skills).
+  MYSELF_SUPABASE_URL          Override the Supabase URL (default: baked in at build).
+  MYSELF_SUPABASE_ANON_KEY     Override the anon/publishable key (default: baked in).
+  MYSELF_AGENT_CMD             Command to invoke for processing events (default: "openclaw").
+  MYSELF_OP_SKILL_DIR          Where to write the skill scripts (default: ~/.myself-op/skill).
+  MYSELF_OP_SESSION_ID         openclaw session id (default: "myself-op-watcher").
+  MYSELF_OP_AGENT_TIMEOUT_SEC  openclaw agent timeout in seconds (default: 600).
 `;
 
 async function main(): Promise<void> {
