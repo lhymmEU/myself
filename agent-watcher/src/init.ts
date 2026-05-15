@@ -8,13 +8,24 @@ import {
   type WatcherConfig,
 } from "./config";
 import { installSkill, installSkillDeps } from "./skill-installer";
-import { BAKED_SUPABASE_URL } from "./generated/build-info";
+import {
+  BAKED_SUPABASE_URL,
+  BAKED_SUPABASE_ANON_KEY,
+} from "./generated/build-info";
 
 export async function runInit(): Promise<void> {
   const supabaseUrl = process.env.MYSELF_SUPABASE_URL || BAKED_SUPABASE_URL;
   if (!supabaseUrl) {
     throw new Error(
       "This watcher has no Supabase URL baked in. Set MYSELF_SUPABASE_URL " +
+        "before running init.",
+    );
+  }
+  const anonKey =
+    process.env.MYSELF_SUPABASE_ANON_KEY || BAKED_SUPABASE_ANON_KEY;
+  if (!anonKey) {
+    throw new Error(
+      "This watcher has no Supabase anon key baked in. Set MYSELF_SUPABASE_ANON_KEY " +
         "before running init.",
     );
   }
@@ -42,11 +53,13 @@ export async function runInit(): Promise<void> {
     throw new Error("Token has no user id (sub claim).");
   }
 
-  const config: WatcherConfig = { supabaseUrl, userId, token };
+  const config: WatcherConfig = { supabaseUrl, anonKey, userId, token };
 
-  // Sanity-check the token by selecting our registration row.
+  // Sanity-check the token by selecting our registration row. The Supabase
+  // client needs the anon key as the `apikey` header (project identity);
+  // the agent JWT goes in `Authorization` so RLS applies.
   process.stdout.write("Validating token with Supabase... ");
-  const supabase = createClient(supabaseUrl, token, {
+  const supabase = createClient(supabaseUrl, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: { headers: { Authorization: `Bearer ${token}` } },
   });

@@ -16,7 +16,7 @@ interface AgentEventRow {
 
 export async function runStart(): Promise<void> {
   const config = await readConfig();
-  const supabase = createClient(config.supabaseUrl, config.token, {
+  const supabase = createClient(config.supabaseUrl, config.anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: { headers: { Authorization: `Bearer ${config.token}` } },
   });

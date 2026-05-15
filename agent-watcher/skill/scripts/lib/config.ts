@@ -8,7 +8,10 @@ export const WIKI_ROOT = path.join(os.homedir(), ".myself-op", "wiki");
 
 export interface SkillConfig {
   supabaseUrl: string;
+  /** Public anon/publishable key — required as `apikey` header. */
+  anonKey: string;
   userId: string;
+  /** Agent JWT — sent in `Authorization: Bearer ...`. */
   token: string;
 }
 
@@ -22,7 +25,7 @@ export async function loadConfig(): Promise<SkillConfig> {
     );
   }
   const cfg = JSON.parse(raw) as Partial<SkillConfig>;
-  if (!cfg.supabaseUrl || !cfg.userId || !cfg.token) {
+  if (!cfg.supabaseUrl || !cfg.anonKey || !cfg.userId || !cfg.token) {
     throw new Error(`Config at ${CONFIG_PATH} is missing required fields.`);
   }
   return cfg as SkillConfig;

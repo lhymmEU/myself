@@ -6,7 +6,7 @@ let cached: SupabaseClient | null = null;
 export async function getClient(): Promise<SupabaseClient> {
   if (cached) return cached;
   const cfg = await loadConfig();
-  cached = createClient(cfg.supabaseUrl, cfg.token, {
+  cached = createClient(cfg.supabaseUrl, cfg.anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: { headers: { Authorization: `Bearer ${cfg.token}` } },
   });

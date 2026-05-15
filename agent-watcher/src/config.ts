@@ -7,7 +7,10 @@ export const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
 
 export interface WatcherConfig {
   supabaseUrl: string;
+  /** Public anon/publishable key — required as `apikey` header by PostgREST. */
+  anonKey: string;
   userId: string;
+  /** Agent JWT — sent in `Authorization: Bearer ...` for per-user RLS. */
   token: string;
   /** Optional override; defaults to "openclaw" on PATH. */
   agentCmd?: string;
@@ -23,7 +26,7 @@ export async function readConfig(): Promise<WatcherConfig> {
     );
   }
   const cfg = JSON.parse(raw) as Partial<WatcherConfig>;
-  if (!cfg.supabaseUrl || !cfg.userId || !cfg.token) {
+  if (!cfg.supabaseUrl || !cfg.anonKey || !cfg.userId || !cfg.token) {
     throw new Error(`Config at ${CONFIG_PATH} is missing required fields.`);
   }
   return cfg as WatcherConfig;
