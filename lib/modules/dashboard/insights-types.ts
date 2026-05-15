@@ -36,6 +36,13 @@ export interface DashboardCard {
   ingestSlot: string | null;
   kind: CardKind;
   title: string;
+  /**
+   * Short plain-text summary (≤ 2 sentences) rendered on the bento tile.
+   * Acts as the "headline" the user sees before clicking. Optional — when
+   * absent, the tile falls back to a clamped view of `body`/`presentation`.
+   */
+  summary: string | null;
+  /** Full detail shown in the slide-in sheet. May be Markdown if `richMarkdown`. */
   body: string;
   hue: number;
   freshness: number;
@@ -77,6 +84,9 @@ export interface PublishCardInput {
   slot?: string;
   kind: CardKind;
   title: string;
+  /** ≤ 2 sentence plain-text headline for the bento tile. */
+  summary?: string;
+  /** Full detail body (Markdown when `richMarkdown` is true). Shown in the slide-in. */
   body?: string;
   hue?: number;
   freshness?: number;

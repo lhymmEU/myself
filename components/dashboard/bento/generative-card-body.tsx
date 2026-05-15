@@ -55,7 +55,16 @@ function Block({ block }: { block: GenerativeBlock }) {
 }
 
 /**
- * Renders agent-authored structured layout or Markdown body for bento tiles.
+ * Renders the agent-authored card content. Two distinct surfaces:
+ *
+ * - **tile**: prefers `summary` (short headline, no clamp needed). Falls
+ *   back to a clamped view of `presentation.blocks` / `body` when no
+ *   summary was provided.
+ * - **sheet** (slide-in): always renders the full long-form content —
+ *   `presentation.blocks` if structured, otherwise `body` (as Markdown
+ *   when `richMarkdown`). If both `summary` and a long-form body exist,
+ *   the summary leads as a subtitle line so the slide-in still opens
+ *   with the same headline the tile showed.
  */
 export function GenerativeCardBody({
   card,
@@ -64,7 +73,33 @@ export function GenerativeCardBody({
   card: DashboardCard;
   mode?: "tile" | "sheet";
 }) {
-  const clamp = mode === "tile" ? "line-clamp-6" : "";
+  if (mode === "tile") {
+    if (card.summary) {
+      return (
+        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+          {card.summary}
+        </p>
+      );
+    }
+    return <LongFormBody card={card} clamp="line-clamp-6" />;
+  }
+
+  // sheet
+  const hasLongForm =
+    (card.presentation?.blocks?.length ?? 0) > 0 || Boolean(card.body);
+  return (
+    <div className="flex flex-col gap-3">
+      {card.summary && hasLongForm && (
+        <p className="text-sm font-medium text-foreground/90 leading-snug">
+          {card.summary}
+        </p>
+      )}
+      <LongFormBody card={card} />
+    </div>
+  );
+}
+
+function LongFormBody({ card, clamp }: { card: DashboardCard; clamp?: string }) {
   const blocks = card.presentation?.blocks;
   if (blocks && blocks.length > 0) {
     return (
@@ -89,7 +124,18 @@ export function GenerativeCardBody({
     );
   }
 
-  if (!card.body) return null;
+  if (!card.body) {
+    return card.summary ? (
+      <p
+        className={cn(
+          "text-sm text-muted-foreground leading-relaxed whitespace-pre-line",
+          clamp,
+        )}
+      >
+        {card.summary}
+      </p>
+    ) : null;
+  }
 
   return (
     <p

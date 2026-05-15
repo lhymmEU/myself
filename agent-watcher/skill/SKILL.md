@@ -86,7 +86,29 @@ Always emit exactly five, with stable `ingestSlot` ids:
 5. `heartbeat` — One- or two-line summary of what changed since the last
    run (read the new lines from `wiki/changelog.md`).
 
-Card payload shape:
+## Tile vs slide-in — emit BOTH
+
+Each card has two render surfaces:
+
+- **Tile** (the bento dashboard square): visible at a glance. Show a
+  tight headline plus optional source chips. Use `summary` for this.
+- **Slide-in sheet**: opens when the user clicks the tile. Has room for
+  full prose / structured blocks. Use `body` (with `richMarkdown: true`)
+  **or** `presentation.blocks` for this.
+
+You **must** emit both:
+
+- `summary` — 1-2 plain-text sentences (≤ 220 chars). What the user reads
+  first. No Markdown, no bullets, no line breaks.
+- One of:
+  - `body` (Markdown long-form) + `richMarkdown: true`, **or**
+  - `presentation.blocks` (structured layout — see block types below).
+
+If you only emit `summary`, the slide-in will be empty. If you only emit
+`body`/`presentation`, the tile clamps to 6 lines and looks truncated.
+Both is the contract.
+
+## Card payload shape
 
 ```json
 {
@@ -94,19 +116,30 @@ Card payload shape:
     {
       "slot": "current_status",
       "kind": "synthesis",
-      "title": "...",
-      "body": "Short summary line (optional if presentation.blocks is set).",
+      "title": "Status — Learn Japanese",
+      "summary": "On track for N4 in Q3. Vocabulary pace healthy; kanji still lagging by ~2 weeks.",
+      "body": "## Progress to N4\n\n- Vocabulary: **820/1500** learned (target Apr 30).\n- Kanji: **190/300** (target Apr 14 — currently 14 days behind).\n- Listening: weekly NHK Easy, ~3 hrs/week.\n\n## What's driving the lag\nKanji practice slipped during the March travel block — see `plans/japan-trip.md`.",
       "richMarkdown": true,
       "sources": [
         { "kind": "wish", "id": "<wish uuid>", "label": "Learn Japanese" },
         { "kind": "plan", "id": "<plan uuid>", "range": "1:12" }
       ],
-      "presentation": { "blocks": [ ... ] },
       "confidence": "strong"
     }
   ]
 }
 ```
+
+### Block types for `presentation.blocks`
+
+When the slide-in deserves structure rather than prose, use blocks in
+place of `body`:
+
+- `{ "t": "heading", "text": "..." }`
+- `{ "t": "paragraph", "text": "..." }`
+- `{ "t": "bullets", "items": ["...", "..."] }`
+- `{ "t": "metric", "label": "...", "value": "..." }`
+- `{ "t": "callout", "tone": "info" | "warn" | "success", "text": "..." }`
 
 **Source shape is strict.** Each `sources[]` item must be
 `{ kind, id, label?, range? }`:
