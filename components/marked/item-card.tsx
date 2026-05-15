@@ -11,7 +11,9 @@ import {
   FolderInput,
   FolderMinus,
   ChevronDown,
+  Send,
 } from "lucide-react";
+import { sendToAgent } from "@/lib/modules/agent/client";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -91,6 +93,19 @@ export function ItemCard({ item, collections, onMutate }: Props) {
       onMutate();
     } catch {
       toast.error(t("marked.failedDelete"));
+    }
+  };
+
+  const handleSendToAgent = async () => {
+    try {
+      await sendToAgent(
+        "marked.upsert",
+        item,
+        { table: "marked_items", id: item.id },
+      );
+      toast.success(t("agent.sentToAgent"));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("agent.sendFailed"));
     }
   };
 
@@ -194,6 +209,10 @@ export function ItemCard({ item, collections, onMutate }: Props) {
             <DropdownMenuItem onClick={() => setEditing(true)}>
               <Pencil className="h-3.5 w-3.5 mr-2" />
               {t("marked.editItem")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSendToAgent}>
+              <Send className="h-3.5 w-3.5 mr-2" />
+              {t("agent.sendToAgent")}
             </DropdownMenuItem>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>

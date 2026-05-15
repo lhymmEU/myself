@@ -705,4 +705,10 @@ export const en = {
       failedSave: "Failed to save",
     },
   },
+
+  agent: {
+    sendToAgent: "Send to agent",
+    sentToAgent: "Sent to agent",
+    sendFailed: "Failed to send to agent",
+  },
 };

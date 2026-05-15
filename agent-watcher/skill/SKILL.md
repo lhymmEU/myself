@@ -36,9 +36,14 @@ read `~/.myself-op/config.json` for credentials; you never see the token.
 ## Workflow (every invocation)
 
 1. `npx tsx scripts/set-ingest-status.ts processing "ingest started"`
-2. Read `wiki/INDEX.md` to orient yourself.
+2. Ensure the wiki exists, then orient yourself:
+   - `mkdir -p ~/.myself-op/wiki` (idempotent).
+   - If `~/.myself-op/wiki/INDEX.md` is missing, create a minimal stub
+     (`# Wiki — empty\n`) and treat this as a first-run cold start.
+   - Read `~/.myself-op/wiki/INDEX.md`.
 3. `npx tsx scripts/list-pending-events.ts` → JSON array of pending events,
-   oldest first.
+   oldest first. If the array is empty AND no `regen.cards` was requested,
+   skip ahead to step 7.
 4. For each event, in order:
    1. If `payload` is present, use it; otherwise
       `npx tsx scripts/fetch-payload.ts <id>`.

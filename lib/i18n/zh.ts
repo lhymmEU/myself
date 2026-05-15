@@ -707,4 +707,10 @@ export const zh: Translations = {
       failedSave: "保存失败",
     },
   },
+
+  agent: {
+    sendToAgent: "发送到代理",
+    sentToAgent: "已发送到代理",
+    sendFailed: "发送到代理失败",
+  },
 };

@@ -21,6 +21,11 @@ export function skillTargetPath(): string {
  * Decode embedded assets and write them under `skillTargetPath()` (default
  * `~/.myself-op/skill/`). Overwrites existing files so re-running `init`
  * always pins the bundle version that came with this watcher binary.
+ *
+ * Also scaffolds `~/.myself-op/wiki/INDEX.md` if missing — the SKILL.md
+ * workflow tries to read INDEX.md as step 2, and we don't want the agent
+ * to fail with ENOENT on its first run before any events have been
+ * processed.
  */
 export async function installSkill(): Promise<{ target: string; fileCount: number }> {
   const target = skillTargetPath();
@@ -34,7 +39,36 @@ export async function installSkill(): Promise<{ target: string; fileCount: numbe
     count++;
   }
 
+  await scaffoldEmptyWiki();
+
   return { target, fileCount: count };
+}
+
+async function scaffoldEmptyWiki(): Promise<void> {
+  const wikiRoot = path.join(os.homedir(), ".myself-op", "wiki");
+  await fs.mkdir(wikiRoot, { recursive: true });
+  const indexPath = path.join(wikiRoot, "INDEX.md");
+  try {
+    await fs.access(indexPath);
+    return; // already exists — don't overwrite the agent's curated index
+  } catch {
+    // not yet — create a minimal placeholder
+  }
+  const body = [
+    "# Wiki — empty",
+    "",
+    "This wiki has no content yet. On your next invocation, drain the event",
+    "queue, populate `wishes/`, `plans/`, `references/`, etc. per SKILL.md,",
+    "and rewrite this INDEX.md to reflect the new layout.",
+    "",
+  ].join("\n");
+  await fs.writeFile(indexPath, body);
+  const changelogPath = path.join(wikiRoot, "changelog.md");
+  try {
+    await fs.access(changelogPath);
+  } catch {
+    await fs.writeFile(changelogPath, "");
+  }
 }
 
 /**

@@ -2,7 +2,9 @@
 
 import { useState, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { Loader2, Sparkles, Trash2, ChevronRight } from "lucide-react";
+import { Loader2, Sparkles, Trash2, ChevronRight, Send } from "lucide-react";
+import { toast } from "sonner";
+import { sendToAgent } from "@/lib/modules/agent/client";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -119,6 +121,19 @@ function WishCard({
     onDeleted();
   };
 
+  const handleSendToAgent = async () => {
+    try {
+      await sendToAgent(
+        "wish.upsert",
+        wish,
+        { table: "user_wishes", id: wish.id },
+      );
+      toast.success(t("agent.sentToAgent"));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("agent.sendFailed"));
+    }
+  };
+
   return (
     <Card className="overflow-hidden border-muted/60">
       <CardHeader className="p-3 pb-0 space-y-0">
@@ -126,16 +141,29 @@ function WishCard({
           <p className="text-sm font-medium leading-snug line-clamp-3">
             {wish.userDescription}
           </p>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-            onClick={handleDelete}
-            aria-label={t("wishlist.deleteWish")}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          <div className="flex items-center shrink-0">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              onClick={handleSendToAgent}
+              aria-label={t("agent.sendToAgent")}
+              title={t("agent.sendToAgent")}
+            >
+              <Send className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              onClick={handleDelete}
+              aria-label={t("wishlist.deleteWish")}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-3 pt-2 space-y-2">
