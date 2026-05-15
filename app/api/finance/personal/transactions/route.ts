@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const auth = await requireUserId();
   if ("response" in auth) return auth.response;
   const sp = req.nextUrl.searchParams;
-  const filters: NonNullable<Parameters<typeof getTransactions>[0]> = {};
+  const filters: NonNullable<Parameters<typeof getTransactions>[1]> = {};
 
   const accountId = sp.get("account_id");
   if (accountId) filters.account_id = accountId;
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     if (!Number.isNaN(n)) filters.limit = n;
   }
 
-  const result = await getTransactions(filters, auth.userId);
+  const result = await getTransactions(auth.userId, filters);
   return NextResponse.json(result);
 }
 

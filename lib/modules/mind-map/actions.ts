@@ -200,12 +200,12 @@ export async function getOrCreateDefaultScene(
 ): Promise<MindMapScene> {
   const existing = await getScene(DEFAULT_SCENE_ID, userId);
   if (existing) return existing;
-  return createScene({ name: "Mind Map" }, DEFAULT_SCENE_ID, userId);
+  return createScene({ name: "Mind Map" }, userId, DEFAULT_SCENE_ID);
 }
 
 export async function getAllScenes(
-  mode?: "mind" | "product",
   userId: string,
+  mode?: "mind" | "product",
 ): Promise<MindMapScene[]> {
   const db = getDb();
   if (mode) {
@@ -226,8 +226,8 @@ export async function getAllScenes(
 
 export async function createScene(
   input: CreateSceneInput,
-  id?: string,
   userId: string,
+  id?: string,
 ): Promise<MindMapScene> {
   const db = getDb();
   const now = Date.now();

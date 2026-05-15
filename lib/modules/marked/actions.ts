@@ -212,8 +212,8 @@ export async function reorderCollections(
 // ---------------------------------------------------------------------------
 
 export async function listItems(
-  collectionId?: string | null,
   userId: string,
+  collectionId?: string | null,
 ): Promise<MarkedItem[]> {
   const db = getDb();
   if (collectionId === "__uncollected__") {

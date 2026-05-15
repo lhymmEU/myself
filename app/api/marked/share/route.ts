@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
         { status: 404 },
       );
 
-    const items = await listItems(collectionId, userId);
+    const items = await listItems(userId, collectionId);
     const payload = encodeCollectionPayload(collection, items);
 
     return NextResponse.json({ collection, items, payload });

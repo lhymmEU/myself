@@ -72,8 +72,8 @@ export async function getVaultStatus(
 
 export async function setupVault(
   password: string,
-  storagePath?: string,
   userId: string,
+  storagePath?: string,
 ): Promise<void> {
   if (storagePath) {
     moveVaultDb(storagePath);

@@ -1,0 +1,11 @@
+{
+  "name": "myself-op-skill",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Skill files invoked by the openclaw agent to process push-ingest events from the Life Dashboard.",
+  "type": "module",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.104.1",
+    "tsx": "^4.21.0"
+  }
+}

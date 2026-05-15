@@ -7,6 +7,7 @@ import { InvoiceConfig } from "./invoice-config";
 import { DataManagement } from "./data-management";
 import { AccountSecurity } from "./account-security";
 import { OpenClawSupabaseSettings } from "./openclaw-supabase-settings";
+import { AgentSection } from "./agent-section";
 import { Loader2 } from "lucide-react";
 import { useT } from "@/lib/i18n/context";
 
@@ -69,6 +70,7 @@ export function SettingsForm() {
       <div className="md:col-span-2">
         <AccountSecurity />
       </div>
+      <AgentSection />
       <OpenClawSupabaseSettings />
       <AppearanceConfig settings={settings} onUpdate={handleUpdate} />
       <div className="md:col-span-2">

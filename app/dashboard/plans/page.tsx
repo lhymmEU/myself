@@ -6,6 +6,7 @@ import type { PlanFolder } from "@/components/plans/page-list";
 import { Editor } from "@/components/plans/editor";
 import type { EditorHandle } from "@/components/plans/editor";
 import { ExportImportBar } from "@/components/plans/export-import-bar";
+import { SendToAgentButton } from "@/components/agent/send-to-agent-button";
 import {
   FileText,
   PenLine,
@@ -312,6 +313,21 @@ export default function PlansPage() {
               title={title}
               onImport={handleImport}
             />
+          )}
+          {activePlan && (
+            <div className="ml-auto pr-2">
+              <SendToAgentButton
+                eventType="page.upsert"
+                payload={{
+                  id: activePlan.id,
+                  title,
+                  content: activePlan.content,
+                  folderId: activePlan.folderId ?? null,
+                  updatedAt: activePlan.updatedAt,
+                }}
+                sourceRef={{ table: "plan_pages", id: activePlan.id }}
+              />
+            </div>
           )}
         </div>
         {activePlan ? (

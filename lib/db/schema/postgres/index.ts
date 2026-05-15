@@ -10,3 +10,4 @@ export * from "./claw";
 export * from "./finance";
 export * from "./vault";
 export * from "./insights";
+export * from "./agent";

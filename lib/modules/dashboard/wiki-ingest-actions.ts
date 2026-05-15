@@ -146,8 +146,8 @@ export async function runWikiIngestJob(
     const result = await executeCommand(
       connectionId,
       command,
-      WIKI_INGEST_TIMEOUT_MS,
       userId,
+      WIKI_INGEST_TIMEOUT_MS,
     );
     if (result.code !== 0) {
       const errText = clampDetail(
@@ -166,8 +166,8 @@ export async function runWikiIngestJob(
     const fileRes = await executeCommand(
       connectionId,
       catCmd,
-      120_000,
       userId,
+      120_000,
     );
     const rawFile = fileRes.stdout?.replace(/^\uFEFF/, "").trim() ?? "";
 

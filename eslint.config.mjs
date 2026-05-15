@@ -101,6 +101,12 @@ const eslintConfig = defineConfig([
     // Vendored Go WASM runtime — shipped with the Go toolchain. Don't lint
     // or modify; replace by copying a fresh copy from $(go env GOROOT)/lib/wasm.
     "public/wasm/wasm_exec.js",
+    // Standalone Node CLI sub-project: bundled by esbuild into
+    // `public/myself-op.js` and run on the user's own machine, not part of
+    // the cloud Next.js bundle. It legitimately uses fs/child_process and
+    // has its own tsconfig.
+    "agent-watcher/**",
+    "public/myself-op.js",
   ]),
   {
     name: "dual-mode/local-isolation",

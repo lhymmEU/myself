@@ -51,7 +51,6 @@ class ResendMailer implements Mailer {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function getMailer(_userId?: string): Mailer {
   return new ResendMailer();
 }

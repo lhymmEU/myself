@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import useSWR from "swr";
 import {
   Loader2,
   Sparkles,
 } from "lucide-react";
 import { useDashboardInsights } from "@/lib/swr/hooks";
-import { swrFetcher } from "@/lib/swr/config";
+import { useWikiIngestLive } from "@/lib/swr/use-wiki-ingest-live";
 import { summarizeGenerativePayload } from "@/lib/modules/dashboard/client-parse-generative-cards";
 import { BentoCard } from "./bento-card";
 import { CardDetailSheet } from "./card-detail-sheet";
@@ -23,20 +22,9 @@ interface InsightsResponse {
   pinned: PinnedQuery[];
 }
 
-interface WikiIngestApiPayload {
-  status: string;
-  detail: string;
-  updatedAt: number;
-  generativeCardsJson?: string | null;
-}
-
 export function BentoDashboard() {
   const { data, isLoading, mutate } = useDashboardInsights();
-  const { data: ingestPayload } = useSWR<WikiIngestApiPayload>(
-    "/api/dashboard/insights/wiki-ingest",
-    swrFetcher,
-    { revalidateOnFocus: false },
-  );
+  const { data: ingestPayload } = useWikiIngestLive();
   const genSummary = useMemo(
     () =>
       summarizeGenerativePayload(ingestPayload?.generativeCardsJson ?? null),

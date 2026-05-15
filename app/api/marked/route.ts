@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
           );
         return NextResponse.json(item);
       }
-      return NextResponse.json(await listItems(collectionId, userId));
+      return NextResponse.json(await listItems(userId, collectionId));
     }
 
     return NextResponse.json({ error: "Missing entity param" }, { status: 400 });

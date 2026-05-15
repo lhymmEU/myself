@@ -1,0 +1,19 @@
+{
+  "name": "myself-op-watcher",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Single-file watcher that subscribes to Supabase Realtime and invokes the user's local agent (openclaw) when ingest events arrive.",
+  "scripts": {
+    "build:assets": "tsx build-assets.ts",
+    "build": "npm run build:assets && esbuild src/index.ts --bundle --platform=node --target=node20 --format=cjs --banner:js='#!/usr/bin/env node' --outfile=../public/myself-op.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.104.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.0",
+    "tsx": "^4.21.0",
+    "@types/node": "^20"
+  }
+}

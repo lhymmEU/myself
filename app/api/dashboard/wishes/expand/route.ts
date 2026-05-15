@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   });
 
   try {
-    const iter = streamCommand(connection.id, command, 120_000, auth.userId);
+    const iter = streamCommand(connection.id, command, auth.userId, 120_000);
     let result = await iter.next();
     while (!result.done) {
       result = await iter.next();

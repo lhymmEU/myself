@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
   const listAll = searchParams.get("all");
   if (listAll === "true") {
     const mode = searchParams.get("mode") as "mind" | "product" | null;
-    return NextResponse.json(await getAllScenes(mode ?? undefined, userId));
+    return NextResponse.json(await getAllScenes(userId, mode ?? undefined));
   }
 
   const scene = await getOrCreateDefaultScene(userId);
@@ -60,7 +60,6 @@ export async function POST(req: NextRequest) {
       files: body.files,
       mode: body.mode,
     },
-    undefined,
     auth.userId,
   );
   return NextResponse.json(scene, { status: 201 });

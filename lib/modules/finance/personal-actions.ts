@@ -191,6 +191,7 @@ export async function deleteAccount(
 // --- Transactions ---
 
 export async function getTransactions(
+  userId: string,
   filters?: {
     account_id?: string;
     type?: string;
@@ -199,7 +200,6 @@ export async function getTransactions(
     to_date?: string;
     limit?: number;
   },
-  userId: string,
 ): Promise<FinanceTransaction[]> {
   const db = getDb();
   const where = [eq(financeTransactions.userId, userId)];

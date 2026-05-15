@@ -46,8 +46,8 @@ export async function GET(req: NextRequest) {
     const { stdout, stderr, code } = await executeCommand(
       connection.id,
       LIST_CMD,
-      60_000,
       auth.userId,
+      60_000,
     );
     if (code !== 0) {
       return NextResponse.json({
