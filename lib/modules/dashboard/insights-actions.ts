@@ -99,9 +99,37 @@ function ingestSlotFromCardId(
   return slot && DASHBOARD_CARD_SLOT_RE.test(slot) ? slot : null;
 }
 
+const SOURCE_KINDS = new Set(["plan", "marked", "wish", "skill"]);
+
 function parseSourcesFromUnknown(s: unknown): SourceRef[] {
   if (!Array.isArray(s)) return [];
-  return s as SourceRef[];
+  const out: SourceRef[] = [];
+  for (const raw of s) {
+    if (!raw || typeof raw !== "object") continue;
+    const r = raw as Record<string, unknown>;
+    const kind =
+      typeof r.kind === "string" && SOURCE_KINDS.has(r.kind)
+        ? (r.kind as SourceRef["kind"])
+        : null;
+    const id = typeof r.id === "string" ? r.id : null;
+    if (!kind || !id) {
+      // Tolerate the legacy `{ path, lineFrom, lineTo }` shape that older
+      // SKILL.md examples produced: keep a label derived from `path` so the
+      // chip still has *something* to render, even if we can't deep-link.
+      const path = typeof r.path === "string" ? r.path : null;
+      if (path) {
+        out.push({ kind: "plan", id: path, label: path });
+      }
+      continue;
+    }
+    out.push({
+      kind,
+      id,
+      range: typeof r.range === "string" ? r.range : undefined,
+      label: typeof r.label === "string" ? r.label : undefined,
+    });
+  }
+  return out;
 }
 
 function coerceConfidence(v: unknown): CardConfidence {

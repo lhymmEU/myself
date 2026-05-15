@@ -223,7 +223,11 @@ function SourceChip({ source }: { source: SourceRef }) {
     }
     return null;
   })();
-  const label = source.label ?? `${source.kind}:${source.id.slice(0, 8)}`;
+  const label =
+    source.label ??
+    (source.kind && source.id
+      ? `${source.kind}:${source.id.slice(0, 8)}`
+      : "source");
   const inner = (
     <Badge
       variant="outline"

@@ -92,20 +92,38 @@ Card payload shape:
 {
   "cards": [
     {
-      "id": "<userId>_dash_current_status",
-      "ingestSlot": "current_status",
+      "slot": "current_status",
       "kind": "synthesis",
       "title": "...",
-      "richMarkdown": "...",
-      "sources": [{ "path": "wiki/wishes/learn-japanese.md", "lineFrom": 1, "lineTo": 12 }],
+      "body": "Short summary line (optional if presentation.blocks is set).",
+      "richMarkdown": true,
+      "sources": [
+        { "kind": "wish", "id": "<wish uuid>", "label": "Learn Japanese" },
+        { "kind": "plan", "id": "<plan uuid>", "range": "1:12" }
+      ],
       "presentation": { "blocks": [ ... ] },
-      "confidence": "strong" | "thin" | "contradicted",
-      "state": "active"
-    },
-    ...
+      "confidence": "strong"
+    }
   ]
 }
 ```
+
+**Source shape is strict.** Each `sources[]` item must be
+`{ kind, id, label?, range? }`:
+
+- `kind` — one of `"plan" | "marked" | "wish" | "skill"`.
+- `id`   — the row UUID from the corresponding table (`plan_pages.id`,
+  `marked_items.id`, `user_wishes.id`, etc. — these are the payload `id`
+  fields you already received via `fetch-payload.ts`).
+- `label` — optional human-readable name (rendered in the chip).
+- `range` — optional `start:end` line hint.
+
+Do **not** emit `{ path, lineFrom, lineTo }`; the dashboard will drop those
+sources (or render them generically) because it can't deep-link to a
+filesystem path. Cite the underlying database row instead.
+
+Valid `slot` values: `current_status`, `going_right`, `deviating`,
+`suggestions`, `heartbeat` (exactly one of each per run).
 
 ## Rules
 

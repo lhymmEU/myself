@@ -181,14 +181,17 @@ export function BentoCard({
           card.body) && <GenerativeCardBody card={card} mode="tile" />}
       </div>
 
-      {card.sources.length > 0 && (
+      {card.sources && card.sources.length > 0 && (
         <footer className="px-5 pb-4 pt-1 mt-auto flex flex-wrap gap-1">
           {card.sources.slice(0, 3).map((s, i) => (
             <span
-              key={`${s.kind}:${s.id}:${i}`}
+              key={`${s?.kind ?? "?"}:${s?.id ?? i}:${i}`}
               className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-muted/60 text-[10px] text-muted-foreground"
             >
-              {s.label ?? `${s.kind}:${s.id.slice(0, 6)}`}
+              {s?.label ??
+                (s?.kind && s?.id
+                  ? `${s.kind}:${s.id.slice(0, 6)}`
+                  : "source")}
             </span>
           ))}
           {card.sources.length > 3 && (
