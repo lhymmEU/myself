@@ -2,66 +2,9 @@ import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { getDb } from "@/lib/db";
 import { eventBus } from "@/lib/core/event-bus";
-import { userSkills, userWishes } from "./schema";
-import type { SkillLevel } from "./schema";
+import { userWishes } from "./schema";
 import type { WishCategory } from "@/lib/wishlist/types";
 import { DASHBOARD_EVENTS } from "./events";
-
-// --- User Skills ---
-
-function normalizeSkill<T extends { createdAt: number | string }>(row: T): T {
-  return { ...row, createdAt: Number(row.createdAt) };
-}
-
-export async function listUserSkills(userId: string) {
-  const rows = await getDb()
-    .select()
-    .from(userSkills)
-    .where(eq(userSkills.userId, userId));
-  return rows.map(normalizeSkill);
-}
-
-export async function createUserSkill(
-  data: {
-    name: string;
-    level?: SkillLevel;
-    category?: string;
-  },
-  userId: string,
-) {
-  const id = nanoid();
-  await getDb()
-    .insert(userSkills)
-    .values({
-      id,
-      userId,
-      name: data.name,
-      level: data.level ?? "familiar",
-      category: data.category ?? "",
-      createdAt: Date.now(),
-    });
-  return { id };
-}
-
-export async function updateUserSkill(
-  id: string,
-  data: Partial<{ name: string; level: SkillLevel; category: string }>,
-  userId: string,
-): Promise<void> {
-  await getDb()
-    .update(userSkills)
-    .set(data)
-    .where(and(eq(userSkills.id, id), eq(userSkills.userId, userId)));
-}
-
-export async function deleteUserSkill(
-  id: string,
-  userId: string,
-): Promise<void> {
-  await getDb()
-    .delete(userSkills)
-    .where(and(eq(userSkills.id, id), eq(userSkills.userId, userId)));
-}
 
 // --- User wishes (learn / places / goals) ---
 

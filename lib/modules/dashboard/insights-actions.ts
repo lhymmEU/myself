@@ -548,9 +548,3 @@ export function formatDate(ts: number): string {
   const dd = String(d.getUTCDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 }
-
-// ---------------------------------------------------------------------------
-// Wiki-vault facade (no-op / null — wiki lives on OpenClaw host only).
-// ---------------------------------------------------------------------------
-
-export { readWikiPage, writeWikiPage, appendLog } from "./wiki-vault";

@@ -1,5 +1,9 @@
-import { DashboardGameView } from "@/components/dashboard/dashboard-game-view";
+import { WishlistDashboard } from "@/components/wishlist/wishlist-dashboard";
 
 export default function MyselfPage() {
-  return <DashboardGameView />;
+  return (
+    <div className="flex flex-col h-full min-h-0">
+      <WishlistDashboard />
+    </div>
+  );
 }

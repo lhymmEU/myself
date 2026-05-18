@@ -9,10 +9,6 @@ export function useUserWishes() {
   return useSWR("/api/dashboard/wishes", swrFetcher);
 }
 
-export function useUserSkills() {
-  return useSWR("/api/dashboard/skills", swrFetcher);
-}
-
 export interface AgentRegistrationStatus {
   connected: boolean;
   label: string;
