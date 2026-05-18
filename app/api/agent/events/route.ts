@@ -7,6 +7,7 @@ const VALID_TYPES: ReadonlySet<AgentEventType> = new Set<AgentEventType>([
   "page.upsert",
   "marked.upsert",
   "wish.upsert",
+  "wish.expand",
   "dismissal.create",
   "regen.cards",
   "bootstrap.full",

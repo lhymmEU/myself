@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { MODE } from "@/lib/core/runtime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +23,6 @@ export async function GET() {
 
   const body = {
     status: dbOk ? "ok" : "degraded",
-    mode: MODE,
     db: dbOk ? "ready" : "unavailable",
     dbError,
     uptimeMs: process.uptime() * 1000,

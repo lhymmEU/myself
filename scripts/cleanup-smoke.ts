@@ -3,7 +3,6 @@
  *
  * Requires DATABASE_URL and MYSELF_SMOKE_USER_ID (uuid).
  */
-import { initDatabase } from "../lib/core/init-db";
 import { getDb } from "../lib/db";
 import {
   cardDismissals,
@@ -20,7 +19,6 @@ function requireSmokeUser(): string {
 }
 
 async function main() {
-  initDatabase();
   const userId = requireSmokeUser();
   const db = getDb();
   const ids = ["smoke-card-1", "smoke-card-2"];

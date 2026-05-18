@@ -1,1 +1,0 @@
-ALTER TABLE claw_connections ADD COLUMN tool_reverse_forward_remote_port INTEGER;

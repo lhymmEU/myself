@@ -22,7 +22,38 @@ import type {
   CardVerb,
 } from "./insights-types";
 import { coerceGenerativePresentation } from "./coerce-generative-presentation";
-import { coerceCardsJsonBlock } from "@/lib/claw/dashboard-cards-stdout";
+
+/**
+ * Normalize a raw `{ "cards": [...] }` blob (which may be wrapped in a code
+ * fence, prefixed by chatty preamble, etc.) into a string `JSON.parse` accepts.
+ * Returns `null` if no valid object can be extracted.
+ */
+function coerceCardsJsonBlock(inner: string): string | null {
+  let s = inner.replace(/^﻿/, "").trim();
+  const fullFence = /^```(?:json|JSON)?\s*\r?\n?([\s\S]*?)\r?\n?```\s*$/;
+  const fm = s.match(fullFence);
+  if (fm) s = fm[1]!.trim();
+  else if (s.startsWith("```")) {
+    s = s.replace(/^```(?:json|JSON)?\s*/, "");
+    s = s.replace(/\s*```\s*$/, "");
+  }
+  s = s.trim();
+  try {
+    JSON.parse(s);
+    return s;
+  } catch {
+    const i = s.indexOf("{");
+    const j = s.lastIndexOf("}");
+    if (i === -1 || j <= i) return null;
+    const slice = s.slice(i, j + 1);
+    try {
+      JSON.parse(slice);
+      return slice;
+    } catch {
+      return null;
+    }
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Helpers

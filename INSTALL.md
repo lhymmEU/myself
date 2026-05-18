@@ -1,202 +1,72 @@
-[中文版](./INSTALL.zh-CN.md)
+# Life Dashboard — Dev Setup
 
-# Life Dashboard — Install Guide (for first-time users)
+This guide is for developers who want to run the dashboard locally against their own Supabase project. End users should just visit the hosted instance — see [`README.md`](./README.md).
 
-This guide is written for someone who has never opened a terminal before. It walks you, step by step, from a brand-new computer to a running dashboard at `http://localhost:3000`.
+## Prerequisites
 
-It works on **Windows 10/11** and **macOS**. Pick the section for your operating system in each step.
+- **Node.js 20+** — [nodejs.org](https://nodejs.org/) (pick the LTS).
+- **Git** — [git-scm.com](https://git-scm.com/).
+- A **Supabase project** ([supabase.com](https://supabase.com)) — free tier is fine. You will need the project URL, the anon key, and the database connection string.
 
-> **Just want to try it without installing anything?** Open the hosted version at **https://lifedashboard.app** (or whichever URL is pinned in this repo's "About"), click **Sign in**, and use your email for a magic-link login. The hosted version doesn't have the embedded SSH terminal or a built-in LLM — those are in this local install. See [`README.md`](./README.md) for the side-by-side comparison.
+## Setup
 
----
-
-## Step 1. Install the two programs you need
-
-You only need two free programs. Install both, then close and reopen any terminal windows so they pick up the new programs.
-
-### 1a. Node.js (required)
-
-Node.js is what runs the dashboard. The dashboard needs **version 20 or higher**.
-
-1. Open your web browser and go to https://nodejs.org/
-2. Click the big green button labelled **"LTS"** (Long Term Support). At the time of writing it is "LTS — Recommended for Most Users".
-3. Run the installer you just downloaded.
-   - **Windows**: keep clicking "Next" and accept the defaults. When asked about "Tools for Native Modules", **leave that box checked** — it saves you trouble later.
-   - **macOS**: open the `.pkg` file and click through the installer.
-4. After the installer finishes, **close every terminal window you have open**. Open a fresh one (see Step 3 below for how) and type:
-
-   ```
-   node -v
-   ```
-
-   You should see something like `v22.11.0`. If you see "command not found", restart your computer and try again.
-
-### 1b. Git (required)
-
-Git is what downloads the project from GitHub.
-
-- **Windows**: download from https://git-scm.com/ and run the installer. Keep all the defaults.
-- **macOS**: open the Terminal app (press Cmd+Space, type "Terminal", press Enter) and type:
-
-  ```
-  git --version
-  ```
-
-  If macOS pops up a window offering to install the "Command Line Developer Tools", click **Install** and wait for it to finish. That includes Git.
-
----
-
-## Step 2. Download the project
-
-Pick **one** of the three options below. They all give you the same result.
-
-### Option A — Using Git (recommended)
-
-1. Open a terminal in the folder where you want the project to live (Desktop is fine).
-   - **Windows**: open File Explorer, browse to the folder, then in the address bar at the top type `cmd` and press Enter.
-   - **macOS**: open Finder, browse to the folder, right-click the folder, and choose **"New Terminal at Folder"**. (If you don't see that option, turn it on in System Settings → Keyboard → Keyboard Shortcuts → Services → "New Terminal at Folder".)
-2. Type this and press Enter:
-
-   ```
-   git clone https://github.com/lhymmEU/myself.git
-   cd myself
-   ```
-
-### Option B — Download a ZIP
-
-1. In your browser, go to https://github.com/lhymmEU/myself
-2. Click the green **"Code"** button, then **"Download ZIP"**.
-3. Unzip the file. You will get a folder called `myself-main`. **Rename it to `myself`** to match the rest of this guide.
-4. Open a terminal inside that folder using the right-click trick from Option A, step 1.
-
-### Option C — GitHub Desktop
-
-1. Install GitHub Desktop from https://desktop.github.com/
-2. In GitHub Desktop, choose **File → Clone repository → URL** and paste `https://github.com/lhymmEU/myself`.
-3. Pick a folder on disk and click **Clone**.
-4. Right-click the repository in the sidebar and choose **"Open in Terminal"** (Mac) or **"Open in Command Prompt"** (Windows).
-
-By the end of Step 2, your terminal should be **inside** the `myself` folder. You can confirm by typing `dir` (Windows) or `ls` (macOS) — you should see files like `package.json` and `setup.sh`.
-
----
-
-## Step 3. Run the setup script
-
-The setup script checks your environment, installs everything the dashboard needs, and builds the app. It usually takes 1–3 minutes.
-
-### macOS / Linux
-
-In the terminal you opened in Step 2, type:
-
-```
-chmod +x setup.sh
-./setup.sh
+```bash
+git clone https://github.com/lhymmEU/myself.git
+cd myself
+npm install
 ```
 
-The first line gives the script permission to run; the second line runs it.
-
-### Windows — Command Prompt
+Create `.env.local` at the repo root:
 
 ```
-setup.bat
+DATABASE_URL=postgres://...                  # from Supabase → Project Settings → Database
+NEXT_PUBLIC_SUPABASE_URL=https://....supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+
+# For Resend-based invoice email (optional unless you exercise that flow):
+RESEND_API_KEY=...
+RESEND_FROM_EMAIL=invoices@yourdomain.com
+
+# For the agent watcher JWTs (any long random string):
+SUPABASE_JWT_SECRET=...                       # matches your Supabase project's JWT secret
 ```
 
-### Windows — PowerShell
+Apply the SQL migrations in `drizzle/postgres/` to your Supabase database (Supabase SQL editor, `psql`, or `npm run db:migrate` with `DATABASE_URL` set).
 
-PowerShell blocks unsigned scripts by default. Use this exact command instead:
+## Run
 
-```
-powershell -ExecutionPolicy Bypass -File setup.ps1
-```
-
-You should finish with a green message that says **"Setup complete!"** If you see an error, jump to **Step 6 — Common errors** below.
-
----
-
-## Step 4. Start the dashboard
-
-In the same terminal, type:
-
-```
+```bash
 npm run dev
 ```
 
-After a few seconds you will see something like:
+Open [http://localhost:3000](http://localhost:3000). Sign in via magic link to your email, then start using the dashboard against your own Supabase data.
 
-```
-- Local:        http://localhost:3000
-- Ready in 2.3s
-```
+## Pair an agent watcher (optional)
 
-Open your browser and go to **http://localhost:3000**. The dashboard loads. The local database is created automatically on the first launch — there is nothing else to configure.
+Wiki ingest and wish-expansion need a paired `openclaw` agent. On the machine you want the agent to live on:
 
-To stop the dashboard, return to the terminal and press **Ctrl+C** (on both Windows and Mac). To start it again later, just run `npm run dev` from inside the `myself` folder.
-
----
-
-## Step 5. Common errors and how to fix them
-
-### "Cannot resolve module '@noble/hashes/scrypt'"
-
-This was a packaging mistake in older copies of the project. It is fixed in the current version. If you still see it:
-
-1. Make sure your project files are up to date. If you used Git: `git pull`. If you downloaded a ZIP: download the ZIP again and replace the folder.
-2. Delete the build cache and dependency folder:
-   - **Windows**: `rmdir /s /q .next` and `rmdir /s /q node_modules`
-   - **macOS / Linux**: `rm -rf .next node_modules`
-3. Run the setup script again (Step 3).
-
-### "node-gyp" or "better-sqlite3" errors during install (Windows)
-
-The dashboard uses a small native database driver that needs Microsoft's free C++ compiler.
-
-1. Download **Visual Studio Build Tools** from https://visualstudio.microsoft.com/visual-cpp-build-tools/
-2. Run the installer. On the **"Workloads"** tab, **check the box** for "Desktop development with C++". Click Install.
-3. Restart your terminal and run `setup.bat` (or `setup.ps1`) again.
-
-If you would rather not install Visual Studio Build Tools, the easier alternative is to switch to the **Node.js v22 LTS** installer (https://nodejs.org/), which includes a prebuilt copy of the database driver.
-
-### PowerShell says "running scripts is disabled on this system"
-
-You ran `./setup.ps1` directly. Use the bypass form instead:
-
-```
-powershell -ExecutionPolicy Bypass -File setup.ps1
+```bash
+# inside the repo:
+npm run build:watcher    # bundles agent-watcher into agent-watcher/dist/myself-op.js
+node agent-watcher/dist/myself-op.js init
+node agent-watcher/dist/myself-op.js start
 ```
 
-### "Port 3000 is already in use"
+`init` prompts for the token printed by **Dashboard → Settings → Agent → Pair watcher**. `start` keeps a Supabase Realtime subscription open and runs `openclaw agent` whenever new events arrive.
 
-Another program is using port 3000. Start the dashboard on a different port:
+## Useful scripts
 
-```
-npm run dev -- -p 3001
-```
+| Command | What it does |
+|---|---|
+| `npm run dev` | Next.js dev server (Turbopack). |
+| `npm run build` | Builds the agent-watcher bundle then the Next app. |
+| `npm run lint` | ESLint. |
+| `npm run typecheck` | `tsc --noEmit`. |
+| `npm run db:generate` | Diff schema → new migration in `drizzle/postgres/`. |
+| `npm run db:migrate` | Apply pending migrations to the database in `DATABASE_URL`. |
 
-Then open http://localhost:3001 instead.
+## Troubleshooting
 
-### `npm install` is extremely slow or hangs
-
-You may be on a slow or filtered network. Try again on a different connection. If you are behind a corporate proxy, ask your IT team for the proxy settings, then run:
-
-```
-npm config set proxy http://proxy.example.com:8080
-npm config set https-proxy http://proxy.example.com:8080
-```
-
-(Replace with the values your IT team gives you.)
-
-### "node: command not found" after installing Node.js
-
-You need to **fully close** every terminal window after installing Node.js, then open a fresh one. On Windows, sometimes you have to sign out and back in (or restart) for the `PATH` change to take effect.
-
----
-
-## Where to go next
-
-- For a tour of every feature inside the dashboard, see **[USER_MANUAL.md](./USER_MANUAL.md)**.
-- For the technical README aimed at developers, see [README.md](./README.md).
-
-If you get stuck at a step that this guide does not cover, please open an issue on GitHub with:
-- which step you were on,
-- the exact error message you saw,
-- your operating system (e.g. "Windows 11").
+- **"Cannot connect to Supabase"** — Double-check `DATABASE_URL` and the two `NEXT_PUBLIC_SUPABASE_*` env vars. The connection string from Supabase → Project Settings → Database includes the password; URL-encode any special characters.
+- **Magic-link email never arrives** — In Supabase → Auth → Providers → Email, make sure the email provider is enabled and `Site URL` is set to `http://localhost:3000` while developing.
+- **"No agent watcher paired" toast** — Open Settings → Agent and click Pair watcher to issue a token, then run `myself-op.js init` with that token on the machine you want the agent on.

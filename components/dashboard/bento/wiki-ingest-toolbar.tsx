@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import useSWR from "swr";
 import { Loader2, RefreshCw, Library } from "lucide-react";
 import { toast } from "sonner";
@@ -13,28 +13,15 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { swrFetcher } from "@/lib/swr/config";
-import { useClawConnectionsList } from "@/lib/swr/hooks";
-import { CLAW_ACTIVE_CONNECTION_STORAGE_KEY } from "@/lib/claw/constants";
-import { createClient } from "@/lib/supabase/client";
+import { useAgentRegistration } from "@/lib/swr/hooks";
 
 interface WikiIngestPayload {
   status: "idle" | "processing" | "done" | "error";
   detail: string;
   updatedAt: number;
   generativeCardsJson?: string | null;
-  /** Legacy — prefer deriving eligibility from `/api/claw/connections` (same cache as Claw). */
-  hasConnection?: boolean;
-  openclawTokenConfigured?: boolean;
-}
-
-function readStoredClawConnectionId(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const v = sessionStorage.getItem(CLAW_ACTIVE_CONNECTION_STORAGE_KEY);
-    return v?.trim() || null;
-  } catch {
-    return null;
-  }
+  agentConnected?: boolean;
+  agentLastSeenAt?: number | null;
 }
 
 export function WikiIngestToolbar({
@@ -43,12 +30,12 @@ export function WikiIngestToolbar({
   onIngestFinished?: () => void;
 }) {
   const {
-    data: connPayload,
-    error: connError,
-    isLoading: connLoading,
-    mutate: mutateConnections,
-    isValidating: connValidating,
-  } = useClawConnectionsList();
+    data: registration,
+    error: registrationError,
+    isLoading: registrationLoading,
+    isValidating: registrationValidating,
+    mutate: mutateRegistration,
+  } = useAgentRegistration();
 
   const { data, error, isLoading, mutate, isValidating } =
     useSWR<WikiIngestPayload>("/api/dashboard/insights/wiki-ingest", swrFetcher, {
@@ -56,61 +43,9 @@ export function WikiIngestToolbar({
         latestData?.status === "processing" ? 2000 : 0,
     });
 
-  /** Bumped from callbacks only — re-reads sessionStorage without setState-in-effect. */
-  const [storageEpoch, setStorageEpoch] = useState(0);
-  useEffect(() => {
-    const onVis = () => {
-      if (document.visibilityState === "visible") {
-        setStorageEpoch((e) => e + 1);
-      }
-    };
-    document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
-  }, []);
-
-  const storedConnectionId = useMemo(() => {
-    void storageEpoch;
-    return readStoredClawConnectionId();
-  }, [storageEpoch]);
-
-  const connections = useMemo(
-    () => connPayload?.connections ?? [],
-    [connPayload?.connections],
-  );
-  const effectiveConnectionId = useMemo(() => {
-    if (connections.length === 0) return null;
-    if (
-      storedConnectionId &&
-      connections.some((c) => c.id === storedConnectionId)
-    ) {
-      return storedConnectionId;
-    }
-    const def = connections.find((c) => c.isDefault);
-    return def?.id ?? connections[0]!.id;
-  }, [connections, storedConnectionId]);
-
   const status = data?.status ?? "idle";
-  const hasConnection = connections.length > 0;
   const detail = data?.detail ?? "";
-
-  const disableForMissingConnection =
-    !connLoading &&
-    connPayload !== undefined &&
-    !hasConnection &&
-    !connError;
-
-  const openclawReady = data?.openclawTokenConfigured === true;
-  const [supabaseSessionAccess, setSupabaseSessionAccess] = useState(false);
-  useEffect(() => {
-    void createClient()
-      .auth.getSession()
-      .then(({ data: d }) => {
-        setSupabaseSessionAccess(Boolean(d.session));
-      });
-  }, []);
-  const ingestAuthReady = openclawReady || supabaseSessionAccess;
-  const disableForMissingOpenclawToken =
-    !isLoading && data !== undefined && !ingestAuthReady && !error;
+  const agentConnected = registration?.connected === true;
 
   /** Set after POST succeeds so we refresh the bento even when status stays `done` (new `updatedAt`). */
   const pendingInsightRefresh = useRef(false);
@@ -119,34 +54,16 @@ export function WikiIngestToolbar({
   const hydrated = useRef(false);
 
   const startIngest = useCallback(async () => {
-    if (!effectiveConnectionId) {
+    if (!agentConnected) {
       toast.error(
-        "No SSH connection to use. Open Dashboard → Claw and save a connection.",
+        "No agent watcher paired. Pair one under Settings → Agent.",
       );
       return;
     }
     try {
-      const supabase = createClient();
-      await supabase.auth.refreshSession().catch(() => {
-        /* offline or no refresh — still attempt ingest with existing session */
-      });
-      const { data: sessionData } = await supabase.auth.getSession();
-      const supabaseAccessToken = sessionData.session?.access_token;
-      const supabaseRefreshToken = sessionData.session?.refresh_token;
-
       const res = await fetch("/api/dashboard/insights/wiki-ingest", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          connectionId: effectiveConnectionId,
-          ...(supabaseAccessToken
-            ? { supabaseAccessToken }
-            : {}),
-          ...(supabaseRefreshToken
-            ? { supabaseRefreshToken }
-            : {}),
-        }),
       });
       const body = await res.json().catch(() => ({}));
       if (res.status === 409) {
@@ -159,12 +76,12 @@ export function WikiIngestToolbar({
         return;
       }
       pendingInsightRefresh.current = true;
-      toast.success("Wiki ingest started — running in the background.");
+      toast.success("Wiki ingest queued — the agent watcher will pick it up.");
       await mutate();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Network error");
     }
-  }, [effectiveConnectionId, mutate]);
+  }, [agentConnected, mutate]);
 
   useEffect(() => {
     if (!data) return;
@@ -200,7 +117,7 @@ export function WikiIngestToolbar({
 
   const statusLabel =
     status === "processing"
-      ? "Processing — openclaw is updating the wiki"
+      ? "Processing — the watcher is updating the wiki"
       : status === "done"
         ? "Last run succeeded"
         : status === "error"
@@ -247,17 +164,16 @@ export function WikiIngestToolbar({
               size="sm"
               className="h-8 gap-1.5 rounded-full px-3"
               disabled={
-                disableForMissingConnection ||
-                disableForMissingOpenclawToken ||
-                connLoading ||
+                !agentConnected ||
+                registrationLoading ||
                 status === "processing" ||
-                !!connError
+                !!registrationError
               }
               onClick={() => void startIngest()}
             >
               {status === "processing" ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : connLoading || isLoading ? (
+              ) : registrationLoading || isLoading ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 <Library className="h-3.5 w-3.5" />
@@ -266,17 +182,15 @@ export function WikiIngestToolbar({
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            {connError
-              ? "Could not load Claw connections. Use refresh or open Dashboard → Claw."
+            {registrationError
+              ? "Could not load agent watcher status. Use refresh or open Settings → Agent."
               : error
                 ? "Could not load wiki ingest status. Use refresh or reload the page."
-                : connLoading
-                  ? "Loading your Claw SSH connections…"
-                    : !ingestAuthReady
-                    ? "Save your Supabase refresh token under Dashboard → Settings → OpenClaw / wiki ingest, or stay signed in here so ingest can send session tokens (access + refresh) to the agent."
-                    : hasConnection
-                      ? "Uses the same SSH connection as Claw chat when you have opened Claw in this browser (or your default). Runs openclaw on the remote host; up to ~15 min."
-                      : "Configure a Claw SSH connection first (Dashboard → Claw)."}
+                : registrationLoading
+                  ? "Loading agent watcher status…"
+                  : agentConnected
+                    ? "Pushes a regen.cards event; the agent watcher picks it up and rebuilds your dashboard cards."
+                    : "Pair an agent watcher first (Settings → Agent)."}
           </TooltipContent>
         </Tooltip>
         <Tooltip>
@@ -289,24 +203,22 @@ export function WikiIngestToolbar({
               onClick={() =>
                 void Promise.all([
                   mutate(undefined, { revalidate: true }),
-                  mutateConnections(undefined, { revalidate: true }),
-                ]).then(() => {
-                  setStorageEpoch((e) => e + 1);
-                })
+                  mutateRegistration(undefined, { revalidate: true }),
+                ])
               }
-              disabled={isValidating || connValidating}
-              aria-label="Refresh wiki ingest status and Claw connections"
+              disabled={isValidating || registrationValidating}
+              aria-label="Refresh wiki ingest status and agent watcher state"
             >
               <RefreshCw
                 className={cn(
                   "h-3.5 w-3.5",
-                  (isValidating || connValidating) && "animate-spin",
+                  (isValidating || registrationValidating) && "animate-spin",
                 )}
               />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            Refresh ingest status and Claw connection list
+            Refresh ingest status and watcher state
           </TooltipContent>
         </Tooltip>
       </div>

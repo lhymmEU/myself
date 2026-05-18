@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { Loader2, Sparkles, Trash2, ChevronRight, Send } from "lucide-react";
 import { toast } from "sonner";
@@ -12,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/context";
-import { useUserWishes, useClawConnectionsList } from "@/lib/swr/hooks";
+import { useUserWishes, useAgentRegistration } from "@/lib/swr/hooks";
 import { parsePlanDataJson } from "@/lib/wishlist/parse-plan";
 import { flatPlanToCards } from "@/lib/wishlist/flat-plan-to-cards";
 import { CardRenderer } from "@/components/claw/card-renderer";
@@ -24,6 +24,7 @@ export interface UserWishRow {
   category: WishCategory;
   userDescription: string;
   planData: string;
+  status: "expanding" | "ready" | "error";
   createdAt: number;
   updatedAt: number;
 }
@@ -41,19 +42,19 @@ function sortedStepKeys(plan: Record<string, string>): string[] {
 }
 
 function AgentStatusLight({
-  hasConnection,
+  agentConnected,
   expandError,
 }: {
-  hasConnection: boolean;
+  agentConnected: boolean;
   expandError: string | null;
 }) {
   const t = useT();
-  const tone = !hasConnection
+  const tone = !agentConnected
     ? "bg-destructive shadow-[0_0_10px] shadow-destructive/50"
     : expandError
       ? "bg-amber-500 shadow-[0_0_8px] shadow-amber-500/40"
       : "bg-emerald-500 shadow-[0_0_8px] shadow-emerald-500/40";
-  const label = !hasConnection
+  const label = !agentConnected
     ? t("wishlist.agent.disconnected")
     : expandError
       ? t("wishlist.agent.lastError")
@@ -167,7 +168,16 @@ function WishCard({
         </div>
       </CardHeader>
       <CardContent className="p-3 pt-2 space-y-2">
-        {cards.length === 0 ? (
+        {wish.status === "expanding" ? (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <span>{t("wishlist.expanding")}</span>
+          </div>
+        ) : wish.status === "error" ? (
+          <p className="text-xs text-destructive">
+            {t("wishlist.expandError")}
+          </p>
+        ) : cards.length === 0 ? (
           <p className="text-xs text-muted-foreground">{t("wishlist.emptyPlan")}</p>
         ) : (
           cards.map((card, i) => (
@@ -189,9 +199,21 @@ export function WishlistDashboard() {
   const t = useT();
   const { data: wishData, isLoading: wishesLoading, mutate: mutateWishes } =
     useUserWishes();
-  const { data: connData } = useClawConnectionsList();
-  const connections = connData?.connections ?? [];
-  const hasConnection = connections.length > 0;
+  const { data: registration } = useAgentRegistration();
+  const agentConnected = registration?.connected === true;
+
+  const anyExpanding = useMemo(() => {
+    const rows = (wishData?.wishes ?? []) as UserWishRow[];
+    return rows.some((w) => w.status === "expanding");
+  }, [wishData?.wishes]);
+
+  useEffect(() => {
+    if (!anyExpanding) return;
+    const t = setInterval(() => {
+      void mutateWishes();
+    }, 5000);
+    return () => clearInterval(t);
+  }, [anyExpanding, mutateWishes]);
 
   const [category, setCategory] = useState<WishCategory>("learn");
   const [description, setDescription] = useState("");
@@ -209,7 +231,7 @@ export function WishlistDashboard() {
   );
 
   const handleGenerate = async () => {
-    if (!description.trim() || !hasConnection) return;
+    if (!description.trim() || !agentConnected) return;
     setExpanding(true);
     setExpandError(null);
     try {
@@ -222,16 +244,14 @@ export function WishlistDashboard() {
         }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
+      if (!res.ok && res.status !== 202) {
         const detail =
-          typeof json.detail === "string"
-            ? json.detail
-            : typeof json.error === "string"
-              ? json.error
-              : res.statusText;
+          typeof json.error === "string" ? json.error : res.statusText;
         setExpandError(detail);
         return;
       }
+      // 202 — placeholder wish was created; the watcher will fill planData in
+      // and the polling below will surface the update.
       setDescription("");
       await mutateWishes();
     } catch (e) {
@@ -282,12 +302,12 @@ export function WishlistDashboard() {
         <div className="space-y-2 min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-3">
             <AgentStatusLight
-              hasConnection={hasConnection}
+              agentConnected={agentConnected}
               expandError={expandError}
             />
-            {!hasConnection && (
+            {!agentConnected && (
               <Button variant="outline" size="sm" asChild className="h-8 text-xs">
-                <Link href="/dashboard/claw">{t("wishlist.linkClaw")}</Link>
+                <Link href="/dashboard/settings">{t("wishlist.linkClaw")}</Link>
               </Button>
             )}
           </div>
@@ -318,7 +338,7 @@ export function WishlistDashboard() {
         <Button
           className="shrink-0 gap-2 md:self-end"
           disabled={
-            expanding || !hasConnection || !description.trim()
+            expanding || !agentConnected || !description.trim()
           }
           onClick={() => void handleGenerate()}
         >

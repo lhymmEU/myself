@@ -91,6 +91,7 @@ export async function createUserWish(
     category: WishCategory;
     userDescription: string;
     planData: Record<string, string>;
+    status?: "expanding" | "ready" | "error";
   },
   userId: string,
 ) {
@@ -105,6 +106,7 @@ export async function createUserWish(
       category: data.category,
       userDescription: data.userDescription.trim(),
       planData: planJson,
+      status: data.status ?? "ready",
       createdAt: now,
       updatedAt: now,
     });
@@ -137,6 +139,17 @@ export async function updateUserWishPlanData(
     })
     .where(and(eq(userWishes.id, id), eq(userWishes.userId, userId)));
   eventBus.emit("dashboard", DASHBOARD_EVENTS.WISH_UPDATED, { id });
+}
+
+export async function updateUserWishStatus(
+  id: string,
+  status: "expanding" | "ready" | "error",
+  userId: string,
+): Promise<void> {
+  await getDb()
+    .update(userWishes)
+    .set({ status, updatedAt: Date.now() })
+    .where(and(eq(userWishes.id, id), eq(userWishes.userId, userId)));
 }
 
 export async function deleteUserWish(

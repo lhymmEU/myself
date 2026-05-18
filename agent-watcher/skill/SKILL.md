@@ -68,6 +68,7 @@ If the cycle fails partway through, leave the failing event with
 | `page.upsert` | A plan page: `{ id, title, slug, content_markdown, folder_id, updated_at }` | `wiki/plans/{slug}.md` — synthesise (don't copy verbatim). |
 | `marked.upsert` | A marked item or collection: `{ id, kind, title, url, body, tags, collection }` | `wiki/references/{slug}.md` — extract the why, not the full clip. |
 | `wish.upsert` | `{ id, title, description, category, target_date, status }` | `wiki/wishes/{id}.md` — note the gap vs. current behaviour. |
+| `wish.expand` | `{ wishId, category, userDescription }` — the user just submitted a free-text wish from the dashboard. The row already exists with `status="expanding"` and empty `plan_data`. Synthesize a flat JSON plan (`{"step_1":"…","step_2":"…", … "done_step_1":"false", … "rationale":"…"}`), then `echo '<plan json>' \| npx tsx scripts/save-wish-plan.ts <wishId>` to persist it. On failure: `npx tsx scripts/save-wish-plan.ts <wishId> --error`. Also write `wiki/wishes/{wishId}.md` so the wiki stays in sync. | `wiki/wishes/{wishId}.md` |
 | `dismissal.create` | `{ card_id, verb, note }` where verb is confirm/contradict/expand/archive/dismiss/pin/unpin | Fold the user's verb into `wiki/syntheses/dismissal-log.md` and any directly-cited wiki files. |
 | `regen.cards` | `{}` | No wiki change — just regenerate cards. |
 | `bootstrap.full` | `{}` (informational — server enumerated their content as many smaller events) | Marker only; the actual work arrives as individual page/marked/wish events. |

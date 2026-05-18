@@ -36,7 +36,6 @@ export const en = {
   sidebar: {
     title: "Life",
     dashboard: "Dashboard",
-    claw: "Claw",
     myself: "Myself",
     me: "Wishlist",
     mindMap: "Mind Map",
@@ -83,6 +82,8 @@ export const en = {
     generate: "Generate plan",
     deleteWish: "Remove wish",
     emptyPlan: "No structured plan stored.",
+    expanding: "Agent is expanding this wish into a plan…",
+    expandError: "The agent could not expand this wish. Delete and try again.",
     todosSection: "Urgent from mind map",
     openTodos: "Open todos",
   },
@@ -429,17 +430,6 @@ export const en = {
   settings: {
     title: "Settings",
     subtitle: "Configure your dashboard",
-    llm: {
-      title: "LLM Configuration",
-      openRouterKey: "OpenRouter API Key",
-      preferredModel: "Preferred Model",
-      temperature: "Temperature",
-      placeholderKey: "sk-or-...",
-      enterKeyFirst: "Please enter an API key first",
-      connectionSuccess: "Connection successful",
-      invalidKey: "Invalid API key",
-      connectionFailed: "Connection failed",
-    },
     data: {
       title: "Data Management",
       exportData: "Export Data",

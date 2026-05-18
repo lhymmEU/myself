@@ -18,7 +18,6 @@ import {
   MapPlus,
   User,
   Bookmark,
-  Terminal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -129,11 +128,6 @@ export function Sidebar() {
           {renderLink(
             { href: "/dashboard", labelKey: "sidebar.dashboard", icon: LayoutDashboard },
             pathname === "/dashboard"
-          )}
-
-          {renderLink(
-            { href: "/dashboard/claw", labelKey: "sidebar.claw", icon: Terminal },
-            pathname.startsWith("/dashboard/claw")
           )}
 
           {/* Myself group */}

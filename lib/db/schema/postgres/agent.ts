@@ -44,6 +44,7 @@ export type AgentEventType =
   | "page.upsert"
   | "marked.upsert"
   | "wish.upsert"
+  | "wish.expand"
   | "dismissal.create"
   | "regen.cards"
   | "bootstrap.full";

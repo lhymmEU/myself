@@ -38,7 +38,6 @@ export const zh: Translations = {
   sidebar: {
     title: "生活仪表盘",
     dashboard: "仪表盘",
-    claw: "Claw",
     myself: "我自己",
     me: "愿望单",
     mindMap: "思维导图",
@@ -85,6 +84,8 @@ export const zh: Translations = {
     generate: "生成计划",
     deleteWish: "删除愿望",
     emptyPlan: "暂无结构化计划。",
+    expanding: "智能体正在为这个愿望生成计划……",
+    expandError: "智能体无法生成此愿望的计划，请删除后重试。",
     todosSection: "脑图中的紧急待办",
     openTodos: "打开待办",
   },
@@ -431,17 +432,6 @@ export const zh: Translations = {
   settings: {
     title: "设置",
     subtitle: "配置你的仪表盘",
-    llm: {
-      title: "LLM 配置",
-      openRouterKey: "OpenRouter API 密钥",
-      preferredModel: "首选模型",
-      temperature: "温度",
-      placeholderKey: "sk-or-...",
-      enterKeyFirst: "请先输入 API 密钥",
-      connectionSuccess: "连接成功",
-      invalidKey: "API 密钥无效",
-      connectionFailed: "连接失败",
-    },
     data: {
       title: "数据管理",
       exportData: "导出数据",

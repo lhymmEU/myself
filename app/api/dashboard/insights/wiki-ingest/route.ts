@@ -1,32 +1,28 @@
-import { NextRequest, NextResponse } from "next/server";
-import { after } from "next/server";
+import { NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";
 import { requireUserId } from "@/lib/core/route-helpers";
 import {
-  getClawConnection,
-  getDefaultClawConnection,
-  listClawConnections,
-} from "@/lib/claw/db";
-import {
   getWikiIngestState,
   upsertWikiIngestState,
-  runWikiIngestJob,
 } from "@/lib/modules/dashboard/wiki-ingest-actions";
-import { hasOpenclawRefreshToken } from "@/lib/modules/dashboard/openclaw-token-actions";
+import { getRegistration } from "@/lib/modules/agent/registration";
+import { emitEvent } from "@/lib/modules/agent/emit";
 
 /**
- * GET — poll ingest status + whether a default Claw SSH connection exists.
- * POST — enqueue a background wiki ingest (returns 202 immediately; job runs
- *         via `after()` so proxies/browsers do not time out).
+ * GET — return current `wiki_ingest_state` + whether the user has paired an
+ *        agent-watcher. The bento polls this while ingest is in flight.
+ * POST — enqueue a `regen.cards` event for the watcher to drain. Returns
+ *        immediately; the watcher updates `wiki_ingest_state` as it runs.
  */
 export async function GET() {
   bootApp();
   const auth = await requireUserId();
   if ("response" in auth) return auth.response;
 
-  const conns = await listClawConnections(auth.userId);
-  const state = await getWikiIngestState(auth.userId);
-  const openclawTokenConfigured = await hasOpenclawRefreshToken(auth.userId);
+  const [state, registration] = await Promise.all([
+    getWikiIngestState(auth.userId),
+    getRegistration(auth.userId),
+  ]);
 
   return NextResponse.json(
     {
@@ -34,8 +30,8 @@ export async function GET() {
       detail: state.detail,
       updatedAt: state.updatedAt,
       generativeCardsJson: state.generativeCardsJson,
-      hasConnection: conns.length > 0,
-      openclawTokenConfigured,
+      agentConnected: registration.connected,
+      agentLastSeenAt: registration.lastSeenAt,
     },
     {
       headers: {
@@ -45,62 +41,17 @@ export async function GET() {
   );
 }
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   bootApp();
   const auth = await requireUserId();
   if ("response" in auth) return auth.response;
 
-  let requestedConnectionId: string | undefined;
-  let supabaseAccessToken: string | undefined;
-  let supabaseRefreshToken: string | undefined;
-  const ct = req.headers.get("content-type") ?? "";
-  if (ct.includes("application/json")) {
-    try {
-      const raw: unknown = await req.json();
-      if (raw && typeof raw === "object") {
-        const o = raw as {
-          connectionId?: unknown;
-          supabaseAccessToken?: unknown;
-          supabaseRefreshToken?: unknown;
-        };
-        if (typeof o.connectionId === "string") {
-          const id = o.connectionId.trim();
-          if (id) requestedConnectionId = id;
-        }
-        if (typeof o.supabaseAccessToken === "string") {
-          const t = o.supabaseAccessToken.trim();
-          if (t) supabaseAccessToken = t;
-        }
-        if (typeof o.supabaseRefreshToken === "string") {
-          const t = o.supabaseRefreshToken.trim();
-          if (t) supabaseRefreshToken = t;
-        }
-      }
-    } catch {
-      /* empty or invalid body — fall back to default connection */
-    }
-  }
-
-  const conn = requestedConnectionId
-    ? await getClawConnection(requestedConnectionId, auth.userId)
-    : await getDefaultClawConnection(auth.userId);
-  if (!conn) {
-    return NextResponse.json(
-      {
-        error: requestedConnectionId
-          ? "That SSH connection was not found. Refresh the connection list or pick another in Dashboard → Claw."
-          : "No Claw connection configured. Open Claw and save an SSH connection first.",
-      },
-      { status: 400 },
-    );
-  }
-
-  const hasStoredRefresh = await hasOpenclawRefreshToken(auth.userId);
-  if (!hasStoredRefresh && !supabaseAccessToken && !supabaseRefreshToken) {
+  const registration = await getRegistration(auth.userId);
+  if (!registration.connected) {
     return NextResponse.json(
       {
         error:
-          "Save your Supabase refresh token (Dashboard → Settings → OpenClaw / wiki ingest), or stay logged in so ingest can send session tokens (access + refresh). Wiki ingest needs one of these.",
+          "No agent watcher paired. Pair one under Dashboard → Settings → Agent.",
       },
       { status: 400 },
     );
@@ -114,16 +65,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  await upsertWikiIngestState(auth.userId, "processing", "Queued…");
-
-  const connectionId = conn.id;
-  const userId = auth.userId;
-
-  after(async () => {
-    await runWikiIngestJob(connectionId, userId, {
-      supabaseAccessToken,
-      supabaseRefreshToken,
-    });
+  await upsertWikiIngestState(auth.userId, "processing", "Queued for watcher…");
+  await emitEvent({
+    userId: auth.userId,
+    eventType: "regen.cards",
+    payload: { reason: "manual wiki ingest" },
   });
 
   return NextResponse.json(

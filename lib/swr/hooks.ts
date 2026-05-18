@@ -3,21 +3,25 @@
 import useSWR from "swr";
 import { swrFetcher } from "./config";
 
-// --- Dashboard hooks (local SQLite — fast) ---
+// --- Dashboard hooks ---
 
 export function useUserWishes() {
   return useSWR("/api/dashboard/wishes", swrFetcher);
 }
 
-export function useClawConnectionsList() {
-  return useSWR<{ connections: { id: string; name: string; isDefault?: boolean }[] }>(
-    "/api/claw/connections",
-    swrFetcher,
-  );
-}
-
 export function useUserSkills() {
   return useSWR("/api/dashboard/skills", swrFetcher);
+}
+
+export interface AgentRegistrationStatus {
+  connected: boolean;
+  label: string;
+  connectedAt: number | null;
+  lastSeenAt: number | null;
+}
+
+export function useAgentRegistration() {
+  return useSWR<AgentRegistrationStatus>("/api/agent", swrFetcher);
 }
 
 // --- Plans hooks ---

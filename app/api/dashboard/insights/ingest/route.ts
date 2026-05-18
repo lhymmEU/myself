@@ -1,17 +1,10 @@
 /**
- * Lightweight signal endpoint hit by:
- *   - the dashboard event listeners (when plans / marked / wishlist change), and
- *   - the bento UI's drop-zone after a manual URL clip.
+ * Lightweight signal endpoint hit by the bento drop-zone after a URL clip.
  *
- * The endpoint just records a "sources changed" intent. The actual ingest
- * (running openclaw with the wiki preamble) happens client-side via the
- * existing /api/claw/chat route — that way the SSH/SSE stream is owned by
- * the browser and we don't need a server-side queue.
- *
- * For now the endpoint is a no-op write that returns the latest dismissals
- * count so a client can decide whether to nudge openclaw. We deliberately
- * keep this thin so it can be made richer later (debouncing, queue, …)
- * without changing the contract.
+ * Pure best-effort acknowledgement: the agent-watcher picks up `marked.upsert`
+ * events from the queue on its own, so we don't need to enqueue anything here.
+ * Returns the pending dismissals count so the client can show a "you have
+ * unsynced verbs" hint if it wants.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { bootApp } from "@/lib/core/init";

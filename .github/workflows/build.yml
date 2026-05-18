@@ -1,4 +1,4 @@
-name: build-cloud
+name: build
 
 on:
   push:
@@ -6,12 +6,10 @@ on:
   pull_request:
 
 concurrency:
-  group: build-cloud-${{ github.ref }}
+  group: build-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  DEPLOYMENT_MODE: cloud
-  NEXT_PUBLIC_DEPLOYMENT_MODE: cloud
   # Build-time placeholders. Real values are wired in Vercel's project settings.
   NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
   NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
@@ -19,7 +17,7 @@ env:
 
 jobs:
   build:
-    name: lint + typecheck + build (cloud / postgres, no native deps)
+    name: lint + typecheck + build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,18 +27,18 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install dependencies (omit optional native modules)
-        run: npm ci --omit=optional
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Verify native modules are absent
+      - name: Guardrail — local-mode/SSH deps must not reappear
         run: |
-          for pkg in better-sqlite3 ssh2 nodemailer; do
+          for pkg in better-sqlite3 ssh2 nodemailer openai; do
             if [ -d "node_modules/$pkg" ]; then
-              echo "::error::optionalDependency '$pkg' was installed in cloud build — bundle is heavier than necessary."
+              echo "::error::dependency '$pkg' is installed — this repo is cloud-only and shouldn't ship with local/SSH/LLM deps."
               exit 1
             fi
           done
-          echo "OK — better-sqlite3 / ssh2 / nodemailer not installed."
+          echo "OK — better-sqlite3 / ssh2 / nodemailer / openai not installed."
 
       - name: Lint
         run: npm run lint

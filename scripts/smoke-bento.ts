@@ -6,7 +6,6 @@
  *
  * Run: `MYSELF_SMOKE_USER_ID=<uuid> tsx scripts/smoke-bento.ts`
  */
-import { initDatabase } from "../lib/core/init-db";
 import { ensureVault, isVaultReady } from "../lib/modules/dashboard/wiki-vault";
 import {
   publishDashboard,
@@ -24,7 +23,6 @@ function requireSmokeUser(): string {
 
 async function main() {
   const userId = requireSmokeUser();
-  initDatabase();
   await ensureVault(userId);
   if (!(await isVaultReady(userId))) {
     throw new Error("wiki vault not ready after ensureVault");

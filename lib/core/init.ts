@@ -1,4 +1,3 @@
-import { initDatabase } from "./init-db";
 import { moduleRegistry } from "./module-registry";
 import { mindMapModule } from "@/lib/modules/mind-map";
 import { todosModule } from "@/lib/modules/todos";
@@ -14,8 +13,6 @@ let booted = false;
 
 export function bootApp() {
   if (booted) return;
-
-  initDatabase();
 
   moduleRegistry.register(mindMapModule);
   moduleRegistry.register(todosModule);

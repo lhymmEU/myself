@@ -1,1 +1,0 @@
-ALTER TABLE claw_connections DROP COLUMN remote_dashboard_json_path;

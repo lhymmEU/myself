@@ -3,11 +3,13 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
 /**
- * Modules that may only appear in code that is gated to local mode.
- * Keep this list small and explicit — adding a new entry means adding a
- * matching `isLocal()` guard at the call site.
+ * Modules forbidden in cloud Next.js code. They show up when somebody
+ * accidentally drags in a local-mode shim, an SSH transport, or a packaged
+ * mailer that would inflate the Vercel bundle. The allowlist below names
+ * the few files (e.g. `lib/db/**`, `lib/core/mailer.ts`) where these are
+ * legitimately allowed.
  */
-const LOCAL_ONLY_NODE_MODULES = [
+const FORBIDDEN_NODE_MODULES = [
   "fs",
   "node:fs",
   "fs/promises",
@@ -33,26 +35,20 @@ const LOCAL_ONLY_NODE_MODULES = [
 const RESTRICTED_DB_NAMED_IMPORTS = ["getPgClient"];
 
 /**
- * Files that legitimately need either local-only Node modules or raw
- * SQLite handles. Anything not in this list must go through the runtime
- * capability layer (`lib/core/runtime.ts`) and the Drizzle ORM.
+ * Files that legitimately need either Node modules above or raw Postgres
+ * handles. Anything not in this list must go through the Drizzle ORM.
  */
-const LOCAL_ONLY_FILE_PATTERNS = [
+const FORBIDDEN_MODULE_ALLOWLIST = [
   "lib/db/**",
-  "lib/core/db.ts",
   "lib/core/mailer.ts",
-  "lib/claw/ssh.ts",
-  "lib/modules/vault/actions.ts",
   "scripts/**",
-  "openclaw/**",
-  "app/api/vault/read-local-file/route.ts",
 ];
 
 const restrictedImportsRule = {
   paths: [
-    ...LOCAL_ONLY_NODE_MODULES.map((name) => ({
+    ...FORBIDDEN_NODE_MODULES.map((name) => ({
       name,
-      message: `\`${name}\` is local-only. Move the call into lib/local-only or guard with isLocal() inside an approved file.`,
+      message: `\`${name}\` is forbidden in app code. If you really need it, add the file to FORBIDDEN_MODULE_ALLOWLIST in eslint.config.mjs.`,
       // Type-only imports are erased at compile time so they don't pull
       // the native module into the cloud bundle — those are fine.
       allowTypeImports: true,
@@ -77,15 +73,15 @@ const restrictedImportsRule = {
 };
 
 /**
- * Catches the `require("fs")`-inside-a-function escape hatch that several
- * legacy adapters use. Allowed only in the explicit allowlist above.
+ * Catches the `require("fs")`-inside-a-function escape hatch.
+ * Allowed only in the allowlist above.
  */
 const restrictedRequireSyntax = {
-  selector: `CallExpression[callee.name='require'][arguments.0.value=/^(${LOCAL_ONLY_NODE_MODULES.map(
+  selector: `CallExpression[callee.name='require'][arguments.0.value=/^(${FORBIDDEN_NODE_MODULES.map(
     (m) => m.replace(/[/]/g, "\\/"),
   ).join("|")})$/]`,
   message:
-    "require() of local-only Node modules is forbidden outside the local-only allowlist. Move the call into lib/local-only or an approved file.",
+    "require() of forbidden Node modules is not allowed outside the allowlist.",
 };
 
 const eslintConfig = defineConfig([
@@ -96,11 +92,6 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    "workers/**",
-    "lobsterd/**",
-    // Vendored Go WASM runtime — shipped with the Go toolchain. Don't lint
-    // or modify; replace by copying a fresh copy from $(go env GOROOT)/lib/wasm.
-    "public/wasm/wasm_exec.js",
     // Standalone Node CLI sub-project: bundled by esbuild into
     // `public/myself-op.js` and run on the user's own machine, not part of
     // the cloud Next.js bundle. It legitimately uses fs/child_process and
@@ -109,7 +100,7 @@ const eslintConfig = defineConfig([
     "public/myself-op.js",
   ]),
   {
-    name: "dual-mode/local-isolation",
+    name: "cloud/forbidden-modules",
     files: ["**/*.{ts,tsx,js,jsx,mjs,cjs}"],
     rules: {
       "no-restricted-imports": ["error", restrictedImportsRule],
@@ -127,8 +118,8 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    name: "dual-mode/local-isolation-allowlist",
-    files: LOCAL_ONLY_FILE_PATTERNS,
+    name: "cloud/forbidden-modules-allowlist",
+    files: FORBIDDEN_MODULE_ALLOWLIST,
     rules: {
       "no-restricted-imports": "off",
       "no-restricted-syntax": "off",
